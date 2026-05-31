@@ -1,0 +1,119 @@
+.about-section {
+  background-color: #ffffff;
+  padding: 40px 0;
+  position: relative;
+  z-index: 10;
+  /* Kéo khối này đè lên một chút phần hero section */
+  margin-top: -60px;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+}
+
+.about-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 40px;
+}
+
+.stats-cards {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+}
+
+.stat-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 32px 20px;
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 25px -5px rgba(0,0,0,0.1);
+  border-color: #f97316;
+}
+
+.stat-icon {
+  color: #f97316; /* Cam */
+  margin-bottom: 16px;
+}
+
+.stat-number {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.stat-text {
+  color: #64748b;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.tech-stack-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 40px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px dashed #cbd5e1;
+}
+
+.tech-grid {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.tech-item {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  padding: 12px;
+}
+
+.tech-logo {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.react-logo {
+  animation: spin-slow 10s linear infinite;
+}
+
+.tech-text {
+  font-weight: 700;
+  color: #334155;
+  font-size: 1.25rem;
+  margin-top: 10px;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 900px) {
+  .stats-cards { flex-direction: column; }
+  .about-container { flex-direction: column; align-items: stretch; }
+  .tech-stack-container { margin-top: 20px; }
+}

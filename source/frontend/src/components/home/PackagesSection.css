@@ -1,0 +1,158 @@
+.packages-section {
+  padding: 100px 0;
+  background-color: #0f172a;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 80px;
+}
+
+.packages-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  align-items: center;
+}
+
+.package-card {
+  border-radius: 16px;
+  padding: 40px 32px;
+  text-align: center;
+  transition: transform 0.3s;
+}
+
+.package-card:hover {
+  transform: translateY(-10px);
+}
+
+.package-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.package-price {
+  font-size: 1.25rem;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.package-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 40px 0;
+  text-align: left;
+}
+
+.package-features li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 1.05rem;
+}
+
+.package-features li.disabled {
+  color: #64748b;
+}
+
+.check-icon { color: #22c55e; } /* Xanh lá */
+.x-icon { color: #ef4444; } /* Đỏ */
+.check-icon-vip { color: #b45309; } /* Vàng đậm */
+
+.btn-package {
+  width: 100%;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* BASIC CARD */
+.basic-card {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
+}
+.btn-basic {
+  background: transparent;
+  color: #cbd5e1;
+  border: 2px solid #475569;
+}
+.btn-basic:hover { background: #334155; }
+
+/* PREMIUM CARD */
+.premium-card {
+  background-color: #ea580c;
+  color: white;
+  transform: scale(1.05); /* To hơn một chút */
+  box-shadow: 0 20px 40px rgba(234, 88, 12, 0.3);
+  z-index: 10;
+}
+.premium-card:hover {
+  transform: scale(1.05) translateY(-10px);
+}
+.premium-card .package-price {
+  border-bottom-color: rgba(255,255,255,0.2);
+}
+.premium-card .check-icon {
+  color: #ffffff; /* Check trắng trên nền cam */
+}
+.btn-premium {
+  background: white;
+  color: #ea580c;
+  border: 2px solid white;
+}
+.btn-premium:hover {
+  background: #fff7ed;
+}
+
+/* VIP CARD */
+.vip-card {
+  background: linear-gradient(135deg, #fef08a, #eab308, #ca8a04);
+  color: #1a0600; /* Chữ đậm trên nền vàng */
+  position: relative;
+}
+.special-badge {
+  position: absolute;
+  top: -16px;
+  right: 24px;
+  background: #000000;
+  color: #fcd34d;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.vip-card .package-price {
+  border-bottom-color: rgba(0,0,0,0.1);
+}
+.btn-vip {
+  background: white;
+  color: #b45309;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.btn-vip:hover {
+  background: #f8fafc;
+}
+
+@media (max-width: 1024px) {
+  .packages-grid { grid-template-columns: 1fr; gap: 40px; }
+  .premium-card { transform: none; }
+  .premium-card:hover { transform: translateY(-10px); }
+}
