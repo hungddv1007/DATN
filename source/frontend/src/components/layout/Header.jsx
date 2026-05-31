@@ -9,13 +9,14 @@ const Header = () => {
           <span className="logo-text">GymPro</span>
         </div>
         <nav className="main-nav">
-          <a href="#" className="nav-link">Trang chủ</a>
-          <a href="#" className="nav-link">Gói tập</a>
-          <a href="#" className="nav-link">Blog</a>
+          <a href="#" className="nav-link active">HOME</a>
+          <a href="#" className="nav-link">ABOUT</a>
+          <a href="#" className="nav-link">SERVICES</a>
+          <a href="#" className="nav-link">PTs</a>
+          <a href="#" className="nav-link">BLOG</a>
         </nav>
         <div className="header-actions">
-          <button className="btn-login">Đăng nhập</button>
-          <button className="btn-register">Tham gia ngay</button>
+          <button className="btn-signin">SIGN IN</button>
         </div>
       </div>
     </header>

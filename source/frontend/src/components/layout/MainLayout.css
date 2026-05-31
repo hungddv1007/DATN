@@ -2,6 +2,8 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: #0f172a; /* Slate-900 nền tối */
+  color: #f8fafc;
 }
 
 .main-content {

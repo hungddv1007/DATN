@@ -1,4 +1,5 @@
 import React from 'react';
+import { Globe, MessageCircle, Video, Camera, MapPin, Phone, Mail } from 'lucide-react';
 import './Footer.css';
 
 const Footer = () => {
@@ -7,25 +8,40 @@ const Footer = () => {
       <div className="footer-container">
         <div className="footer-brand">
           <span className="logo-text">GymPro</span>
-          <p>Nâng tầm sức mạnh, bứt phá giới hạn cùng các chuyên gia hàng đầu.</p>
+          <p>Hệ thống Quản lý & Tập luyện Chuyên nghiệp Nhất.</p>
+          <div className="social-icons">
+            <a href="#"><MessageCircle size={20} /></a>
+            <a href="#"><Globe size={20} /></a>
+            <a href="#"><Video size={20} /></a>
+            <a href="#"><Camera size={20} /></a>
+          </div>
         </div>
+        
         <div className="footer-links">
-          <div className="link-group">
-            <h4>Dịch vụ</h4>
-            <a href="#">Gói Basic</a>
-            <a href="#">Gói Premium</a>
-            <a href="#">Gói VIP</a>
-          </div>
-          <div className="link-group">
-            <h4>Hỗ trợ</h4>
-            <a href="#">Về chúng tôi</a>
-            <a href="#">Liên hệ</a>
-            <a href="#">Tuyển dụng</a>
-          </div>
+          <h4>VỀ CHÚNG TÔI</h4>
+          <a href="#">Giới thiệu</a>
+          <a href="#">Huấn luyện viên</a>
+          <a href="#">Thư viện</a>
+          <a href="#">Chính sách bảo mật</a>
+        </div>
+        
+        <div className="footer-links">
+          <h4>DỊCH VỤ</h4>
+          <a href="#">Gói Basic</a>
+          <a href="#">Gói Premium</a>
+          <a href="#">Gói VIP</a>
+          <a href="#">Lịch tập</a>
+        </div>
+        
+        <div className="footer-contact">
+          <h4>LIÊN HỆ</h4>
+          <p><MapPin size={16} /> <strong>Văn phòng:</strong> 123 Đường Gym, Quận 1, TP. HCM</p>
+          <p><Phone size={16} /> <strong>Điện thoại:</strong> 1900 1234</p>
+          <p><Mail size={16} /> <strong>Email:</strong> contact@gympro.vn</p>
         </div>
       </div>
       <div className="footer-bottom">
-        &copy; {new Date().getFullYear()} GymPro. Đồ án tốt nghiệp.
+        <p>Copyright &copy; {new Date().getFullYear()} GymPro. All rights reserved.</p>
       </div>
     </footer>
   );
