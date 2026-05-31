@@ -1,122 +1,105 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React, { useState } from 'react';
+import MainLayout from './components/layout/MainLayout';
+import Loading from './components/common/Loading';
+import Modal from './components/common/Modal';
+import FormInput from './components/common/FormInput';
+import DataTable from './components/common/DataTable';
+
+import './index.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Dữ liệu mẫu cho bảng
+  const tableColumns = [
+    { header: 'Họ Tên', accessor: 'name', width: '30%' },
+    { header: 'Email', accessor: 'email', width: '40%' },
+    { header: 'Vai Trò', accessor: 'role', width: '30%' }
+  ];
+
+  const tableData = [
+    { name: 'Nguyễn Văn A', email: 'a@example.com', role: 'Admin' },
+    { name: 'Trần Thị B', email: 'b@example.com', role: 'PT' },
+    { name: 'Lê Văn C', email: 'c@example.com', role: 'Member' },
+  ];
+
+  const handleShowLoading = () => {
+    setIsLoading(true);
+    // Tự động tắt sau 2 giây
+    setTimeout(() => setIsLoading(false), 2000);
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <MainLayout>
+      <div className="demo-container">
+        <h1 className="demo-title">UI Components Showcase</h1>
+        <p className="demo-desc">Dưới đây là các component dùng chung (common) đã được tạo cùng với Layout chuẩn.</p>
 
-      <div className="ticks"></div>
+        {/* --- FormInput --- */}
+        <section className="demo-section">
+          <h2>1. Form Input</h2>
+          <div className="demo-card">
+            <FormInput 
+              label="Địa chỉ Email" 
+              id="email" 
+              type="email" 
+              placeholder="Nhập email của bạn..." 
+            />
+            <FormInput 
+              label="Mật khẩu" 
+              id="password" 
+              type="password" 
+              error="Mật khẩu phải có ít nhất 8 ký tự" 
+              placeholder="Nhập mật khẩu..." 
+            />
+          </div>
+        </section>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        {/* --- Buttons & Modal --- */}
+        <section className="demo-section">
+          <h2>2. Modal & Trạng thái tải (Loading)</h2>
+          <div className="demo-card demo-flex">
+            <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
+              Mở Modal Thông báo
+            </button>
+            <button className="btn-secondary" onClick={handleShowLoading}>
+              Bật Loading Toàn màn hình (2s)
+            </button>
+          </div>
+        </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* --- DataTable --- */}
+        <section className="demo-section">
+          <h2>3. Data Table</h2>
+          <div className="demo-card">
+            <DataTable columns={tableColumns} data={tableData} />
+          </div>
+        </section>
+
+      </div>
+
+      {/* Render Modal (Bị ẩn, chỉ hiện khi isModalOpen = true) */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        title="Thông báo hệ thống"
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => setIsModalOpen(false)}>Hủy</button>
+            <button className="btn-primary" onClick={() => setIsModalOpen(false)}>Đồng ý</button>
+          </>
+        }
+      >
+        <p>Đây là nội dung của modal. Rất phù hợp để hiển thị cảnh báo, xác nhận thao tác hoặc hiển thị form nhập liệu nhanh.</p>
+        <br/>
+        <p>Thử bấm <b>Hủy</b>, <b>Đồng ý</b> hoặc bấm <b>ra ngoài khoảng đen</b> để đóng modal.</p>
+      </Modal>
+
+      {/* Render Fullscreen Loading */}
+      {isLoading && <Loading fullScreen={true} />}
+    </MainLayout>
+  );
 }
 
-export default App
+export default App;
