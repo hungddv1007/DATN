@@ -62,7 +62,7 @@ public class AuthService {
         }
 
         // Lay role MEMBER
-        VaiTro vaiTroMember = vaiTroRepository.findByTen("MEMBER")
+        VaiTro vaiTroMember = vaiTroRepository.findByName("MEMBER")
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò MEMBER"));
 
         // Tao user moi
