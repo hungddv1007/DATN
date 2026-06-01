@@ -1,10 +1,8 @@
 package datn_gym.security;
 
-import datn_gym.entity.NguoiDung;
-import datn_gym.repository.NguoiDungRepository;
+import datn_gym.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -16,24 +14,25 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final NguoiDungRepository nguoiDungRepository;
+    private final UserRepository userRepository;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        NguoiDung nguoiDung = nguoiDungRepository.findByEmail(email)
+        // Sử dụng đường dẫn tuyệt đối để không nhầm với User của Spring Security
+        datn_gym.entity.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "Không tìm thấy người dùng với email: " + email));
 
-        // Kiem tra tai khoan co bi khoa khong
-        if (!nguoiDung.getTrangThai()) {
+        // Kiểm tra tài khoản có bị khóa không
+        if (!user.getStatus()) {
             throw new UsernameNotFoundException("Tài khoản đã bị khóa");
         }
 
-        return new User(
-                nguoiDung.getEmail(),
-                nguoiDung.getMatKhau(),
+        return new org.springframework.security.core.userdetails.User(
+                user.getEmail(),
+                user.getPassword(),
                 Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_" + nguoiDung.getVaiTro().getTen())
+                        new SimpleGrantedAuthority("ROLE_" + user.getRole().getName())
                 )
         );
     }

@@ -9,10 +9,11 @@ import lombok.Data;
 @AllArgsConstructor
 public class JwtResponse {
     private String token;
+    @Builder.Default
     private String type = "Bearer";
     private Integer id;
     private String email;
-    private String hoTen;
-    private String vaiTro;
-    private String anhDaiDien;
+    private String fullName;
+    private String role;
+    private String avatar;
 }

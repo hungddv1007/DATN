@@ -29,7 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         try {
-            // Lay token tu header Authorization
+            // Lấy token từ header Authorization
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
@@ -47,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
-            logger.error("Khong the set user authentication: " + ex.getMessage());
+            logger.error("Không thể set user authentication: " + ex.getMessage());
         }
 
         filterChain.doFilter(request, response);

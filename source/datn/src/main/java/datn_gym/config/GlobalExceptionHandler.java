@@ -15,21 +15,21 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Loi xac thuc sai email/mat khau
+    // Lỗi xác thực sai email/mật khẩu
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<MessageResponse> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new MessageResponse("Email hoặc mật khẩu không đúng!"));
     }
 
-    // Loi khong tim thay user
+    // Lỗi không tìm thấy user
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<MessageResponse> handleUserNotFound(UsernameNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new MessageResponse(ex.getMessage()));
     }
 
-    // Loi validation (input khong hop le)
+    // Lỗi validation (input không hợp lệ)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<MessageResponse> handleValidation(MethodArgumentNotValidException ex) {
         String errors = ex.getBindingResult().getFieldErrors().stream()
@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
                 .body(new MessageResponse(errors));
     }
 
-    // Loi runtime chung
+    // Lỗi runtime chung
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<MessageResponse> handleRuntime(RuntimeException ex) {
         return ResponseEntity.badRequest()

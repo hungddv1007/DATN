@@ -2,7 +2,6 @@ package datn_gym.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
@@ -13,5 +12,5 @@ public class LoginRequest {
     private String email;
 
     @NotBlank(message = "Mật khẩu không được để trống")
-    private String matKhau;
+    private String password;
 }
