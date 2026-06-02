@@ -32,7 +32,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // GET /api/auth/test - API test kiem tra server chay
+    // GET /api/auth/test - API test kiểm tra server chạy
     @GetMapping("/test")
     public ResponseEntity<MessageResponse> test() {
         return ResponseEntity.ok(new MessageResponse("GymPro API is running!"));

@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class NguoiDung {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -17,31 +17,32 @@ public class NguoiDung {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
-    private VaiTro vaiTro;
+    private Role role;
 
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
     @Column(name = "password", nullable = false, length = 255)
-    private String matKhau;
+    private String password;
 
     @Column(name = "full_name", nullable = false, length = 100)
-    private String hoTen;
+    private String fullName;
 
     @Column(name = "phone", length = 20)
-    private String soDienThoai;
+    private String phone;
 
     @Column(name = "avatar", length = 500)
-    private String anhDaiDien;
+    private String avatar;
 
     @Column(name = "status")
-    private Boolean trangThai = true;
+    @Builder.Default
+    private Boolean status = true;
 
     @Column(name = "created_at")
-    private LocalDateTime ngayTao;
+    private LocalDateTime createdAt;
 
     @PrePersist
-    protected void onCreate() {
-        this.ngayTao = LocalDateTime.now();
+    protected void onCreate() { 
+        this.createdAt = LocalDateTime.now(); 
     }
 }

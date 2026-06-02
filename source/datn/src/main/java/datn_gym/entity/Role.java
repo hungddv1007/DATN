@@ -7,12 +7,13 @@ import lombok.*;
 @Table(name = "roles")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-public class VaiTro {
+@Builder
+public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @Column(name = "name", nullable = false, unique = true, length = 20)
-    private String ten;
+    private String name;
 }

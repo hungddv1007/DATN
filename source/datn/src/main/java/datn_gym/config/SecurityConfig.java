@@ -38,10 +38,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // Tat CSRF vi dung JWT (stateless)
+            // Tắt CSRF vì dùng JWT (stateless)
             .csrf(csrf -> csrf.disable())
 
-            // Cho phep CORS
+            // Cho phép CORS
             .cors(cors -> cors.configurationSource(request -> {
                 var corsConfig = new org.springframework.web.cors.CorsConfiguration();
                 corsConfig.addAllowedOrigin("http://localhost:5173"); // React dev server
@@ -52,13 +52,13 @@ public class SecurityConfig {
                 return corsConfig;
             }))
 
-            // Khong tao session (stateless JWT)
+            // Không tạo session (stateless JWT)
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            // Cau hinh quyen truy cap
+            // Cấu hình quyền truy cập
             .authorizeHttpRequests(auth -> auth
-                // API cong khai - khong can dang nhap
+                // API công khai - không cần đăng nhập
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/goi-tap/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/bai-viet/**").permitAll()
@@ -70,14 +70,14 @@ public class SecurityConfig {
                 // API PT
                 .requestMatchers("/api/pt/**").hasRole("PT")
 
-                // API Hoi vien
+                // API Hội viên
                 .requestMatchers("/api/hoi-vien/**").hasRole("MEMBER")
 
-                // Tat ca API khac can dang nhap
+                // Tất cả API khác cần đăng nhập
                 .anyRequest().authenticated()
             )
 
-            // Them JWT filter truoc UsernamePasswordAuthenticationFilter
+            // Thêm JWT filter trước UsernamePasswordAuthenticationFilter
             .addFilterBefore(jwtAuthenticationFilter,
                     UsernamePasswordAuthenticationFilter.class);
 

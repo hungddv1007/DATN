@@ -20,7 +20,7 @@ public class JwtTokenProvider {
     @Value("${app.jwt.expiration}")
     private long jwtExpiration;
 
-    // Tao token tu thong tin user
+    // Tạo token từ thông tin user
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Date now = new Date();
@@ -34,7 +34,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Lay email tu token
+    // Lấy email từ token
     public String getEmailFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -44,7 +44,7 @@ public class JwtTokenProvider {
         return claims.getSubject();
     }
 
-    // Kiem tra token hop le
+    // Kiểm tra token hợp lệ
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
