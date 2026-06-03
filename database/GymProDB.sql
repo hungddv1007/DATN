@@ -333,27 +333,27 @@ GO
 -- ============================================================
 INSERT INTO users (role_id, email, password, full_name, phone, status) VALUES
 -- ADMIN (role_id = 1) Password toàn bộ đều là = 123123123
-(1, 'admin@gympro.vn',        '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Nguyễn Quản Lý',   '0901000001', 1),
-(1, 'manager@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Trần Thị Quản',    '0901000002', 1),
+(1, 'admin@gympro.vn',        '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Nguyễn Quản Lý',   '0901000001', 1),
+(1, 'manager@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Trần Thị Quản',    '0901000002', 1),
+							   
 
--- PT (role_id = 2)
-(2, 'pt.minh@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Lê Văn Minh',      '0902000001', 1),
-(2, 'pt.linh@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Phạm Thị Linh',    '0902000002', 1),
-(2, 'pt.hung@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Đỗ Mạnh Hùng',     '0902000003', 1),
-(2, 'pt.trang@gympro.vn',     '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Nguyễn Thị Trang', '0902000004', 1),
-(2, 'pt.khoa@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Vũ Đức Khoa',      '0902000005', 0), -- PT bị vô hiệu hóa
+(2, 'pt.minh@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Lê Văn Minh',      '0902000001', 1),
+(2, 'pt.linh@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Phạm Thị Linh',    '0902000002', 1),
+(2, 'pt.hung@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Đỗ Mạnh Hùng',     '0902000003', 1),
+(2, 'pt.trang@gympro.vn',     '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Nguyễn Thị Trang', '0902000004', 1),
+(2, 'pt.khoa@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Vũ Đức Khoa',      '0902000005', 0), -- PT bị vô hiệu hóa
+							  
 
--- MEMBER (role_id = 3)
-(3, 'member.an@gmail.com',    '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Nguyễn Văn An',    '0903000001', 1),
-(3, 'member.binh@gmail.com',  '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Trần Thị Bình',    '0903000002', 1),
-(3, 'member.cuong@gmail.com', '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Lê Văn Cường',     '0903000003', 1),
-(3, 'member.dung@gmail.com',  '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Phạm Thị Dung',    '0903000004', 1),
-(3, 'member.em@gmail.com',    '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Đỗ Văn Em',        '0903000005', 1),
-(3, 'member.phuong@gmail.com','$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Hoàng Thị Phương', '0903000006', 1),
-(3, 'member.giang@gmail.com', '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Vũ Văn Giang',     '0903000007', 1),
-(3, 'member.hoa@gmail.com',   '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Bùi Thị Hoa',      '0903000008', 1),
-(3, 'member.hung@gmail.com',  '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Đinh Văn Hưng',    '0903000009', 1),
-(3, 'member.inactive@gmail.com','$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Thành Viên Cũ',    '0903000010', 0); -- Member bị khóa
+(3, 'member.an@gmail.com',    '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Nguyễn Văn An',    '0903000001', 1),
+(3, 'member.binh@gmail.com',  '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Trần Thị Bình',    '0903000002', 1),
+(3, 'member.cuong@gmail.com', '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Lê Văn Cường',     '0903000003', 1),
+(3, 'member.dung@gmail.com',  '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Phạm Thị Dung',    '0903000004', 1),
+(3, 'member.em@gmail.com',    '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Đỗ Văn Em',        '0903000005', 1),
+(3, 'member.phuong@gmail.com','$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Hoàng Thị Phương', '0903000006', 1),
+(3, 'member.giang@gmail.com', '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Vũ Văn Giang',     '0903000007', 1),
+(3, 'member.hoa@gmail.com',   '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Bùi Thị Hoa',      '0903000008', 1),
+(3, 'member.hung@gmail.com',  '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Đinh Văn Hưng',    '0903000009', 1),
+(3, 'member.inactive@gmail.com','$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Thành Viên Cũ',    '0903000010', 0); -- Member bị khóa
 GO
 
 -- ============================================================
@@ -645,3 +645,6 @@ SELECT 'reviews',                        COUNT(*)                FROM reviews   
 SELECT 'blogs',                          COUNT(*)                FROM blogs             UNION ALL
 SELECT 'notifications',                  COUNT(*)                FROM notifications;
 GO
+use GymProDB
+select * from users
+$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO
