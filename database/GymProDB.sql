@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- GYMPRO DATABASE - SQL Server 2025
 -- Website Quan Ly Phong Tap Gym
 -- 19 bang
@@ -311,25 +311,337 @@ CREATE INDEX IX_diets_date ON diets(date);
 -- SEED DATA
 -- ============================================================
 
--- Roles
-INSERT INTO roles (name) VALUES (N'ADMIN'), (N'PT'), (N'MEMBER');
+-- ============================================================
+-- GYMPRO SEED DATA - SQL Server 2025
+-- Mục đích: Test đủ chức năng, không dư thừa
+-- Số lượng: 4 Admin, 5 PT, 10 Member, đủ các trạng thái
+-- Đã được đồng bộ hoàn toàn với schema tiếng Anh của GymProDB
+-- ============================================================
 
--- 3 goi tap co dinh
+-- ============================================================
+-- 1. ROLES
+-- ============================================================
+INSERT INTO roles (name) VALUES
+    (N'ADMIN'),
+    (N'PT'),
+    (N'MEMBER');
+GO
+
+-- ============================================================
+-- 2. USERS
+-- admin: id 1-2 | PT: id 3-7 | Member: id 8-17
+-- ============================================================
+INSERT INTO users (role_id, email, password, full_name, phone, status) VALUES
+-- ADMIN (role_id = 1) Password toàn bộ đều là = 123123123
+(1, 'admin@gympro.vn',        '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Nguyễn Quản Lý',   '0901000001', 1),
+(1, 'manager@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Trần Thị Quản',    '0901000002', 1),
+
+-- PT (role_id = 2)
+(2, 'pt.minh@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Lê Văn Minh',      '0902000001', 1),
+(2, 'pt.linh@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Phạm Thị Linh',    '0902000002', 1),
+(2, 'pt.hung@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Đỗ Mạnh Hùng',     '0902000003', 1),
+(2, 'pt.trang@gympro.vn',     '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Nguyễn Thị Trang', '0902000004', 1),
+(2, 'pt.khoa@gympro.vn',      '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Vũ Đức Khoa',      '0902000005', 0), -- PT bị vô hiệu hóa
+
+-- MEMBER (role_id = 3)
+(3, 'member.an@gmail.com',    '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Nguyễn Văn An',    '0903000001', 1),
+(3, 'member.binh@gmail.com',  '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Trần Thị Bình',    '0903000002', 1),
+(3, 'member.cuong@gmail.com', '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Lê Văn Cường',     '0903000003', 1),
+(3, 'member.dung@gmail.com',  '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Phạm Thị Dung',    '0903000004', 1),
+(3, 'member.em@gmail.com',    '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Đỗ Văn Em',        '0903000005', 1),
+(3, 'member.phuong@gmail.com','$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Hoàng Thị Phương', '0903000006', 1),
+(3, 'member.giang@gmail.com', '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Vũ Văn Giang',     '0903000007', 1),
+(3, 'member.hoa@gmail.com',   '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Bùi Thị Hoa',      '0903000008', 1),
+(3, 'member.hung@gmail.com',  '$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Đinh Văn Hưng',    '0903000009', 1),
+(3, 'member.inactive@gmail.com','$2a$10$ZZTHC6uY5EPWryGOWGr6m.2rvj5vHUerJxJoCGDv.M4DnISCHehya', N'Thành Viên Cũ',    '0903000010', 0); -- Member bị khóa
+GO
+
+-- ============================================================
+-- 3. PT_PROFILES (id PT: 3,4,5,6,7)
+-- ============================================================
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score) VALUES
+(3, N'Tăng cơ, Giảm cân', N'10 năm kinh nghiệm. Chuyên gia thể hình từng thi đấu quốc gia.', N'ACE-CPT, NSCA-CSCS', 4.8),
+(4, N'Yoga, Cardio, Giảm cân', N'HLV yoga được chứng nhận quốc tế, 7 năm kinh nghiệm.', N'RYT-200, ACE', 4.9),
+(5, N'Powerlifting, Strength', N'Cựu vận động viên cử tạ. Chuyên sức mạnh và sức bền.', N'NSCA-CSCS', 4.6),
+(6, N'Phục hồi chức năng, Người cao tuổi', N'Có bằng vật lý trị liệu. Chuyên phục hồi sau chấn thương.', N'NASM-CES, CPT', 4.7),
+(7, N'CrossFit, HIIT', N'HLV CrossFit cấp độ 2.', N'CrossFit L2', 0.0);
+GO
+
+-- ============================================================
+-- 4. MEMBER_PROFILES (id Member: 8-17)
+-- ============================================================
+INSERT INTO member_profiles (user_id, physical_condition) VALUES
+(8,  N'Nam, 25 tuổi, 70kg, 175cm. Mục tiêu: tăng cơ. Không có tiền sử chấn thương.'),
+(9,  N'Nữ, 28 tuổi, 55kg, 162cm. Mục tiêu: giảm cân. Đầu gối yếu, cần lưu ý bài tập chân.'),
+(10, N'Nam, 30 tuổi, 85kg, 178cm. Mục tiêu: giảm mỡ bụng và tăng sức mạnh.'),
+(11, N'Nữ, 22 tuổi, 48kg, 158cm. Mục tiêu: tăng cân, định hình vóc dáng.'),
+(12, N'Nam, 35 tuổi, 90kg, 180cm. Mục tiêu: phục hồi sau chấn thương vai.'),
+(13, N'Nữ, 26 tuổi, 60kg, 165cm. Mục tiêu: cải thiện sức bền cardio.'),
+(14, N'Nam, 27 tuổi, 72kg, 172cm. Mục tiêu: tăng cơ toàn thân.'),
+(15, N'Nữ, 32 tuổi, 65kg, 168cm. Mục tiêu: yoga và thư giãn.'),
+(16, N'Nam, 40 tuổi, 78kg, 170cm. Mục tiêu: duy trì sức khỏe, tim mạch.'),
+(17, N'Nữ, 20 tuổi, 52kg, 160cm. Tài khoản bị khóa - test case.');
+GO
+
+-- ============================================================
+-- 5. PACKAGES
+-- ============================================================
 INSERT INTO packages (name, price, duration_days, description, has_pt, can_choose_pt, has_meal_plan) VALUES
-(N'BASIC', 500000, 30,
- N'Tap tu do. Xem trang chu, blog, video cong khai. Dich vu khan, nuoc tinh phi rieng.',
- 0, 0, 0),
-(N'PREMIUM', 1500000, 30,
- N'Duoc gan PT ngau nhien. Xem lo trinh, diem danh buoi tap. Nuoc, khan, giat do mien phi.',
- 1, 0, 0),
-(N'VIP', 3000000, 30,
- N'Duoc chon PT. Khau phan an do PT len. Tat ca dich vu mien phi.',
- 1, 1, 1);
+(N'BASIC',       500000,  30,  N'Tự tập, sử dụng toàn bộ thiết bị phòng gym.',       0, 0, 0),
+(N'ADVANCED',    1200000, 30,  N'Có PT hỗ trợ 3 buổi/tuần, PT do phòng phân công.',  1, 0, 0),
+(N'PREMIUM',     2000000, 30,  N'Tự chọn PT yêu thích, có chế độ ăn kèm theo.',      1, 1, 1),
+(N'LONG_TERM',   3500000, 90,  N'Gói 3 tháng Premium - tiết kiệm 25%. Tự chọn PT.',  1, 1, 1);
+GO
 
--- Admin mac dinh
-INSERT INTO users (role_id, email, password, full_name, phone) VALUES
-(1, N'admin@gympro.vn', N'$2a$10$hashed_password_here', N'Admin GymPro', N'0901234567');
+-- ============================================================
+-- 6. PROMOTIONS
+-- ============================================================
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES
+(N'GYMPRO10',  10, NULL, '2025-01-01', '2025-12-31', 100, 15, 1),  
+(N'PREMIUM25', 25, 3,    '2025-06-01', '2025-07-31',  20,  2, 1),  
+(N'SUMMER20',  20, NULL, '2025-05-01', '2025-05-31',  50, 50, 0),  
+(N'NEW50',     50, 1,    '2025-07-01', '2025-07-15',   5,  0, 1);  
+GO
 
-PRINT N'=== GymProDB created successfully ===';
-PRINT N'19 tables, 13 indexes, 3 roles, 3 packages, 1 admin account';
+-- ============================================================
+-- 7. MEMBERSHIPS
+-- ============================================================
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason) VALUES
+(8,  3, 3,    '2025-06-01', '2025-06-30', N'ACTIVE',    NULL),
+(9,  2, 4,    '2025-06-10', '2025-07-10', N'ACTIVE',    NULL),
+(10, 4, 5,    '2025-05-01', '2025-07-31', N'ACTIVE',    NULL),
+(11, 3, 6,    '2025-06-15', '2025-07-15', N'ACTIVE',    NULL),
+(12, 3, 3,    '2025-06-20', '2025-07-20', N'ACTIVE',    NULL),
+(13, 1, NULL, '2025-06-01', '2025-06-30', N'ACTIVE',    NULL),
+(14, 2, 4,    '2025-06-05', '2025-07-05', N'ACTIVE',    NULL),
+(15, 1, NULL, '2025-05-01', '2025-05-31', N'PAUSED',    N'Đi công tác nước ngoài 2 tuần'),
+(16, 1, NULL, '2025-04-01', '2025-04-30', N'EXPIRED',   NULL),
+(8,  1, NULL, '2025-03-01', '2025-03-31', N'CANCELLED', NULL);
+GO
+
+-- ============================================================
+-- 8. TRANSACTIONS
+-- ============================================================
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, confirmed_by) VALUES
+(1, 2,    1500000, 2000000, N'BANK',   N'CONFIRMED', 1),
+(2, 1,    1080000, 1200000, N'CASH',   N'CONFIRMED', 1),
+(3, NULL, 3500000, 3500000, N'BANK',   N'CONFIRMED', 1),
+(4, 1,    1800000, 2000000, N'ONLINE', N'CONFIRMED', 2),
+(5, NULL, 2000000, 2000000, N'CASH',   N'CONFIRMED', 1),
+(6, NULL, 500000,  500000,  N'CASH',   N'CONFIRMED', 2),
+(7, 1,    1080000, 1200000, N'BANK',   N'CONFIRMED', 1),
+(8, NULL, 500000,  500000,  N'CASH',   N'CONFIRMED', 2),
+(9, NULL, 500000,  500000,  N'CASH',   N'CONFIRMED', 1),
+(10,NULL, 500000,  500000,  N'BANK',   N'PENDING',   NULL);
+GO
+
+-- ============================================================
+-- 9. EXERCISES
+-- ============================================================
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by) VALUES
+(N'Bench Press',       N'Ngực',   N'Nằm ngửa, đẩy tạ thẳng lên. Giữ lưng thẳng.',           'https://www.youtube.com/watch?v=4Y2ZdHCOXok&pp=ygULYmVuY2ggcHJlc3M%3D', 3),
+(N'Squat',             N'Chân',   N'Đứng thẳng, hạ người xuống như ngồi ghế.',                'https://www.youtube.com/watch?v=SE_edaFo4Y8&pp=ygUFU3F1YXQ%3D', 3),
+(N'Deadlift',          N'Lưng',   N'Kéo tạ từ dưới sàn lên. Kỹ thuật rất quan trọng.',       'https://www.youtube.com/watch?v=XxWcirHIwVo&pp=ygUNZGVhZGxpZnQgZm9ybQ%3D%3D', 5),
+(N'Pull-up',           N'Lưng',   N'Kéo người lên thanh xà đơn.',                             'https://www.youtube.com/watch?v=L6ndoM3jNKM&pp=ygUHcHVsbC11cA%3D%3D', 5),
+(N'Shoulder Press',    N'Vai',    N'Đẩy tạ từ vai lên trên đầu.',                             'https://www.youtube.com/watch?v=0I10wx3fg3c&pp=ygUOU2hvdWxkZXIgUHJlc3M%3D', 3),
+(N'Bicep Curl',        N'Tay',    N'Cuộn tạ tay để tập nhị đầu.',                             'https://www.youtube.com/watch?v=LUUwU0R_kk8&pp=ygUKQmljZXAgQ3VybA%3D%3D', 4),
+(N'Tricep Pushdown',   N'Tay',    N'Kéo cáp xuống để tập tam đầu.',                           'https://www.youtube.com/watch?v=7S9D1WUblL0&pp=ygUgdOG6rXAgdGF5IHNhdSB24bubaSBkw6J5IHRo4burbmc%3D', 3),
+(N'Leg Press',         N'Chân',   N'Đẩy tạ bằng chân trên máy.',                              'https://www.youtube.com/watch?v=K5n2vg3oZa4&pp=ygUJbGVnIHByZXNz', 5),
+(N'Plank',             N'Bụng',   N'Nằm sấp chống hai tay, giữ thẳng người.',                 NULL,                    4),
+(N'Crunches',          N'Bụng',   N'Nằm ngửa, gập bụng lên.',                                 NULL,                    4),
+(N'Romanian Deadlift', N'Đùi sau',N'Biến thể deadlift tập trọng tâm cơ đùi sau.',             'https://www.youtube.com/watch?v=nE4-LcQ9px4&pp=ygURUm9tYW5pYW4gRGVhZGxpZnQ%3D', 5),
+(N'Lat Pulldown',      N'Lưng',   N'Kéo cáp xuống bằng máy pulldown.',                        'https://www.youtube.com/watch?v=ZXb5HGjK1f8&pp=ygUMTGF0IFB1bGxkb3du',3),
+(N'Treadmill',         N'Cardio', N'Chạy bộ trên máy. Điều chỉnh tốc độ và độ dốc.',          NULL,                    4),
+(N'Mountain Climber',  N'Cardio', N'Chống đẩy, đổi chân liên tục nhanh.',                     NULL,                    4),
+(N'Hip Thrust',        N'Mông',   N'Tựa vai ghế, đẩy hông lên cao với tạ đòn trên bụng.',     'https://www.youtube.com/watch?v=pUdIL5x0fWg&pp=ygUKSGlwIFRocnVzdA%3D%3D',4);
+GO
+
+-- ============================================================
+-- 10. TRAINING_ROUTES
+-- ============================================================
+INSERT INTO training_routes (pt_id, member_id, name, is_template, status, start_date) VALUES
+(3, 8,    N'Lộ trình tăng cơ 4 tuần - Nguyễn Văn An',    0, N'ASSIGNED',  '2025-06-01'), 
+(4, 9,    N'Lộ trình giảm cân 4 tuần - Trần Thị Bình',   0, N'ASSIGNED',  '2025-06-10'), 
+(5, 10,   N'Lộ trình sức mạnh 8 tuần - Lê Văn Cường',    0, N'ASSIGNED',  '2025-05-01'), 
+(6, 12,   N'Phục hồi vai 6 tuần - Đỗ Văn Em',            0, N'ASSIGNED',  '2025-06-20'), 
+(3, 14,   N'Tăng cơ toàn thân - Vũ Văn Giang',           0, N'DRAFT',     NULL),         
+(3, NULL, N'[MẪU] Tăng cơ cơ bản 4 tuần',                1, N'ASSIGNED',  NULL),         
+(4, NULL, N'[MẪU] Giảm cân 4 tuần',                      1, N'ASSIGNED',  NULL),         
+(3, 8,    N'Lộ trình nhập môn - Nguyễn Văn An',          0, N'COMPLETED', '2025-03-01'); 
+GO
+
+-- ============================================================
+-- 11. SESSIONS
+-- ============================================================
+INSERT INTO sessions (route_id, week_num, day_num, name, is_rest_day) VALUES
+(1, 1, 1, N'Ngực + Vai + Tay',  0),  
+(1, 1, 2, N'Lưng + Tay',        0),  
+(1, 1, 3, N'Nghỉ ngơi',         1),  
+(1, 1, 4, N'Chân + Mông',       0),  
+(1, 1, 5, N'Cardio + Bụng',     0),  
+(1, 1, 6, N'Nghỉ ngơi',         1),  
+(1, 1, 7, N'Nghỉ ngơi',         1),  
+(1, 2, 1, N'Ngực + Vai + Tay',  0),  
+(1, 2, 2, N'Lưng + Tay',        0),  
+(1, 2, 3, N'Nghỉ ngơi',         1),  
+(1, 2, 4, N'Chân + Mông',       0),  
+(1, 2, 5, N'Cardio + Bụng',     0),  
+(1, 2, 6, N'Nghỉ ngơi',         1),  
+(1, 2, 7, N'Nghỉ ngơi',         1),  
+(2, 1, 1, N'Cardio + Bụng',     0),  
+(2, 1, 2, N'Chân + Mông',       0),  
+(2, 1, 3, N'Nghỉ ngơi',         1),  
+(2, 1, 4, N'Full body nhẹ',     0),  
+(2, 1, 5, N'Cardio dài',        0),  
+(2, 1, 6, N'Nghỉ ngơi',         1),  
+(2, 1, 7, N'Nghỉ ngơi',         1);  
+GO
+
+-- ============================================================
+-- 12. SESSION_EXERCISES
+-- ============================================================
+INSERT INTO session_exercises (session_id, exercise_id, sets, reps, weight_kg, notes) VALUES
+(1, 1,  4, 10, 60.0,  N'Nghỉ 90 giây giữa hiệp'),
+(1, 5,  3, 12, 30.0,  NULL),
+(1, 7,  3, 15, 25.0,  NULL),
+(2, 4,  4, 8,  NULL,  N'Dùng đai lưng nếu cần'),
+(2, 12, 3, 12, 45.0,  NULL),
+(2, 6,  3, 12, 15.0,  NULL),
+(4, 2,  4, 10, 80.0,  N'Gối không vượt qua ngón chân'),
+(4, 8,  3, 12, 100.0, NULL),
+(4, 15, 3, 15, 40.0,  NULL),
+(5, 13, 1, 1,  NULL,  N'Chạy 20 phút tốc độ vừa'),
+(5, 9,  3, 30, NULL,  N'Nghỉ 45 giây giữa hiệp'),
+(5, 10, 3, 20, NULL,  NULL),
+(15,13, 1, 1,  NULL,  N'Chạy 30 phút, nhịp tim 130-150'),
+(15,14, 3, 20, NULL,  N'3 set x 20 reps'),
+(15,9,  3, 45, NULL,  N'Giữ 45 giây mỗi hiệp'),
+(16,2,  3, 15, 50.0,  N'Tạ nhẹ, nhiều reps'),
+(16,8,  3, 15, 70.0,  NULL),
+(16,15, 3, 20, 20.0,  NULL);
+GO
+
+-- ============================================================
+-- 13. ATTENDANCES
+-- ============================================================
+INSERT INTO attendances (member_id, session_id, status) VALUES
+(8, 1, 1), (8, 2, 1), (8, 3, 1), (8, 4, 1), (8, 5, 1),
+(8, 8, 1), (8, 9, 1), (8, 10, 1), (8, 11, 0), (8, 12, 1),
+(9, 15, 1), (9, 16, 1), (9, 17, 1), (9, 18, 0), (9, 19, 1),
+(10, 1, 1), (10, 2, 1), (10, 4, 1);
+GO
+
+-- ============================================================
+-- 14. PT_NOTES
+-- ============================================================
+INSERT INTO pt_notes (pt_id, member_id, content) VALUES
+(3, 8,  N'An tiến bộ tốt sau 2 tuần. Tăng mức tạ Bench Press từ 60kg lên 65kg từ tuần tới.'),
+(3, 8,  N'Kỹ thuật Squat cần cải thiện. Gối đang bị vạy vào trong, nhắc nhở thường xuyên.'),
+(3, 12, N'Vai phải vẫn còn đau khi nâng tay ngang. Chưa cho tập Shoulder Press. Chuyển sang bài phục hồi nhẹ.'),
+(4, 9,  N'Bình giảm 1.5kg sau 3 tuần. Tiếp tục duy trì chế độ ăn và tăng thời gian cardio.'),
+(5, 10, N'Cường deadlift 120kg clean. Sẵn sàng tăng volume tuần tới.');
+GO
+
+-- ============================================================
+-- 15. PT_COMMENTS
+-- ============================================================
+INSERT INTO pt_comments (pt_id, member_id, route_id, content) VALUES
+(3, 8,  1, N'PT Minh nhiệt tình, hướng dẫn kỹ thuật rõ ràng. Tôi đã thấy kết quả rõ sau 3 tuần!'),
+(4, 9,  2, N'Chị Linh rất tận tâm và có kiến thức chuyên sâu về dinh dưỡng. Rất hài lòng.'),
+(3, 8,  8, N'Lộ trình nhập môn giúp tôi làm quen với gym rất tốt. 5 sao!');
+GO
+
+-- ============================================================
+-- 16. DIETS
+-- ============================================================
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES
+(8, 3, '2025-06-23',
+    N'3 quả trứng luộc + bánh mì ngũ cốc + sữa không đường (450 kcal)',
+    N'Cơm gạo lứt 150g + ức gà 200g + rau xanh luộc (600 kcal)',
+    N'Cá hồi 150g áp chảo + khoai lang 100g + salad (500 kcal)'),
+(8, 3, '2025-06-24',
+    N'Yến mạch 80g + chuối 1 quả + protein shake (420 kcal)',
+    N'Cơm gạo lứt 150g + thịt bò 150g + bông cải xanh (580 kcal)',
+    N'Ức gà 200g hấp + khoai tây luộc + dưa leo (480 kcal)'),
+(11, 6, '2025-06-23',
+    N'2 quả trứng + avocado toast + nước ép cam (400 kcal)',
+    N'Cơm trắng 150g + đậu phụ + rau cải xào (450 kcal)',
+    N'Cháo yến mạch + hạt hạnh nhân + sữa chua (350 kcal)');
+GO
+
+-- ============================================================
+-- 17. REVIEWS
+-- ============================================================
+INSERT INTO reviews (member_id, pt_id, rating_star, comment) VALUES
+(8,  3, 5, N'Tuyệt vời! Kỹ thuật tốt, nhiệt tình, đúng giờ.'),
+(9,  4, 5, N'Chị Linh rất chuyên nghiệp. Kế hoạch ăn uống rất khoa học.'),
+(10, 5, 4, N'Anh Hùng giỏi về sức mạnh, có thể giải thích thêm về dinh dưỡng.'),
+(12, 6, 5, N'Nhờ PT Trang vai tôi đã hồi phục hoàn toàn sau 5 tuần!'),
+(14, 4, 5, N'Trước đây tôi hay bị chấn thương, từ khi tập với chị Linh không còn vấn đề gì.');
+GO
+
+-- ============================================================
+-- 18. BLOGS
+-- ============================================================
+INSERT INTO blogs (author_id, title, content, status) VALUES
+(3, N'5 lỗi kỹ thuật phổ biến khi tập Squat',
+   N'Squat là bài tập nền tảng nhưng cũng là bài dễ chấn thương nhất nếu sai kỹ thuật. Dưới đây là 5 lỗi phổ biến nhất...',
+   N'PUBLISHED'),
+(4, N'Chế độ ăn giảm mỡ hiệu quả: Không cần nhịn ăn',
+   N'Nhiều người nghĩ giảm mỡ = nhịn ăn. Sự thật là bạn cần ăn đúng, không phải ăn ít...',
+   N'PUBLISHED'),
+(1, N'GymPro khai trương cơ sở mới tại Quận 7',
+   N'Chúng tôi vui mừng thông báo cơ sở GymPro thứ 3 tại 123 Nguyễn Lương Bằng sẽ chính thức hoạt động từ 01/07/2025...',
+   N'PUBLISHED'),
+(5, N'Powerlifting cho người mới bắt đầu',
+   N'Bài viết đang được soạn thảo...',
+   N'DRAFT');
+GO
+
+-- ============================================================
+-- 19. NOTIFICATIONS
+-- ============================================================
+INSERT INTO notifications (user_id, sender_id, title, message, is_read) VALUES
+(8,  NULL, N'Chào mừng đến với GymPro!',
+     N'Tài khoản của bạn đã được kích hoạt thành công. Bắt đầu hành trình luyện tập ngay hôm nay!', 1),
+(9,  NULL, N'Gói tập sắp hết hạn',
+     N'Gói tập của bạn sẽ hết hạn sau 7 ngày. Gia hạn ngay để không gián đoạn lịch tập!', 0),
+(16, NULL, N'Gói tập đã hết hạn',
+     N'Gói tập của bạn đã hết hạn từ 30/04/2025. Vui lòng đăng ký gói mới để tiếp tục.', 0),
+(8,  3,    N'Lộ trình tuần 3 đã sẵn sàng',
+    N'Chào An, mình đã cập nhật lộ trình tuần 3 cho bạn. Hãy xem và cho mình biết nếu có thắc mắc nhé!', 1),
+(9,  4,    N'Nhắc nhở: Uống đủ 2.5L nước mỗi ngày',
+    N'Chào Bình, trong tuần này đừng quên uống đủ nước nhé. Rất quan trọng cho quá trình giảm cân!', 0),
+(12, 3,    N'Cần điều chỉnh bài tập vai',
+    N'Chào Em, mình thấy vai bạn vẫn còn đau. Buổi tập tới mình sẽ thay thế Shoulder Press bằng bài nhẹ hơn.', 0),
+(8,  1,    N'Phòng gym đóng cửa bảo trì 25/06',
+    N'GymPro sẽ đóng cửa để bảo trì thiết bị vào ngày 25/06/2025 (Thứ Tư). Xin lỗi vì sự bất tiện này.', 1),
+(9,  1,    N'Phòng gym đóng cửa bảo trì 25/06',
+    N'GymPro sẽ đóng cửa để bảo trì thiết bị vào ngày 25/06/2025 (Thứ Tư). Xin lỗi vì sự bất tiện này.', 0),
+(10, 1,    N'Phòng gym đóng cửa bảo trì 25/06',
+    N'GymPro sẽ đóng cửa để bảo trì thiết bị vào ngày 25/06/2025 (Thứ Tư). Xin lỗi vì sự bất tiện này.', 0);
+GO
+
+-- ============================================================
+-- VERIFY
+-- ============================================================
+SELECT 'roles'             AS TableName, COUNT(*) AS RecordCount FROM roles             UNION ALL
+SELECT 'users',                          COUNT(*)                FROM users             UNION ALL
+SELECT 'pt_profiles',                    COUNT(*)                FROM pt_profiles       UNION ALL
+SELECT 'member_profiles',                COUNT(*)                FROM member_profiles   UNION ALL
+SELECT 'packages',                       COUNT(*)                FROM packages          UNION ALL
+SELECT 'promotions',                     COUNT(*)                FROM promotions        UNION ALL
+SELECT 'memberships',                    COUNT(*)                FROM memberships       UNION ALL
+SELECT 'transactions',                   COUNT(*)                FROM transactions      UNION ALL
+SELECT 'exercises',                      COUNT(*)                FROM exercises         UNION ALL
+SELECT 'training_routes',                COUNT(*)                FROM training_routes   UNION ALL
+SELECT 'sessions',                       COUNT(*)                FROM sessions          UNION ALL
+SELECT 'session_exercises',              COUNT(*)                FROM session_exercises UNION ALL
+SELECT 'attendances',                    COUNT(*)                FROM attendances       UNION ALL
+SELECT 'pt_notes',                       COUNT(*)                FROM pt_notes          UNION ALL
+SELECT 'pt_comments',                    COUNT(*)                FROM pt_comments       UNION ALL
+SELECT 'diets',                          COUNT(*)                FROM diets             UNION ALL
+SELECT 'reviews',                        COUNT(*)                FROM reviews           UNION ALL
+SELECT 'blogs',                          COUNT(*)                FROM blogs             UNION ALL
+SELECT 'notifications',                  COUNT(*)                FROM notifications;
 GO
