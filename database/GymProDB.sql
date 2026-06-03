@@ -645,6 +645,3 @@ SELECT 'reviews',                        COUNT(*)                FROM reviews   
 SELECT 'blogs',                          COUNT(*)                FROM blogs             UNION ALL
 SELECT 'notifications',                  COUNT(*)                FROM notifications;
 GO
-use GymProDB
-select * from users
-$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO
