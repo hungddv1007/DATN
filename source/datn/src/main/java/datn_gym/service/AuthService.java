@@ -28,7 +28,6 @@ public class AuthService {
 
     // Đăng nhập
     public JwtResponse login(LoginRequest request) {
-        // Xác thực email + mật khẩu
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -36,12 +35,10 @@ public class AuthService {
                 )
         );
 
-        // Tạo JWT token
         String token = tokenProvider.generateToken(authentication);
 
-        // Lấy thông tin user
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
 
         return JwtResponse.builder()
                 .token(token)
@@ -54,18 +51,27 @@ public class AuthService {
                 .build();
     }
 
-    // Đăng ký (mặc định role = MEMBER)
+    // Đăng ký
     public MessageResponse register(RegisterRequest request) {
-        // Kiểm tra email đã tồn tại chưa
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email đã được sử dụng!");
+        // Lỗi 1: Mật khẩu xác nhận không khớp
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("Mật khẩu xác nhận không khớp!");
         }
 
-        // Lấy role MEMBER
-        Role roleMember = roleRepository.findByName("MEMBER")
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy vai trò MEMBER"));
+        // Lỗi 2: Email đã tồn tại
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email này đã được đăng ký. Vui lòng sử dụng email khác!");
+        }
 
-        // Tạo user mới
+        // Lỗi 3: Số điện thoại đã tồn tại 
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            throw new IllegalArgumentException("Số điện thoại này đã được sử dụng. Vui lòng nhập số khác!");
+        }
+
+        // Lỗi 4: Không tìm thấy Role MEMBER
+        Role roleMember = roleRepository.findByName("MEMBER")
+                .orElseThrow(() -> new RuntimeException("Lỗi hệ thống: Không tìm thấy vai trò MEMBER"));
+
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -77,6 +83,6 @@ public class AuthService {
 
         userRepository.save(user);
 
-        return new MessageResponse("Đăng ký thành công!");
+        return new MessageResponse("Đăng ký tài khoản thành công!");
     }
 }
