@@ -36,4 +36,11 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
             @Param("toDate") LocalDate toDate);
 
     Page<Membership> findByStatus(String status, Pageable pageable);
+    int countByPt_IdAndStatus(Integer ptId, String status);
+    
+    @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
+           "m.pt.id = :ptId AND m.user.id = :memberId AND m.status = 'ACTIVE'")
+    boolean existsActiveMembershipByPtAndMember(
+            @Param("ptId") Integer ptId,
+            @Param("memberId") Integer memberId);
 }

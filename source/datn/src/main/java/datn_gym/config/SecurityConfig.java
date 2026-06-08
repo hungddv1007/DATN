@@ -38,13 +38,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // Tắt CSRF vì dùng JWT (stateless)
             .csrf(csrf -> csrf.disable())
 
-            // Cho phép CORS
             .cors(cors -> cors.configurationSource(request -> {
                 var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-                corsConfig.addAllowedOrigin("http://localhost:5173"); // React dev server
+                corsConfig.addAllowedOrigin("http://localhost:5173");
                 corsConfig.addAllowedOrigin("http://localhost:3000");
                 corsConfig.addAllowedMethod("*");
                 corsConfig.addAllowedHeader("*");
@@ -52,32 +50,36 @@ public class SecurityConfig {
                 return corsConfig;
             }))
 
-            // Không tạo session (stateless JWT)
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            // Cấu hình quyền truy cập
             .authorizeHttpRequests(auth -> auth
-                // API công khai - không cần đăng nhập
+
+                // ✅ QUAN TRỌNG: Rule cụ thể phải đặt TRƯỚC rule chung
+                // Spring Security đọc từ trên xuống, dừng ở rule đầu tiên match
+
+                // 1. Auth - công khai hoàn toàn
                 .requestMatchers("/api/auth/**").permitAll()
+
+                // 2. API Admin - chỉ ADMIN (đặt trước rule GET chung)
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                // 3. API PT - chỉ PT (đặt trước rule GET chung)
+                .requestMatchers("/api/pt/**").hasRole("PT")
+
+                // 4. API Hội viên - chỉ MEMBER (đặt trước rule GET chung)
+                .requestMatchers("/api/hoi-vien/**").hasRole("MEMBER")
+
+                // 5. Các GET công khai (đặt SAU các rule role cụ thể)
                 .requestMatchers(HttpMethod.GET, "/api/goi-tap/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/bai-viet/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/tim-kiem/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/pt-profiles/**").permitAll()
 
-                // API Admin
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
-                // API PT
-                .requestMatchers("/api/pt/**").hasRole("PT")
-
-                // API Hội viên
-                .requestMatchers("/api/hoi-vien/**").hasRole("MEMBER")
-
-                // Tất cả API khác cần đăng nhập
+                // 6. Còn lại cần đăng nhập
                 .anyRequest().authenticated()
             )
 
-            // Thêm JWT filter trước UsernamePasswordAuthenticationFilter
             .addFilterBefore(jwtAuthenticationFilter,
                     UsernamePasswordAuthenticationFilter.class);
 
