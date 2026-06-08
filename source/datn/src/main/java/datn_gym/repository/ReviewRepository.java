@@ -19,4 +19,5 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
     List<Object[]> getRatingStats(@Param("ptId") Integer ptId);
 
     List<Review> findByMember_IdOrderByCreatedAtDesc(Integer memberId);
+    int countByPt_Id(Integer ptId);
 }

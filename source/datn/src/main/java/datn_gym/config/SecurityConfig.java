@@ -59,10 +59,12 @@ public class SecurityConfig {
             // Cấu hình quyền truy cập
             .authorizeHttpRequests(auth -> auth
                 // API công khai - không cần đăng nhập
+                //NHỚ THÊM API CHỖ NI 
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/goi-tap/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/bai-viet/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/tim-kiem/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
 
                 // API Admin
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

@@ -36,4 +36,5 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
             @Param("toDate") LocalDate toDate);
 
     Page<Membership> findByStatus(String status, Pageable pageable);
+    int countByPt_IdAndStatus(Integer ptId, String status);
 }
