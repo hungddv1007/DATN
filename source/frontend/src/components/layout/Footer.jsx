@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Globe, MessageCircle, Video, Camera, MapPin, Phone, Mail } from 'lucide-react';
 import './Footer.css';
 
@@ -19,18 +20,18 @@ const Footer = () => {
         
         <div className="footer-links">
           <h4>VỀ CHÚNG TÔI</h4>
-          <a href="#">Giới thiệu</a>
-          <a href="#">Huấn luyện viên</a>
-          <a href="#">Thư viện</a>
-          <a href="#">Chính sách bảo mật</a>
+          <Link to="/about">Giới thiệu</Link>
+          <Link to="/pts">Huấn luyện viên</Link>
+          <Link to="/gallery">Thư viện</Link>
+          <Link to="/privacy">Chính sách bảo mật</Link>
         </div>
         
         <div className="footer-links">
           <h4>DỊCH VỤ</h4>
-          <a href="#">Gói Basic</a>
-          <a href="#">Gói Premium</a>
-          <a href="#">Gói VIP</a>
-          <a href="#">Lịch tập</a>
+          <Link to="/packages">Gói Basic</Link>
+          <Link to="/packages">Gói Premium</Link>
+          <Link to="/packages">Gói VIP</Link>
+          <Link to="/schedule">Lịch tập</Link>
         </div>
         
         <div className="footer-contact">
