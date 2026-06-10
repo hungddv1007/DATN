@@ -15,6 +15,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -31,18 +34,18 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
+            AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
 
+            // Cấu hình CORS để Next.js gọi API không bị lỗi
             .cors(cors -> cors.configurationSource(request -> {
-                var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-                corsConfig.addAllowedOrigin("http://localhost:5173");
+                CorsConfiguration corsConfig = new CorsConfiguration();
                 corsConfig.addAllowedOrigin("http://localhost:3000");
                 corsConfig.addAllowedMethod("*");
                 corsConfig.addAllowedHeader("*");
@@ -50,6 +53,7 @@ public class SecurityConfig {
                 return corsConfig;
             }))
 
+            // Không tạo session (stateless JWT)
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
@@ -68,12 +72,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/pt/**").hasRole("PT")
 
                 // 4. API Hội viên - chỉ MEMBER (đặt trước rule GET chung)
-                .requestMatchers("/api/hoi-vien/**").hasRole("MEMBER")
+                // Đổi từ /api/hoi-vien/ thành /api/member/
+                .requestMatchers("/api/member/**").hasRole("MEMBER")
 
                 // 5. Các GET công khai (đặt SAU các rule role cụ thể)
-                .requestMatchers(HttpMethod.GET, "/api/goi-tap/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/bai-viet/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/tim-kiem/**").permitAll()
+                // Đã chuyển đổi sang Tiếng Anh
+                .requestMatchers(HttpMethod.GET, "/api/packages/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/search/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/pt-profiles/**").permitAll()
 
                 // 6. Còn lại cần đăng nhập
