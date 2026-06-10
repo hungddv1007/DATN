@@ -77,7 +77,7 @@ public class PtCommentController {
     // MEMBER APIs
     // ----------------------------------------------------------------
 
-    @GetMapping("/api/hoi-vien/comments")
+    @GetMapping("/api/member/comments")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<List<PtCommentResponse>> getMyComments(
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -85,7 +85,7 @@ public class PtCommentController {
                 ptCommentService.getMyComments(userDetails.getUsername()));
     }
 
-    @GetMapping("/api/hoi-vien/comments/route/{routeId}")
+    @GetMapping("/api/member/comments/route/{routeId}")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<List<PtCommentResponse>> getMyCommentsByRoute(
             @AuthenticationPrincipal UserDetails userDetails,
