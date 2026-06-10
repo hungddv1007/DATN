@@ -37,9 +37,9 @@ public class ReviewController {
     // MEMBER APIs
     // ----------------------------------------------------------------
 
-    // GET /api/hoi-vien/reviews
+    // GET /api/member/reviews
     // Member xem tất cả đánh giá mình đã gửi
-    @GetMapping("/api/hoi-vien/reviews")
+    @GetMapping("/api/member/reviews")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<List<ReviewResponse>> getMyReviews(
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -47,9 +47,9 @@ public class ReviewController {
                 reviewService.getMyReviews(userDetails.getUsername()));
     }
 
-    // POST /api/hoi-vien/reviews
+    // POST /api/member/reviews
     // Member tạo đánh giá mới
-    @PostMapping("/api/hoi-vien/reviews")
+    @PostMapping("/api/member/reviews")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ReviewResponse> createReview(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -58,9 +58,9 @@ public class ReviewController {
                 .body(reviewService.createReview(userDetails.getUsername(), request));
     }
 
-    // PUT /api/hoi-vien/reviews/{reviewId}
+    // PUT /api/member/reviews/{reviewId}
     // Member sửa đánh giá — chỉ gửi ratingStar và comment
-    @PutMapping("/api/hoi-vien/reviews/{reviewId}")
+    @PutMapping("/api/member/reviews/{reviewId}")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ReviewResponse> updateReview(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -71,9 +71,9 @@ public class ReviewController {
                         userDetails.getUsername(), reviewId, request));
     }
 
-    // DELETE /api/hoi-vien/reviews/{reviewId}
+    // DELETE /api/member/reviews/{reviewId}
     // Member xóa đánh giá
-    @DeleteMapping("/api/hoi-vien/reviews/{reviewId}")
+    @DeleteMapping("/api/member/reviews/{reviewId}")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<MessageResponse> deleteReview(
             @AuthenticationPrincipal UserDetails userDetails,
