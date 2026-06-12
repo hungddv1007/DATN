@@ -456,8 +456,8 @@ INSERT INTO training_routes (pt_id, member_id, name, is_template, status, start_
 (5, 10,   N'Lộ trình sức mạnh 8 tuần - Lê Văn Cường',    0, N'ASSIGNED',  '2025-05-01'), 
 (6, 12,   N'Phục hồi vai 6 tuần - Đỗ Văn Em',            0, N'ASSIGNED',  '2025-06-20'), 
 (3, 14,   N'Tăng cơ toàn thân - Vũ Văn Giang',           0, N'DRAFT',     NULL),         
-(3, NULL, N'[MẪU] Tăng cơ cơ bản 4 tuần',                1, N'ASSIGNED',  NULL),         
-(4, NULL, N'[MẪU] Giảm cân 4 tuần',                      1, N'ASSIGNED',  NULL),         
+(3, NULL, N'[MẪU] Tăng cơ cơ bản 4 tuần', 1, N'DRAFT', NULL),
+(4, NULL, N'[MẪU] Giảm cân 4 tuần',        1, N'DRAFT', NULL),        
 (3, 8,    N'Lộ trình nhập môn - Nguyễn Văn An',          0, N'COMPLETED', '2025-03-01'); 
 GO
 
@@ -537,9 +537,9 @@ GO
 -- 15. PT_COMMENTS
 -- ============================================================
 INSERT INTO pt_comments (pt_id, member_id, route_id, content) VALUES
-(3, 8,  1, N'PT Minh nhiệt tình, hướng dẫn kỹ thuật rõ ràng. Tôi đã thấy kết quả rõ sau 3 tuần!'),
-(4, 9,  2, N'Chị Linh rất tận tâm và có kiến thức chuyên sâu về dinh dưỡng. Rất hài lòng.'),
-(3, 8,  8, N'Lộ trình nhập môn giúp tôi làm quen với gym rất tốt. 5 sao!');
+(3, 8,  1, N'An hoàn thành tuần đầu rất tốt. Thể lực đáp ứng được khối lượng tạ, tuy nhiên cần chú ý hít thở sâu và đều hơn trong bài tập ngực nhé!'),
+(4, 9,  2, N'Bình rất nỗ lực trong các bài Cardio. Chị thấy nhịp tim của em đã ổn định và sức bền cải thiện rõ rệt so với tuần trước. Cố gắng duy trì thực đơn nhé!'),
+(3, 8,  8, N'Chúc mừng An đã hoàn thành xuất sắc lộ trình nhập môn 4 tuần. Khung xương và cơ bắp phản ứng rất tốt, chúng ta đã sẵn sàng bước sang giáo án tăng cơ nặng hơn.');
 GO
 
 -- ============================================================
