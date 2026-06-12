@@ -6,11 +6,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 public interface MembershipRepository extends JpaRepository<Membership, Integer> {
+
     Optional<Membership> findByUser_IdAndStatus(Integer userId, String status);
     List<Membership> findByUser_IdOrderByCreatedAtDesc(Integer userId);
     List<Membership> findByPt_IdAndStatus(Integer ptId, String status);
@@ -36,11 +38,31 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
             @Param("toDate") LocalDate toDate);
 
     Page<Membership> findByStatus(String status, Pageable pageable);
+
     int countByPt_IdAndStatus(Integer ptId, String status);
-    
+
+    // Dùng cho: PtNote, PtComment, TrainingRoute, Review
     @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
            "m.pt.id = :ptId AND m.user.id = :memberId AND m.status = 'ACTIVE'")
     boolean existsActiveMembershipByPtAndMember(
+            @Param("ptId") Integer ptId,
+            @Param("memberId") Integer memberId);
+
+    // FIX KIẾN TRÚC: Chuyển từ DietRepository về đây
+    // Dùng cho: DietService.validateMemberIsVip()
+    // Kiểm tra HV có gói ACTIVE với hasMealPlan = true không
+    @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
+           "m.user.id = :memberId AND m.status = 'ACTIVE' " +
+           "AND m.gymPackage.hasMealPlan = true")
+    boolean existsVipMembership(@Param("memberId") Integer memberId);
+
+    // FIX KIẾN TRÚC: Chuyển từ DietRepository về đây
+    // Dùng cho: DietService.validatePtCanManageDiet()
+    // Kiểm tra HV có gói VIP ACTIVE và đang thuộc PT này không
+    @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
+           "m.pt.id = :ptId AND m.user.id = :memberId " +
+           "AND m.status = 'ACTIVE' AND m.gymPackage.hasMealPlan = true")
+    boolean existsVipMembershipByPtAndMember(
             @Param("ptId") Integer ptId,
             @Param("memberId") Integer memberId);
 }
