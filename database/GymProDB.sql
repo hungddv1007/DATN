@@ -1,7 +1,7 @@
 ﻿-- ============================================================
 -- GYMPRO DATABASE - SQL Server 2025
 -- Website Quan Ly Phong Tap Gym
--- 19 bang
+-- 19 bang (Đã chuẩn hóa Data mẫu theo file Chi tiết dự án)
 -- ============================================================
 
 IF DB_ID('GymProDB') IS NOT NULL
@@ -312,13 +312,6 @@ CREATE INDEX IX_diets_date ON diets(date);
 -- ============================================================
 
 -- ============================================================
--- GYMPRO SEED DATA - SQL Server 2025
--- Mục đích: Test đủ chức năng, không dư thừa
--- Số lượng: 4 Admin, 5 PT, 10 Member, đủ các trạng thái
--- Đã được đồng bộ hoàn toàn với schema tiếng Anh của GymProDB
--- ============================================================
-
--- ============================================================
 -- 1. ROLES
 -- ============================================================
 INSERT INTO roles (name) VALUES
@@ -332,18 +325,16 @@ GO
 -- admin: id 1-2 | PT: id 3-7 | Member: id 8-17
 -- ============================================================
 INSERT INTO users (role_id, email, password, full_name, phone, status) VALUES
--- ADMIN (role_id = 1) Password toàn bộ đều là = 123123123
+-- ADMIN
 (1, 'admin@gympro.vn',        '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Nguyễn Quản Lý',   '0901000001', 1),
 (1, 'manager@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Trần Thị Quản',    '0901000002', 1),
-							   
-
+-- PT
 (2, 'pt.minh@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Lê Văn Minh',      '0902000001', 1),
 (2, 'pt.linh@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Phạm Thị Linh',    '0902000002', 1),
 (2, 'pt.hung@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Đỗ Mạnh Hùng',     '0902000003', 1),
 (2, 'pt.trang@gympro.vn',     '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Nguyễn Thị Trang', '0902000004', 1),
-(2, 'pt.khoa@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Vũ Đức Khoa',      '0902000005', 0), -- PT bị vô hiệu hóa
-							  
-
+(2, 'pt.khoa@gympro.vn',      '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Vũ Đức Khoa',      '0902000005', 0), 
+-- MEMBERS
 (3, 'member.an@gmail.com',    '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Nguyễn Văn An',    '0903000001', 1),
 (3, 'member.binh@gmail.com',  '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Trần Thị Bình',    '0903000002', 1),
 (3, 'member.cuong@gmail.com', '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Lê Văn Cường',     '0903000003', 1),
@@ -353,11 +344,11 @@ INSERT INTO users (role_id, email, password, full_name, phone, status) VALUES
 (3, 'member.giang@gmail.com', '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Vũ Văn Giang',     '0903000007', 1),
 (3, 'member.hoa@gmail.com',   '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Bùi Thị Hoa',      '0903000008', 1),
 (3, 'member.hung@gmail.com',  '$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Đinh Văn Hưng',    '0903000009', 1),
-(3, 'member.inactive@gmail.com','$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Thành Viên Cũ',    '0903000010', 0); -- Member bị khóa
+(3, 'member.inactive@gmail.com','$2a$10$UDUoFA/301VIorR5zYq/ZuN5fbuUFaYd6pZoj6h0w6JiSwSx.6iDO', N'Thành Viên Cũ',    '0903000010', 0);
 GO
 
 -- ============================================================
--- 3. PT_PROFILES (id PT: 3,4,5,6,7)
+-- 3. PT_PROFILES
 -- ============================================================
 INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score) VALUES
 (3, N'Tăng cơ, Giảm cân', N'10 năm kinh nghiệm. Chuyên gia thể hình từng thi đấu quốc gia.', N'ACE-CPT, NSCA-CSCS', 4.8),
@@ -368,7 +359,7 @@ INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_scor
 GO
 
 -- ============================================================
--- 4. MEMBER_PROFILES (id Member: 8-17)
+-- 4. MEMBER_PROFILES
 -- ============================================================
 INSERT INTO member_profiles (user_id, physical_condition) VALUES
 (8,  N'Nam, 25 tuổi, 70kg, 175cm. Mục tiêu: tăng cơ. Không có tiền sử chấn thương.'),
@@ -384,55 +375,55 @@ INSERT INTO member_profiles (user_id, physical_condition) VALUES
 GO
 
 -- ============================================================
--- 5. PACKAGES
+-- 5. PACKAGES (Cập nhật chuẩn 3 gói theo tài liệu)
 -- ============================================================
 INSERT INTO packages (name, price, duration_days, description, has_pt, can_choose_pt, has_meal_plan) VALUES
-(N'BASIC',       500000,  30,  N'Tự tập, sử dụng toàn bộ thiết bị phòng gym.',       0, 0, 0),
-(N'ADVANCED',    1200000, 30,  N'Có PT hỗ trợ 3 buổi/tuần, PT do phòng phân công.',  1, 0, 0),
-(N'PREMIUM',     2000000, 30,  N'Tự chọn PT yêu thích, có chế độ ăn kèm theo.',      1, 1, 1),
-(N'LONG_TERM',   3500000, 90,  N'Gói 3 tháng Premium - tiết kiệm 25%. Tự chọn PT.',  1, 1, 1);
+(N'BASIC',   500000,  30, N'Tự tập, xem video công khai. Trả phí dịch vụ phòng tập.', 0, 0, 0),
+(N'PREMIUM', 1500000, 30, N'Có PT hỗ trợ (hệ thống gán ngẫu nhiên), điểm danh, đánh giá PT, miễn phí dịch vụ.', 1, 0, 0),
+(N'VIP',     2500000, 30, N'Tự chọn PT yêu thích, có thực đơn ăn uống riêng, miễn phí dịch vụ.', 1, 1, 1);
 GO
 
 -- ============================================================
--- 6. PROMOTIONS
+-- 6. PROMOTIONS (Update package_id theo 3 gói mới)
 -- ============================================================
 INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES
 (N'GYMPRO10',  10, NULL, '2025-01-01', '2025-12-31', 100, 15, 1),  
-(N'PREMIUM25', 25, 3,    '2025-06-01', '2025-07-31',  20,  2, 1),  
+(N'VIP25',     25, 3,    '2025-06-01', '2025-07-31',  20,  2, 1),  
 (N'SUMMER20',  20, NULL, '2025-05-01', '2025-05-31',  50, 50, 0),  
-(N'NEW50',     50, 1,    '2025-07-01', '2025-07-15',   5,  0, 1);  
+(N'BASIC50',   50, 1,    '2025-07-01', '2025-07-15',   5,  0, 1);  
 GO
 
 -- ============================================================
--- 7. MEMBERSHIPS
+-- 7. MEMBERSHIPS 
+-- (Phân loại: Gói 1 = Basic ko PT | Gói 2 = Premium PT random | Gói 3 = VIP tự chọn PT)
 -- ============================================================
 INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason) VALUES
-(8,  3, 3,    '2025-06-01', '2025-06-30', N'ACTIVE',    NULL),
-(9,  2, 4,    '2025-06-10', '2025-07-10', N'ACTIVE',    NULL),
-(10, 4, 5,    '2025-05-01', '2025-07-31', N'ACTIVE',    NULL),
-(11, 3, 6,    '2025-06-15', '2025-07-15', N'ACTIVE',    NULL),
-(12, 3, 3,    '2025-06-20', '2025-07-20', N'ACTIVE',    NULL),
-(13, 1, NULL, '2025-06-01', '2025-06-30', N'ACTIVE',    NULL),
-(14, 2, 4,    '2025-06-05', '2025-07-05', N'ACTIVE',    NULL),
+(8,  3, 3,    '2025-06-01', '2025-06-30', N'ACTIVE',    NULL), -- VIP
+(9,  2, 4,    '2025-06-10', '2025-07-10', N'ACTIVE',    NULL), -- Premium
+(10, 2, 5,    '2025-05-01', '2025-07-31', N'ACTIVE',    NULL), -- Premium 
+(11, 3, 6,    '2025-06-15', '2025-07-15', N'ACTIVE',    NULL), -- VIP 
+(12, 3, 3,    '2025-06-20', '2025-07-20', N'ACTIVE',    NULL), -- VIP
+(13, 1, NULL, '2025-06-01', '2025-06-30', N'ACTIVE',    NULL), -- Basic
+(14, 2, 4,    '2025-06-05', '2025-07-05', N'ACTIVE',    NULL), -- Premium
 (15, 1, NULL, '2025-05-01', '2025-05-31', N'PAUSED',    N'Đi công tác nước ngoài 2 tuần'),
 (16, 1, NULL, '2025-04-01', '2025-04-30', N'EXPIRED',   NULL),
 (8,  1, NULL, '2025-03-01', '2025-03-31', N'CANCELLED', NULL);
 GO
 
 -- ============================================================
--- 8. TRANSACTIONS
+-- 8. TRANSACTIONS (Cập nhật giá theo gói chuẩn mới)
 -- ============================================================
 INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, confirmed_by) VALUES
-(1, 2,    1500000, 2000000, N'BANK',   N'CONFIRMED', 1),
-(2, 1,    1080000, 1200000, N'CASH',   N'CONFIRMED', 1),
-(3, NULL, 3500000, 3500000, N'BANK',   N'CONFIRMED', 1),
-(4, 1,    1800000, 2000000, N'ONLINE', N'CONFIRMED', 2),
-(5, NULL, 2000000, 2000000, N'CASH',   N'CONFIRMED', 1),
-(6, NULL, 500000,  500000,  N'CASH',   N'CONFIRMED', 2),
-(7, 1,    1080000, 1200000, N'BANK',   N'CONFIRMED', 1),
-(8, NULL, 500000,  500000,  N'CASH',   N'CONFIRMED', 2),
-(9, NULL, 500000,  500000,  N'CASH',   N'CONFIRMED', 1),
-(10,NULL, 500000,  500000,  N'BANK',   N'PENDING',   NULL);
+(1, 2,    1875000, 2500000, N'BANK',   N'CONFIRMED', 1), -- VIP (áp mã VIP25)
+(2, 1,    1350000, 1500000, N'CASH',   N'CONFIRMED', 1), -- Premium (áp mã GYMPRO10)
+(3, NULL, 4500000, 4500000, N'BANK',   N'CONFIRMED', 1), -- Premium 3 tháng (1.5m * 3)
+(4, 1,    2250000, 2500000, N'ONLINE', N'CONFIRMED', 2), -- VIP (áp mã GYMPRO10)
+(5, NULL, 2500000, 2500000, N'CASH',   N'CONFIRMED', 1), -- VIP
+(6, NULL, 500000,  500000,  N'CASH',   N'CONFIRMED', 2), -- Basic
+(7, 1,    1350000, 1500000, N'BANK',   N'CONFIRMED', 1), -- Premium (áp mã GYMPRO10)
+(8, NULL, 500000,  500000,  N'CASH',   N'CONFIRMED', 2), -- Basic
+(9, NULL, 500000,  500000,  N'CASH',   N'CONFIRMED', 1), -- Basic
+(10,NULL, 500000,  500000,  N'BANK',   N'PENDING',   NULL); -- Basic
 GO
 
 -- ============================================================
@@ -465,8 +456,8 @@ INSERT INTO training_routes (pt_id, member_id, name, is_template, status, start_
 (5, 10,   N'Lộ trình sức mạnh 8 tuần - Lê Văn Cường',    0, N'ASSIGNED',  '2025-05-01'), 
 (6, 12,   N'Phục hồi vai 6 tuần - Đỗ Văn Em',            0, N'ASSIGNED',  '2025-06-20'), 
 (3, 14,   N'Tăng cơ toàn thân - Vũ Văn Giang',           0, N'DRAFT',     NULL),         
-(3, NULL, N'[MẪU] Tăng cơ cơ bản 4 tuần',                1, N'ASSIGNED',  NULL),         
-(4, NULL, N'[MẪU] Giảm cân 4 tuần',                      1, N'ASSIGNED',  NULL),         
+(3, NULL, N'[MẪU] Tăng cơ cơ bản 4 tuần', 1, N'DRAFT', NULL),
+(4, NULL, N'[MẪU] Giảm cân 4 tuần',        1, N'DRAFT', NULL),        
 (3, 8,    N'Lộ trình nhập môn - Nguyễn Văn An',          0, N'COMPLETED', '2025-03-01'); 
 GO
 
@@ -546,13 +537,13 @@ GO
 -- 15. PT_COMMENTS
 -- ============================================================
 INSERT INTO pt_comments (pt_id, member_id, route_id, content) VALUES
-(3, 8,  1, N'PT Minh nhiệt tình, hướng dẫn kỹ thuật rõ ràng. Tôi đã thấy kết quả rõ sau 3 tuần!'),
-(4, 9,  2, N'Chị Linh rất tận tâm và có kiến thức chuyên sâu về dinh dưỡng. Rất hài lòng.'),
-(3, 8,  8, N'Lộ trình nhập môn giúp tôi làm quen với gym rất tốt. 5 sao!');
+(3, 8,  1, N'An hoàn thành tuần đầu rất tốt. Thể lực đáp ứng được khối lượng tạ, tuy nhiên cần chú ý hít thở sâu và đều hơn trong bài tập ngực nhé!'),
+(4, 9,  2, N'Bình rất nỗ lực trong các bài Cardio. Chị thấy nhịp tim của em đã ổn định và sức bền cải thiện rõ rệt so với tuần trước. Cố gắng duy trì thực đơn nhé!'),
+(3, 8,  8, N'Chúc mừng An đã hoàn thành xuất sắc lộ trình nhập môn 4 tuần. Khung xương và cơ bắp phản ứng rất tốt, chúng ta đã sẵn sàng bước sang giáo án tăng cơ nặng hơn.');
 GO
 
 -- ============================================================
--- 16. DIETS
+-- 16. DIETS (Chỉ cấp cho hội viên gói VIP - ID 8, 11, 12)
 -- ============================================================
 INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES
 (8, 3, '2025-06-23',
