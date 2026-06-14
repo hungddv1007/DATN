@@ -15,12 +15,19 @@ import RegisterPage from './pages/auth/RegisterPage';
 
 // Member Pages
 import MemberDashboard from './pages/member/MemberDashboard';
+import BuyPackagePage from './pages/member/BuyPackagePage';
 
 // PT Pages
 import PtDashboard from './pages/pt/PtDashboard';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
+import TransactionsManagement from './pages/admin/TransactionsManagement';
+import PackagesManagement from './pages/admin/PackagesManagement';
+import UsersManagement from './pages/admin/UsersManagement';
+import PromotionsManagement from './pages/admin/PromotionsManagement';
+import BlogsManagement from './pages/admin/BlogsManagement';
+import ExercisesManagement from './pages/admin/ExercisesManagement';
 
 // Profile Page
 import ProfilePage from './pages/profile/ProfilePage';
@@ -56,6 +63,11 @@ function App() {
               <MemberDashboard />
             </ProtectedRoute>
           } />
+          <Route path="/member/buy-package" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <BuyPackagePage />
+            </ProtectedRoute>
+          } />
 
           {/* === PT (cần đăng nhập + role PT) === */}
           <Route path="/pt/dashboard" element={
@@ -68,6 +80,36 @@ function App() {
           <Route path="/admin" element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/transactions" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <TransactionsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/packages" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <PackagesManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/users" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <UsersManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/promotions" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <PromotionsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/blogs" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <BlogsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/exercises" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ExercisesManagement />
             </ProtectedRoute>
           } />
         </Routes>

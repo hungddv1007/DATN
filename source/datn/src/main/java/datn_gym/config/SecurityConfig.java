@@ -60,6 +60,10 @@ public class SecurityConfig {
 
                 // 1. Auth - công khai hoàn toàn
                 .requestMatchers("/api/auth/**").permitAll()
+                
+                // File access
+                .requestMatchers("/api/files/download/**").permitAll()
+                .requestMatchers("/api/files/upload").authenticated()
 
                 // 2. API Admin - chỉ ADMIN (đặt trước rule GET chung)
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -70,13 +74,16 @@ public class SecurityConfig {
                 // 4. API Hội viên - chỉ MEMBER (đặt trước rule GET chung)
                 .requestMatchers("/api/member/**").hasRole("MEMBER")
 
-                // 5. Các GET công khai (đặt SAU các rule role cụ thể)
+                // 5. API User profile - cần đăng nhập (bất kỳ role nào)
+                .requestMatchers("/api/users/**").authenticated()
+
+                // 6. Các GET công khai (đặt SAU các rule role cụ thể)
                 .requestMatchers(HttpMethod.GET, "/api/packages/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/search/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/pt-profiles/**").permitAll()
 
-                // 6. Còn lại cần đăng nhập
+                // 7. Còn lại cần đăng nhập
                 .anyRequest().authenticated()
             )
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import userService from '../../services/userService';
 import MainLayout from '../../components/layout/MainLayout';
 import { Camera, Save, User as UserIcon } from 'lucide-react';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -16,18 +17,36 @@ const ProfilePage = () => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
-  // Load user info into form
+  // Load profile từ backend API khi mở trang
   useEffect(() => {
-    if (user) {
-      setFormData({
-        fullName: user.fullName || '',
-        phone: user.phone || '',
-        email: user.email || '',
-        avatar: user.avatar || ''
-      });
-    }
+    const loadProfile = async () => {
+      try {
+        const profile = await userService.getMyProfile();
+        setFormData({
+          fullName: profile.fullName || '',
+          phone: profile.phone || '',
+          email: profile.email || '',
+          avatar: profile.avatar || ''
+        });
+      } catch (err) {
+        // Nếu API lỗi thì dùng dữ liệu từ context làm fallback
+        if (user) {
+          setFormData({
+            fullName: user.fullName || '',
+            phone: user.phone || '',
+            email: user.email || '',
+            avatar: user.avatar || ''
+          });
+        }
+      } finally {
+        setPageLoading(false);
+      }
+    };
+    loadProfile();
   }, [user]);
 
   const handleChange = (e) => {
@@ -46,15 +65,57 @@ const ProfilePage = () => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
+    setError('');
     
-    // TODO: Gọi API cập nhật User. 
-    // Hiện tại Backend chưa có API PUT /api/users/{id}
-    setTimeout(() => {
-      setMessage('Lưu thành công! (Lưu ý: Backend chưa có API cập nhật User nên thông tin sẽ không lưu vĩnh viễn khi F5)');
+    try {
+      const updatedProfile = await userService.updateMyProfile({
+        fullName: formData.fullName,
+        phone: formData.phone,
+        avatar: formData.avatar
+      });
+
+      // Cập nhật AuthContext + localStorage để Header hiển thị đúng tên mới
+      if (updateUser) {
+        updateUser({
+          ...user,
+          fullName: updatedProfile.fullName,
+          phone: updatedProfile.phone,
+          avatar: updatedProfile.avatar
+        });
+      }
+
+      setMessage('Cập nhật hồ sơ thành công!');
       setIsEditing(false);
+    } catch (err) {
+      const resData = err.response?.data;
+      if (resData) {
+        if (resData.message) {
+          setError(resData.message);
+        } else if (typeof resData === 'object') {
+          const firstError = Object.values(resData)[0];
+          setError(firstError || 'Cập nhật thất bại!');
+        } else {
+          setError('Cập nhật thất bại!');
+        }
+      } else {
+        setError('Lỗi kết nối đến máy chủ!');
+      }
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
+
+  if (pageLoading) {
+    return (
+      <MainLayout>
+        <div className="profile-page">
+          <div className="profile-container" style={{ textAlign: 'center', paddingTop: '120px' }}>
+            <p style={{ color: '#94a3b8' }}>Đang tải hồ sơ...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -66,6 +127,7 @@ const ProfilePage = () => {
           </div>
 
           {message && <div className="profile-alert success">{message}</div>}
+          {error && <div className="profile-alert error">{error}</div>}
 
           <div className="profile-card">
             <div className="profile-sidebar">
@@ -85,7 +147,7 @@ const ProfilePage = () => {
                   </label>
                 )}
               </div>
-              <h3 className="profile-name">{user?.fullName}</h3>
+              <h3 className="profile-name">{formData.fullName || user?.fullName}</h3>
               <span className="profile-role">Vai trò: {user?.role}</span>
             </div>
 
@@ -93,7 +155,7 @@ const ProfilePage = () => {
               <div className="profile-main-header">
                 <h2>Thông tin cơ bản</h2>
                 {!isEditing && (
-                  <button className="btn-edit" onClick={() => setIsEditing(true)}>Chỉnh sửa</button>
+                  <button className="btn-edit" onClick={() => { setIsEditing(true); setMessage(''); setError(''); }}>Chỉnh sửa</button>
                 )}
               </div>
 
@@ -116,7 +178,7 @@ const ProfilePage = () => {
                     type="email"
                     name="email"
                     value={formData.email}
-                    disabled // Không cho đổi email
+                    disabled
                     className="disabled-input"
                   />
                   <small>Email dùng để đăng nhập, không thể thay đổi.</small>
@@ -140,7 +202,7 @@ const ProfilePage = () => {
                       disabled 
                       className="disabled-input" 
                       rows="3"
-                      value="Vui lòng sử dụng API/trang Quản lý Hồ sơ PT riêng biệt để cập nhật Kinh nghiệm và Chuyên môn."
+                      value="Vui lòng sử dụng trang Quản lý Hồ sơ PT riêng biệt để cập nhật Kinh nghiệm và Chuyên môn."
                     />
                   </div>
                 )}
@@ -149,6 +211,8 @@ const ProfilePage = () => {
                   <div className="form-actions">
                     <button type="button" className="btn-cancel" onClick={() => {
                       setIsEditing(false);
+                      setError('');
+                      // Reset form về dữ liệu gốc
                       setFormData({
                         fullName: user.fullName || '',
                         phone: user.phone || '',
@@ -171,3 +235,4 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+

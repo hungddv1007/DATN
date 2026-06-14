@@ -29,11 +29,18 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Cập nhật thông tin user (sau khi sửa profile)
+  const updateUser = (updatedData) => {
+    setUser(updatedData);
+    localStorage.setItem('user', JSON.stringify(updatedData));
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
+    updateUser,
     isLoggedIn: !!user,
   };
 

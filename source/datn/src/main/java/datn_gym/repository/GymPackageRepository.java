@@ -9,4 +9,5 @@ public interface GymPackageRepository extends JpaRepository<GymPackage, Integer>
     Optional<GymPackage> findByName(String name);
     List<GymPackage> findByHasPtTrue();
     List<GymPackage> findByHasMealPlanTrue();
+    List<GymPackage> findByIsActiveTrue();
 }
