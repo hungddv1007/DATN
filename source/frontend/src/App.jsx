@@ -8,6 +8,7 @@ import HomePage from './pages/public/HomePage';
 import PackagesPage from './pages/public/PackagesPage';
 import BlogListPage from './pages/public/BlogListPage';
 import AboutPage from './pages/public/AboutPage';
+import PtListPage from './pages/public/PtListPage';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -16,6 +17,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 // Member Pages
 import MemberDashboard from './pages/member/MemberDashboard';
 import BuyPackagePage from './pages/member/BuyPackagePage';
+import MemberTransactions from './pages/member/MemberTransactions';
 
 // PT Pages
 import PtDashboard from './pages/pt/PtDashboard';
@@ -45,6 +47,7 @@ function App() {
           <Route path="/services" element={<PackagesPage />} />
           <Route path="/blog" element={<BlogListPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/pts" element={<PtListPage />} />
 
           {/* === Auth === */}
           <Route path="/login" element={<LoginPage />} />
@@ -66,6 +69,11 @@ function App() {
           <Route path="/member/buy-package" element={
             <ProtectedRoute allowedRoles={['MEMBER']}>
               <BuyPackagePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/member/transactions" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MemberTransactions />
             </ProtectedRoute>
           } />
 

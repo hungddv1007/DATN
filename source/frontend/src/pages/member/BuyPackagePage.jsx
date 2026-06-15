@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import packageService from '../../services/packageService';
+import ptService from '../../services/ptService';
 import membershipService from '../../services/membershipService';
 import { CreditCard, Banknote, CheckCircle } from 'lucide-react';
 import './BuyPackagePage.css';
@@ -15,11 +16,13 @@ const BuyPackagePage = () => {
   const pkgId = queryParams.get('pkgId');
 
   const [gymPackage, setGymPackage] = useState(null);
+  const [pts, setPts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
   const [promoCode, setPromoCode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('BANK'); // BANK or CASH
+  const [selectedPtId, setSelectedPtId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successData, setSuccessData] = useState(null);
 
@@ -30,10 +33,23 @@ const BuyPackagePage = () => {
       return;
     }
 
-    const fetchPackage = async () => {
+    const fetchPackageAndPts = async () => {
       try {
         const data = await packageService.getPackageById(pkgId);
+        
+        if (data.isActive === false) {
+          setError('Gói tập này hiện đã ngừng cung cấp.');
+          setGymPackage(null);
+          return;
+        }
+
         setGymPackage(data);
+        
+        // Nếu gói tập cho phép chọn PT, tải danh sách PT
+        if (data.canChoosePt) {
+          const ptsData = await ptService.getAllPtProfiles();
+          setPts(ptsData);
+        }
       } catch (err) {
         setError('Lỗi tải thông tin gói tập. Có thể gói tập không tồn tại.');
       } finally {
@@ -41,11 +57,18 @@ const BuyPackagePage = () => {
       }
     };
 
-    fetchPackage();
+    fetchPackageAndPts();
   }, [pkgId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Nếu bắt buộc chọn PT mà chưa chọn thì báo lỗi
+    if (gymPackage?.canChoosePt && !selectedPtId) {
+      setError('Vui lòng chọn một Huấn luyện viên cá nhân!');
+      return;
+    }
+    
     setSubmitting(true);
     setError('');
 
@@ -54,7 +77,7 @@ const BuyPackagePage = () => {
         packageId: parseInt(pkgId),
         promotionCode: promoCode || null,
         paymentMethod: paymentMethod,
-        ptId: null // Chưa support chức năng chọn PT trong UI này
+        ptId: selectedPtId ? parseInt(selectedPtId) : null
       });
       setSuccessData(data);
     } catch (err) {
@@ -151,6 +174,25 @@ const BuyPackagePage = () => {
                   onChange={(e) => setPromoCode(e.target.value)}
                 />
               </div>
+
+              {gymPackage.canChoosePt && (
+                <div className="form-group">
+                  <label>Chọn Huấn luyện viên cá nhân (PT)</label>
+                  <select 
+                    value={selectedPtId} 
+                    onChange={(e) => setSelectedPtId(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(15,23,42,0.5)', color: 'white', marginBottom: '15px' }}
+                  >
+                    <option value="">-- Vui lòng chọn một Huấn luyện viên --</option>
+                    {pts.map(pt => (
+                      <option key={pt.userId} value={pt.userId}>
+                        {pt.fullName} - {pt.specialty} (Đánh giá: {pt.rating || 'Chưa có'}/5)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Phương thức thanh toán</label>

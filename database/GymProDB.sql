@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- GYMPRO DATABASE - SQL Server 2025
 -- Website Quan Ly Phong Tap Gym
 -- 19 bang (Đã chuẩn hóa Data mẫu theo file Chi tiết dự án)
@@ -74,7 +74,8 @@ CREATE TABLE packages (
     description     NVARCHAR(MAX),
     has_pt          BIT DEFAULT 0,
     can_choose_pt   BIT DEFAULT 0,
-    has_meal_plan   BIT DEFAULT 0
+    has_meal_plan   BIT DEFAULT 0,
+    is_active       BIT DEFAULT 1
 );
 
 -- ============================================================
@@ -142,6 +143,7 @@ CREATE TABLE exercises (
     description     NVARCHAR(MAX),
     video_url       NVARCHAR(500),
     created_by      INT NOT NULL,
+    is_active       BIT DEFAULT 1,
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 

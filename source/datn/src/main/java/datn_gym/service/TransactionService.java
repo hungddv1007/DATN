@@ -80,6 +80,12 @@ public class TransactionService {
         // Hủy luôn Membership tương ứng
         tx.getMembership().setStatus("CANCELLED");
 
+        // Trả lại lượt sử dụng mã KM (nếu có)
+        if (tx.getPromotion() != null) {
+            Promotion p = tx.getPromotion();
+            p.setCurrentUsage(Math.max(0, p.getCurrentUsage() - 1));
+        }
+
         transactionRepository.save(tx);
         return toResponse(tx);
     }

@@ -210,39 +210,44 @@ const PromotionsManagement = () => {
 
       {/* Modal Thêm/Sửa */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 style={{ marginBottom: '20px', color: '#f1f5f9' }}>{editingId ? 'Sửa Khuyến Mãi' : 'Thêm Khuyến Mãi Mới'}</h2>
+        <div className="modal-overlay" onClick={() => setShowModal(false)} style={{ backdropFilter: 'blur(8px)', zIndex: 10000 }}>
+          <div className="modal-content" style={{ maxWidth: '600px', background: '#1e293b', border: '2px solid #3b82f6', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ marginBottom: '20px', color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '10px' }}>
+              {editingId ? 'Sửa Khuyến Mãi' : 'Thêm Khuyến Mãi Mới'}
+            </h2>
             
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
-                  <label>Mã Code (VIẾT HOA)</label>
+                  <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Mã Code (VIẾT HOA)</label>
                   <input 
                     type="text" 
                     value={formData.code} 
                     onChange={e => setFormData({...formData, code: e.target.value.toUpperCase()})}
                     required 
                     placeholder="VD: SUMMER2026"
+                    style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                   />
                 </div>
                 <div style={{ width: '120px' }}>
-                  <label>% Giảm giá</label>
+                  <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>% Giảm giá</label>
                   <input 
                     type="number" 
                     min="1" max="100"
                     value={formData.discountPercent} 
                     onChange={e => setFormData({...formData, discountPercent: e.target.value})}
                     required 
+                    style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                   />
                 </div>
               </div>
 
               <div>
-                <label>Áp dụng cho gói tập</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Áp dụng cho gói tập</label>
                 <select 
                   value={formData.packageId} 
                   onChange={e => setFormData({...formData, packageId: e.target.value})}
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                 >
                   <option value="">Tất cả các gói</option>
                   {packages.map(pkg => (
@@ -253,38 +258,41 @@ const PromotionsManagement = () => {
 
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
-                  <label>Ngày bắt đầu</label>
+                  <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Ngày bắt đầu</label>
                   <input 
                     type="date" 
                     value={formData.startDate} 
                     onChange={e => setFormData({...formData, startDate: e.target.value})}
                     required 
+                    style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label>Ngày kết thúc</label>
+                  <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Ngày kết thúc</label>
                   <input 
                     type="date" 
                     value={formData.endDate} 
                     onChange={e => setFormData({...formData, endDate: e.target.value})}
                     required 
+                    style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                   />
                 </div>
               </div>
 
               <div>
-                <label>Số lượt dùng tối đa (Để trống nếu không giới hạn)</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Số lượt dùng tối đa (Để trống nếu không giới hạn)</label>
                 <input 
                   type="number" 
                   min="1"
                   value={formData.maxUsage} 
                   onChange={e => setFormData({...formData, maxUsage: e.target.value})}
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setShowModal(false)} className="btn-cancel">Hủy</button>
-                <button type="submit" className="btn-submit">Lưu</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '20px' }}>
+                <button type="button" onClick={() => setShowModal(false)} className="btn-cancel" style={{ padding: '12px 24px', fontWeight: 'bold', borderRadius: '8px' }}>Hủy</button>
+                <button type="submit" className="btn-submit" style={{ padding: '12px 24px', fontWeight: 'bold', borderRadius: '8px', background: 'linear-gradient(to right, #f97316, #ea580c)', boxShadow: '0 4px 6px rgba(249, 115, 22, 0.3)' }}>Lưu thay đổi</button>
               </div>
             </form>
           </div>

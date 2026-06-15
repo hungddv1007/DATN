@@ -44,6 +44,10 @@ public class MembershipService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy gói tập"));
 
+        if (Boolean.FALSE.equals(gymPackage.getIsActive())) {
+            throw new IllegalArgumentException("Gói tập này hiện đã ngừng cung cấp.");
+        }
+
         // 3. Xử lý PT (nếu gói có PT)
         User pt = null;
         if (Boolean.TRUE.equals(gymPackage.getCanChoosePt()) && request.getPtId() != null) {
