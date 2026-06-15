@@ -20,6 +20,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     Page<User> findByRole_Name(String roleName, Pageable pageable);
 
     List<User> findByStatus(Boolean status);
+    
+    long countByRole_NameAndStatus(String roleName, Boolean status);
 
     @Query("SELECT u FROM User u WHERE " +
            "(:keyword IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

@@ -38,4 +38,8 @@ public class GymPackage {
     @Column(name = "has_meal_plan")
     @Builder.Default
     private Boolean hasMealPlan = false;
+
+    @Column(name = "is_active")
+    @Builder.Default
+    private Boolean isActive = true;
 }

@@ -1,66 +1,58 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Package, CreditCard, BarChart3, FileText, Dumbbell, Tag, LayoutDashboard, LogOut } from 'lucide-react';
-import '../member/DashboardPage.css';
+import { Users, Package, CreditCard, BarChart3 } from 'lucide-react';
+import AdminLayout from '../../components/layout/AdminLayout';
+import statisticsService from '../../services/statisticsService';
 
 const AdminDashboard = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    newRegistrationsThisMonth: 0,
+    monthlyRevenue: 0,
+    activePTs: 0
+  });
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await statisticsService.getOverview();
+        setStats(data);
+      } catch (error) {
+        console.error('Lỗi tải thống kê:', error);
+      }
+    };
+    fetchStats();
+  }, []);
 
   return (
-    <div className="admin-page">
-      <aside className="admin-sidebar">
-        <div className="admin-sidebar-logo">
-          <h2><Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>GymPro</Link></h2>
-          <span>Admin Panel</span>
-        </div>
-        <ul className="admin-nav">
-          <li><Link to="/admin" className="active"><LayoutDashboard size={18} /> Tổng quan</Link></li>
-          <li><Link to="/admin/users"><Users size={18} /> Quản lý Users</Link></li>
-          <li><Link to="/admin/packages"><Package size={18} /> Gói tập</Link></li>
-          <li><Link to="/admin/promotions"><Tag size={18} /> Khuyến mãi</Link></li>
-          <li><Link to="/admin/transactions"><CreditCard size={18} /> Giao dịch</Link></li>
-          <li><Link to="/admin/blogs"><FileText size={18} /> Bài viết</Link></li>
-          <li><Link to="/admin/exercises"><Dumbbell size={18} /> Bài tập</Link></li>
-          <li><Link to="/admin/statistics"><BarChart3 size={18} /> Thống kê</Link></li>
-          <li><a href="#" onClick={handleLogout}><LogOut size={18} /> Đăng xuất</a></li>
-        </ul>
-      </aside>
+    <AdminLayout>
+      <h1>Tổng Quan</h1>
+      <p>Chào mừng, {user?.fullName || 'Admin'}!</p>
 
-      <main className="admin-main">
-        <h1>Tổng Quan</h1>
-        <p>Chào mừng, {user?.fullName || 'Admin'}!</p>
-
-        <div className="admin-stats">
-          <div className="stat-card">
-            <Users size={28} className="stat-icon" />
-            <div className="stat-label">Tổng người dùng</div>
-            <div className="stat-value">--</div>
-          </div>
-          <div className="stat-card">
-            <Package size={28} className="stat-icon" />
-            <div className="stat-label">Đăng ký tháng này</div>
-            <div className="stat-value">--</div>
-          </div>
-          <div className="stat-card">
-            <CreditCard size={28} className="stat-icon" />
-            <div className="stat-label">Doanh thu tháng</div>
-            <div className="stat-value">--</div>
-          </div>
-          <div className="stat-card">
-            <BarChart3 size={28} className="stat-icon" />
-            <div className="stat-label">PT đang hoạt động</div>
-            <div className="stat-value">--</div>
-          </div>
+      <div className="admin-stats">
+        <div className="stat-card">
+          <Users size={28} className="stat-icon" />
+          <div className="stat-label">Tổng người dùng</div>
+          <div className="stat-value">{stats.totalUsers}</div>
         </div>
-      </main>
-    </div>
+        <div className="stat-card">
+          <Package size={28} className="stat-icon" />
+          <div className="stat-label">Đăng ký tháng này</div>
+          <div className="stat-value">{stats.newRegistrationsThisMonth}</div>
+        </div>
+        <div className="stat-card">
+          <CreditCard size={28} className="stat-icon" />
+          <div className="stat-label">Doanh thu tháng (VNĐ)</div>
+          <div className="stat-value">{stats.monthlyRevenue.toLocaleString('vi-VN')} đ</div>
+        </div>
+        <div className="stat-card">
+          <BarChart3 size={28} className="stat-icon" />
+          <div className="stat-label">PT đang hoạt động</div>
+          <div className="stat-value">{stats.activePTs}</div>
+        </div>
+      </div>
+    </AdminLayout>
   );
 };
 

@@ -41,6 +41,8 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
 
     int countByPt_IdAndStatus(Integer ptId, String status);
 
+    long countByCreatedAtAfter(java.time.LocalDateTime date);
+
     // Dùng cho: PtNote, PtComment, TrainingRoute, Review
     @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
            "m.pt.id = :ptId AND m.user.id = :memberId AND m.status = 'ACTIVE'")
