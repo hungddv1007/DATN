@@ -1,6 +1,7 @@
 package datn_gym.service;
 
 import datn_gym.dto.response.TransactionResponse;
+import datn_gym.entity.Promotion;
 import datn_gym.entity.Transaction;
 import datn_gym.entity.User;
 import datn_gym.repository.TransactionRepository;
