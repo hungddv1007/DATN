@@ -84,7 +84,7 @@ const MemberDashboard = () => {
             <User size={32} className="dash-icon" />
             <h3>Hồ sơ cá nhân</h3>
             <p className="dash-value">{user?.email || ''}</p>
-            <span className="dash-link">Chỉnh sửa →</span>
+            <Link to="/profile" className="dash-link">Chỉnh sửa →</Link>
           </div>
         </div>
       </div>

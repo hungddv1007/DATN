@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Header.css';
 
 const Header = () => {
   const { user, isLoggedIn, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showDropdown, setShowDropdown] = useState(false);
 
   const handleLogout = () => {
@@ -27,11 +28,11 @@ const Header = () => {
           <Link to="/" className="logo-text" style={{ textDecoration: 'none' }}>GymPro</Link>
         </div>
         <nav className="main-nav">
-          <Link to="/" className="nav-link active">HOME</Link>
-          <Link to="/about" className="nav-link">ABOUT</Link>
-          <Link to="/services" className="nav-link">SERVICES</Link>
-          <Link to="/pts" className="nav-link">PTs</Link>
-          <Link to="/blog" className="nav-link">BLOG</Link>
+          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>HOME</Link>
+          <Link to="/about" className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}>ABOUT</Link>
+          <Link to="/services" className={`nav-link ${location.pathname === '/services' ? 'active' : ''}`}>SERVICES</Link>
+          <Link to="/pts" className={`nav-link ${location.pathname === '/pts' ? 'active' : ''}`}>PTs</Link>
+          <Link to="/blog" className={`nav-link ${location.pathname === '/blog' ? 'active' : ''}`}>BLOG</Link>
         </nav>
         <div className="header-actions">
           {isLoggedIn ? (

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import SliderRaw from 'react-slick';
 import { Star } from 'lucide-react';
 import "slick-carousel/slick/slick.css"; 
@@ -8,6 +9,7 @@ import './PtSection.css';
 const Slider = SliderRaw.default || SliderRaw;
 
 const PtSection = () => {
+  const navigate = useNavigate();
   const pts = [
     { id: 1, name: 'Nguyễn Thành', spec: 'Giảm mỡ', rating: 4.9, img: 'https://images.unsplash.com/photo-1567598508481-65985588e295?q=80&w=200&auto=format&fit=crop' },
     { id: 2, name: 'Ngọc Trinh', spec: 'Giảm mỡ', rating: 4.9, img: 'https://images.unsplash.com/photo-1534438097544-77e891396a56?q=80&w=200&auto=format&fit=crop' },
@@ -47,7 +49,7 @@ const PtSection = () => {
                     <Star size={18} fill="#eab308" color="#eab308" />
                     <span>{pt.rating}/5</span>
                   </div>
-                  <button className="btn-view-profile">XEM HỒ SƠ</button>
+                  <button className="btn-view-profile" onClick={() => navigate('/pts')}>XEM HỒ SƠ</button>
                 </div>
               </div>
             ))}

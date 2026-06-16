@@ -43,6 +43,9 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
 
     long countByCreatedAtAfter(java.time.LocalDateTime date);
 
+    @Query("SELECT m.gymPackage.name, COUNT(m) FROM Membership m WHERE m.status = 'ACTIVE' GROUP BY m.gymPackage.name")
+    List<Object[]> countActiveMembershipsByPackage();
+
     // Dùng cho: PtNote, PtComment, TrainingRoute, Review
     @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
            "m.pt.id = :ptId AND m.user.id = :memberId AND m.status = 'ACTIVE'")
