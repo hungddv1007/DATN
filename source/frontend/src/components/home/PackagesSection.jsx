@@ -1,8 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Check, X } from 'lucide-react';
 import './PackagesSection.css';
 
 const PackagesSection = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="packages-section">
       <div className="container">
@@ -19,7 +22,7 @@ const PackagesSection = () => {
               <li className="disabled"><X className="x-icon" /> PT kèm</li>
               <li className="disabled"><X className="x-icon" /> Xem lộ trình</li>
             </ul>
-            <button className="btn-package btn-basic">ĐĂNG KÝ GÓI</button>
+            <button className="btn-package btn-basic" onClick={() => navigate('/services')}>ĐĂNG KÝ GÓI</button>
           </div>
 
           {/* PREMIUM */}
@@ -33,7 +36,7 @@ const PackagesSection = () => {
               <li><Check className="check-icon" /> Đánh giá PT</li>
               <li><Check className="check-icon" /> Free: Khăn, Nước</li>
             </ul>
-            <button className="btn-package btn-premium">ĐĂNG KÝ GÓI</button>
+            <button className="btn-package btn-premium" onClick={() => navigate('/services')}>ĐĂNG KÝ GÓI</button>
           </div>
 
           {/* VIP */}
@@ -48,7 +51,7 @@ const PackagesSection = () => {
               <li><Check className="check-icon-vip" /> Đánh giá PT</li>
               <li><Check className="check-icon-vip" /> Free: Khăn, Nước</li>
             </ul>
-            <button className="btn-package btn-vip">ĐĂNG KÝ GÓI</button>
+            <button className="btn-package btn-vip" onClick={() => navigate('/services')}>ĐĂNG KÝ GÓI</button>
           </div>
         </div>
       </div>

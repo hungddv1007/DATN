@@ -192,35 +192,38 @@ const BlogsManagement = () => {
 
       {/* Modal Thêm/Sửa */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" style={{ maxWidth: '800px' }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ marginBottom: '20px', color: '#f1f5f9' }}>{editingId ? 'Sửa Bài Viết' : 'Viết Bài Mới'}</h2>
+        <div className="modal-overlay" onClick={() => setShowModal(false)} style={{ backdropFilter: 'blur(8px)', zIndex: 10000 }}>
+          <div className="modal-content" style={{ maxWidth: '800px', background: '#1e293b', border: '2px solid #3b82f6', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ marginBottom: '20px', color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '10px' }}>
+              {editingId ? 'Sửa Bài Viết' : 'Viết Bài Mới'}
+            </h2>
             
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <div>
-                <label>Tiêu đề</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Tiêu đề</label>
                 <input 
                   type="text" 
                   value={formData.title} 
                   onChange={e => setFormData({...formData, title: e.target.value})}
                   required 
                   placeholder="Nhập tiêu đề bài viết..."
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                 />
               </div>
 
               <div>
-                <label>Hình Thu nhỏ</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Hình Thu nhỏ</label>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <input 
                     type="text" 
                     value={formData.thumbnail} 
                     onChange={e => setFormData({...formData, thumbnail: e.target.value})}
                     placeholder="https://example.com/image.jpg"
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                   />
                   <label style={{ 
-                    cursor: 'pointer', background: '#3b82f6', color: 'white', 
-                    padding: '8px 12px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '5px' 
+                    cursor: 'pointer', background: 'linear-gradient(to right, #3b82f6, #2563eb)', color: 'white', 
+                    padding: '12px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold', margin: 0 
                   }}>
                     <Upload size={16} /> {uploading ? 'Đang tải...' : 'Tải lên'}
                     <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploading} />
@@ -228,37 +231,38 @@ const BlogsManagement = () => {
                 </div>
                 {formData.thumbnail && (
                   <div style={{ marginTop: '10px' }}>
-                    <img src={formData.thumbnail} alt="preview" style={{ maxHeight: '100px', borderRadius: '4px' }} />
+                    <img src={formData.thumbnail} alt="preview" style={{ maxHeight: '100px', borderRadius: '4px', border: '1px solid #3b82f6' }} />
                   </div>
                 )}
               </div>
 
               <div>
-                <label>Nội dung</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Nội dung</label>
                 <textarea 
                   value={formData.content} 
                   onChange={e => setFormData({...formData, content: e.target.value})}
                   required 
                   rows="10"
-                  style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                   placeholder="Nhập nội dung bài viết..."
                 ></textarea>
               </div>
               
               <div>
-                <label>Trạng thái</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Trạng thái</label>
                 <select 
                   value={formData.status} 
                   onChange={e => setFormData({...formData, status: e.target.value})}
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                 >
                   <option value="PUBLISHED">Đã xuất bản (Hiện ngay)</option>
                   <option value="DRAFT">Bản nháp (Ẩn đi)</option>
                 </select>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setShowModal(false)} className="btn-cancel">Hủy</button>
-                <button type="submit" className="btn-submit">Lưu</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '20px' }}>
+                <button type="button" onClick={() => setShowModal(false)} className="btn-cancel" style={{ padding: '12px 24px', fontWeight: 'bold', borderRadius: '8px' }}>Hủy</button>
+                <button type="submit" className="btn-submit" style={{ padding: '12px 24px', fontWeight: 'bold', borderRadius: '8px', background: 'linear-gradient(to right, #f97316, #ea580c)', boxShadow: '0 4px 6px rgba(249, 115, 22, 0.3)' }}>Lưu thay đổi</button>
               </div>
             </form>
           </div>

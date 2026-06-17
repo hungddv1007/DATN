@@ -179,27 +179,31 @@ const ExercisesManagement = () => {
 
       {/* Modal Thêm/Sửa */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 style={{ marginBottom: '20px', color: '#f1f5f9' }}>{editingId ? 'Sửa Bài Tập' : 'Thêm Bài Tập Mới'}</h2>
+        <div className="modal-overlay" onClick={() => setShowModal(false)} style={{ backdropFilter: 'blur(8px)', zIndex: 10000 }}>
+          <div className="modal-content" style={{ maxWidth: '600px', background: '#1e293b', border: '2px solid #3b82f6', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ marginBottom: '20px', color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '10px' }}>
+              {editingId ? 'Sửa Bài Tập' : 'Thêm Bài Tập Mới'}
+            </h2>
             
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <div>
-                <label>Tên bài tập</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Tên bài tập</label>
                 <input 
                   type="text" 
                   value={formData.name} 
                   onChange={e => setFormData({...formData, name: e.target.value})}
                   required 
                   placeholder="VD: Barbell Bench Press"
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                 />
               </div>
 
               <div>
-                <label>Nhóm cơ (Muscle Group)</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Nhóm cơ (Muscle Group)</label>
                 <select 
                   value={formData.muscleGroup} 
                   onChange={e => setFormData({...formData, muscleGroup: e.target.value})}
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                 >
                   <option value="">-- Chọn nhóm cơ --</option>
                   {muscleGroups.map(group => (
@@ -209,18 +213,18 @@ const ExercisesManagement = () => {
               </div>
 
               <div>
-                <label>Link Video Hướng Dẫn / Hình minh họa</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Link Video Hướng Dẫn / Hình minh họa</label>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <input 
                     type="text" 
                     value={formData.videoUrl} 
                     onChange={e => setFormData({...formData, videoUrl: e.target.value})}
                     placeholder="https://youtube.com/watch?v=... hoặc URL hình ảnh"
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                   />
                   <label style={{ 
-                    cursor: 'pointer', background: '#3b82f6', color: 'white', 
-                    padding: '8px 12px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '5px' 
+                    cursor: 'pointer', background: 'linear-gradient(to right, #3b82f6, #2563eb)', color: 'white', 
+                    padding: '12px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 'bold', margin: 0 
                   }}>
                     <Upload size={16} /> {uploading ? 'Đang tải...' : 'Tải lên'}
                     <input type="file" accept="video/*,image/*" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploading} />
@@ -229,19 +233,19 @@ const ExercisesManagement = () => {
               </div>
 
               <div>
-                <label>Mô tả / Cách tập</label>
+                <label style={{ color: '#ffffff', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>Mô tả / Cách tập</label>
                 <textarea 
                   value={formData.description} 
                   onChange={e => setFormData({...formData, description: e.target.value})}
                   rows="4"
-                  style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px' }}
                   placeholder="Hướng dẫn chi tiết..."
                 ></textarea>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setShowModal(false)} className="btn-cancel">Hủy</button>
-                <button type="submit" className="btn-submit">Lưu</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '20px' }}>
+                <button type="button" onClick={() => setShowModal(false)} className="btn-cancel" style={{ padding: '12px 24px', fontWeight: 'bold', borderRadius: '8px' }}>Hủy</button>
+                <button type="submit" className="btn-submit" style={{ padding: '12px 24px', fontWeight: 'bold', borderRadius: '8px', background: 'linear-gradient(to right, #f97316, #ea580c)', boxShadow: '0 4px 6px rgba(249, 115, 22, 0.3)' }}>Lưu thay đổi</button>
               </div>
             </form>
           </div>

@@ -182,77 +182,78 @@ const PackagesManagement = () => {
       {showModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-        }}>
-          <div style={{
-            background: '#1e293b', padding: '30px', borderRadius: '12px', width: '500px',
-            border: '1px solid rgba(255,255,255,0.1)'
+          background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }} onClick={() => setShowModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: '#1e293b', padding: '30px', borderRadius: '12px', width: '90%', maxWidth: '600px',
+            border: '2px solid #3b82f6', boxShadow: '0 25px 50px rgba(0,0,0,0.5)'
           }}>
-            <h2 style={{ color: '#f1f5f9', marginBottom: '20px' }}>
+            <h2 style={{ color: '#ffffff', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '10px' }}>
               {editingPkg ? 'Cập nhật Gói Tập' : 'Thêm Gói Tập Mới'}
             </h2>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', color: '#cbd5e1' }}>Tên gói</label>
+                <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Tên gói</label>
                 <input 
                   required
                   type="text" 
                   value={formData.name} 
                   onChange={e => setFormData({...formData, name: e.target.value})}
-                  style={{ width: '100%', padding: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '6px' }}
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px' }}
                 />
               </div>
               
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '5px', color: '#cbd5e1' }}>Giá (VNĐ)</label>
+                  <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Giá (VNĐ)</label>
                   <input 
                     required
                     type="number" 
                     value={formData.price} 
                     onChange={e => setFormData({...formData, price: e.target.value})}
-                    style={{ width: '100%', padding: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '6px' }}
+                    style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px' }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '5px', color: '#cbd5e1' }}>Số ngày</label>
+                  <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Số ngày</label>
                   <input 
                     required
                     type="number" 
                     value={formData.durationDays} 
                     onChange={e => setFormData({...formData, durationDays: e.target.value})}
-                    style={{ width: '100%', padding: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '6px' }}
+                    style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px' }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', color: '#cbd5e1' }}>Mô tả</label>
+                <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Mô tả</label>
                 <textarea 
                   value={formData.description} 
                   onChange={e => setFormData({...formData, description: e.target.value})}
-                  style={{ width: '100%', padding: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '6px', height: '80px' }}
+                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', height: '80px' }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontWeight: 'bold' }}>
                   <input type="checkbox" checked={formData.hasPt} onChange={e => setFormData({...formData, hasPt: e.target.checked})} />
                   Có PT hướng dẫn
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontWeight: 'bold' }}>
                   <input type="checkbox" checked={formData.canChoosePt} onChange={e => setFormData({...formData, canChoosePt: e.target.checked})} />
                   Được chọn PT
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontWeight: 'bold' }}>
                   <input type="checkbox" checked={formData.hasMealPlan} onChange={e => setFormData({...formData, hasMealPlan: e.target.checked})} />
                   Có Meal Plan
                 </label>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #475569', color: 'white', borderRadius: '6px', cursor: 'pointer' }}>Hủy</button>
-                <button type="submit" style={{ padding: '10px 20px', background: '#f97316', border: 'none', color: 'white', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Lưu thay đổi</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '20px' }}>
+                <button type="button" onClick={() => setShowModal(false)} style={{ padding: '12px 24px', background: 'transparent', border: '1px solid #475569', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Hủy</button>
+                <button type="submit" style={{ padding: '12px 24px', background: 'linear-gradient(to right, #f97316, #ea580c)', boxShadow: '0 4px 6px rgba(249, 115, 22, 0.3)', border: 'none', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Lưu thay đổi</button>
               </div>
             </form>
           </div>

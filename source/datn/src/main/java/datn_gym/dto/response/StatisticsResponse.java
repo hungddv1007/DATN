@@ -10,4 +10,14 @@ public class StatisticsResponse {
     private long newRegistrationsThisMonth;
     private long monthlyRevenue;
     private long activePTs;
+
+    private java.util.List<ChartData> revenueData;
+    private java.util.List<ChartData> packageData;
+
+    @Data
+    @Builder
+    public static class ChartData {
+        private String name;
+        private long value;
+    }
 }

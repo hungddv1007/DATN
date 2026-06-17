@@ -8,6 +8,7 @@ import HomePage from './pages/public/HomePage';
 import PackagesPage from './pages/public/PackagesPage';
 import BlogListPage from './pages/public/BlogListPage';
 import AboutPage from './pages/public/AboutPage';
+import PtListPage from './pages/public/PtListPage';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -16,9 +17,16 @@ import RegisterPage from './pages/auth/RegisterPage';
 // Member Pages
 import MemberDashboard from './pages/member/MemberDashboard';
 import BuyPackagePage from './pages/member/BuyPackagePage';
+import MemberTransactions from './pages/member/MemberTransactions';
 
 // PT Pages
 import PtDashboard from './pages/pt/PtDashboard';
+import PtMembersList from './pages/pt/PtMembersList';
+import PtMemberDetail from './pages/pt/PtMemberDetail';
+import PtProfilePage from './pages/pt/PtProfilePage';
+import PtTemplatesPage from './pages/pt/PtTemplatesPage';
+import PtRouteDetail from './pages/pt/PtRouteDetail';
+import PtReviewsPage from './pages/pt/PtReviewsPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -45,6 +53,7 @@ function App() {
           <Route path="/services" element={<PackagesPage />} />
           <Route path="/blog" element={<BlogListPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/pts" element={<PtListPage />} />
 
           {/* === Auth === */}
           <Route path="/login" element={<LoginPage />} />
@@ -68,11 +77,46 @@ function App() {
               <BuyPackagePage />
             </ProtectedRoute>
           } />
+          <Route path="/member/transactions" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MemberTransactions />
+            </ProtectedRoute>
+          } />
 
           {/* === PT (cần đăng nhập + role PT) === */}
           <Route path="/pt/dashboard" element={
             <ProtectedRoute allowedRoles={['PT']}>
               <PtDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/pt/members" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtMembersList />
+            </ProtectedRoute>
+          } />
+          <Route path="/pt/members/:memberId" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtMemberDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/pt/profile" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtProfilePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/pt/templates" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtTemplatesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/pt/templates/:routeId" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtRouteDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/pt/reviews" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtReviewsPage />
             </ProtectedRoute>
           } />
 

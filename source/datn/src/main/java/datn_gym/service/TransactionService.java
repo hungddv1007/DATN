@@ -1,6 +1,7 @@
 package datn_gym.service;
 
 import datn_gym.dto.response.TransactionResponse;
+import datn_gym.entity.Promotion;
 import datn_gym.entity.Transaction;
 import datn_gym.entity.User;
 import datn_gym.repository.TransactionRepository;
@@ -79,6 +80,12 @@ public class TransactionService {
 
         // Hủy luôn Membership tương ứng
         tx.getMembership().setStatus("CANCELLED");
+
+        // Trả lại lượt sử dụng mã KM (nếu có)
+        if (tx.getPromotion() != null) {
+            Promotion p = tx.getPromotion();
+            p.setCurrentUsage(Math.max(0, p.getCurrentUsage() - 1));
+        }
 
         transactionRepository.save(tx);
         return toResponse(tx);

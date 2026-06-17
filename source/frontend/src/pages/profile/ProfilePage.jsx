@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import userService from '../../services/userService';
+import fileService from '../../services/fileService';
 import MainLayout from '../../components/layout/MainLayout';
 import { Camera, Save, User as UserIcon } from 'lucide-react';
 import './ProfilePage.css';
@@ -53,11 +54,19 @@ const ProfilePage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setFormData({ ...formData, avatar: imageUrl });
+      try {
+        setLoading(true);
+        const data = await fileService.uploadFile(file);
+        setFormData({ ...formData, avatar: data.fileUrl });
+        setMessage('Tải ảnh lên thành công. Nhấn Lưu thay đổi để lưu.');
+      } catch (err) {
+        setError('Lỗi tải ảnh lên.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
