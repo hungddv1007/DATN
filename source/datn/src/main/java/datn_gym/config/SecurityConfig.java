@@ -77,6 +77,9 @@ public class SecurityConfig {
                 // 5. API User profile - cần đăng nhập (bất kỳ role nào)
                 .requestMatchers("/api/users/**").authenticated()
 
+                // 5b. API Exercises - xem danh sách (PT cần dùng khi tạo lộ trình)
+                .requestMatchers(HttpMethod.GET, "/api/exercises/**").authenticated()
+
                 // 6. Các GET công khai (đặt SAU các rule role cụ thể)
                 .requestMatchers(HttpMethod.GET, "/api/packages/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()

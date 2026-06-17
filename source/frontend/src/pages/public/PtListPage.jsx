@@ -38,7 +38,7 @@ const PtListPage = () => {
           ) : (
             <div className="pt-grid">
               {pts.map((pt) => (
-                <div key={pt.userId} className="pt-card">
+                <div key={pt.id} className="pt-card">
                   <div className="pt-avatar">
                     {pt.avatar ? (
                       <img src={pt.avatar} alt={pt.fullName} />
@@ -48,26 +48,26 @@ const PtListPage = () => {
                   </div>
                   <div className="pt-info">
                     <h3>{pt.fullName}</h3>
-                    <div className="pt-specialty">{pt.specialty}</div>
+                    <div className="pt-specialty">{pt.specialization || 'Huấn luyện viên'}</div>
                     
                     <div className="pt-meta">
                       <div className="pt-stat">
                         <Star size={16} className="icon-star" />
-                        <span>{pt.rating ? `${pt.rating}/5` : 'Chưa có'}</span>
+                        <span>{pt.ratingScore ? `${pt.ratingScore}/5` : 'Chưa có'}</span>
                       </div>
                       <div className="pt-stat">
                         <Award size={16} className="icon-exp" />
-                        <span>{pt.experienceYears || 0} năm K.N</span>
+                        <span>{pt.totalMembers || 0} học viên</span>
                       </div>
                     </div>
                     
                     <div className="pt-desc">
-                      {pt.biography || 'Đang cập nhật thông tin giới thiệu.'}
+                      {pt.bio || 'Đang cập nhật thông tin giới thiệu.'}
                     </div>
 
                     <div className="pt-cert">
                       <ShieldCheck size={16} /> 
-                      <span>{pt.certifications || 'Chứng nhận chuyên nghiệp'}</span>
+                      <span>{pt.certificates || 'Chứng nhận chuyên nghiệp'}</span>
                     </div>
                   </div>
                 </div>

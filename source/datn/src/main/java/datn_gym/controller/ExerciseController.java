@@ -12,18 +12,24 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/exercises")
 @RequiredArgsConstructor
 public class ExerciseController {
 
     private final ExerciseService exerciseService;
 
-    @GetMapping
+    // GET /api/exercises — Bất kỳ ai đăng nhập đều có thể xem danh sách bài tập
+    @GetMapping("/api/exercises")
+    public ResponseEntity<List<ExerciseResponse>> getExercisesPublic() {
+        return ResponseEntity.ok(exerciseService.getAllExercises());
+    }
+
+    // === ADMIN CRUD ===
+    @GetMapping("/api/admin/exercises")
     public ResponseEntity<List<ExerciseResponse>> getAllExercises() {
         return ResponseEntity.ok(exerciseService.getAllExercises());
     }
 
-    @PostMapping
+    @PostMapping("/api/admin/exercises")
     public ResponseEntity<ExerciseResponse> createExercise(
             Authentication authentication,
             @Valid @RequestBody ExerciseRequest request) {
@@ -31,14 +37,14 @@ public class ExerciseController {
         return ResponseEntity.ok(exerciseService.createExercise(email, request));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/api/admin/exercises/{id}")
     public ResponseEntity<ExerciseResponse> updateExercise(
             @PathVariable Integer id,
             @Valid @RequestBody ExerciseRequest request) {
         return ResponseEntity.ok(exerciseService.updateExercise(id, request));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/api/admin/exercises/{id}")
     public ResponseEntity<Void> deleteExercise(@PathVariable Integer id) {
         exerciseService.deleteExercise(id);
         return ResponseEntity.ok().build();
