@@ -2,6 +2,7 @@ package datn_gym.controller;
 
 import datn_gym.dto.request.LoginRequest;
 import datn_gym.dto.request.RegisterRequest;
+import datn_gym.dto.request.SendOtpRequest;
 import datn_gym.dto.response.JwtResponse;
 import datn_gym.dto.response.MessageResponse;
 import datn_gym.service.AuthService;
@@ -22,6 +23,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest request) {
         JwtResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // POST /api/auth/send-otp
+    @PostMapping("/send-otp")
+    public ResponseEntity<MessageResponse> sendOtp(@Valid @RequestBody SendOtpRequest request) {
+        MessageResponse response = authService.sendOtp(request);
         return ResponseEntity.ok(response);
     }
 

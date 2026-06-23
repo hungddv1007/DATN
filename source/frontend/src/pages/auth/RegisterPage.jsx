@@ -13,22 +13,29 @@ const RegisterPage = () => {
     confirmPassword: '',
     fullName: '',
     phone: '',
+    otp: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1);
+  const [countdown, setCountdown] = useState(0);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
-  };
+  // Xử lý đếm ngược OTP
+  React.useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
-  const handleSubmit = async (e) => {
+  // Bước 1: Gửi thông tin (chưa có OTP) để kiểm tra hợp lệ và gửi mã
+  const handleRegisterPhase1 = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // Validate phía frontend trước khi gửi
     if (formData.password !== formData.confirmPassword) {
       setError('Mật khẩu xác nhận không khớp!');
       return;
@@ -41,8 +48,34 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
+      // Gọi API send-otp, API này sẽ kiểm tra trùng lặp email/phone và gửi OTP
+      await authService.sendOtp(formData.email, formData.phone);
+      setSuccess('Mã OTP đã được gửi đến email của bạn! Mã có hiệu lực trong 5 phút.');
+      setStep(2); // Chuyển sang bước nhập OTP
+      setCountdown(300); // 5 phút = 300 giây
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể gửi mã OTP. Vui lòng thử lại!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Bước 2: Xác nhận OTP và tạo tài khoản chính thức
+  const handleRegisterPhase2 = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!formData.otp) {
+      setError('Vui lòng nhập mã OTP!');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
       const data = await authService.register(formData);
-      setSuccess(data.message || 'Đăng ký thành công!');
+      setSuccess(data.message || 'Tạo tài khoản thành công!');
       // Chuyển sang trang login sau 2 giây
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
@@ -58,11 +91,22 @@ const RegisterPage = () => {
           setError('Đăng ký thất bại. Vui lòng thử lại!');
         }
       } else {
-        setError('Lỗi kết nối đến máy chủ!');
+        setError('Đăng ký thất bại. Vui lòng thử lại!');
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError('');
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
   return (
@@ -77,75 +121,115 @@ const RegisterPage = () => {
           {error && <div className="auth-error">{error}</div>}
           {success && <div className="auth-success">{success}</div>}
 
-          <form onSubmit={handleSubmit} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="fullName">Họ và tên</label>
-              <input
-                id="fullName"
-                type="text"
-                name="fullName"
-                placeholder="Nguyễn Văn A"
-                value={formData.fullName}
-                onChange={handleChange}
-                required
-              />
-            </div>
+          {step === 1 ? (
+            <form onSubmit={handleRegisterPhase1} className="auth-form">
+              <div className="form-group">
+                <label htmlFor="fullName">Họ và tên</label>
+                <input
+                  id="fullName"
+                  type="text"
+                  name="fullName"
+                  placeholder="Nguyễn Văn A"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                name="email"
-                placeholder="example@gmail.com"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  placeholder="example@gmail.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="phone">Số điện thoại</label>
-              <input
-                id="phone"
-                type="tel"
-                name="phone"
-                placeholder="0901234567"
-                value={formData.phone}
-                onChange={handleChange}
-                required
-              />
-            </div>
+              <div className="form-group">
+                <label htmlFor="phone">Số điện thoại</label>
+                <input
+                  id="phone"
+                  type="tel"
+                  name="phone"
+                  placeholder="0901234567"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Mật khẩu</label>
-              <input
-                id="password"
-                type="password"
-                name="password"
-                placeholder="Ít nhất 6 ký tự"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
-              <input
-                id="confirmPassword"
-                type="password"
-                name="confirmPassword"
-                placeholder="Nhập lại mật khẩu"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-              />
-            </div>
+              <div className="form-group">
+                <label htmlFor="password">Mật khẩu</label>
+                <input
+                  id="password"
+                  type="password"
+                  name="password"
+                  placeholder="Ít nhất 6 ký tự"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="Nhập lại mật khẩu"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-            <button type="submit" className="btn-auth-submit" disabled={loading}>
-              {loading ? 'Đang đăng ký...' : 'ĐĂNG KÝ'}
-            </button>
-          </form>
+              <button type="submit" className="btn-auth-submit" disabled={loading}>
+                {loading ? 'Đang kiểm tra...' : 'ĐĂNG KÝ'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleRegisterPhase2} className="auth-form">
+              <div style={{ textAlign: 'center', marginBottom: '20px', color: '#94a3b8' }}>
+                Vui lòng kiểm tra email <strong>{formData.email}</strong> để lấy mã xác thực gồm 6 chữ số.
+              </div>
+              
+              <div className="form-group" style={{ textAlign: 'center' }}>
+                <label htmlFor="otp" style={{ fontSize: '1.1rem', marginBottom: '10px' }}>Mã OTP</label>
+                <input
+                  id="otp"
+                  type="text"
+                  name="otp"
+                  placeholder="------"
+                  value={formData.otp}
+                  onChange={handleChange}
+                  maxLength="6"
+                  required
+                  style={{ fontSize: '2rem', letterSpacing: '0.5rem', textAlign: 'center', padding: '15px' }}
+                />
+                <div style={{ marginTop: '10px', color: countdown > 0 ? '#10b981' : '#ef4444', fontWeight: '500' }}>
+                  {countdown > 0 ? `Thời gian còn lại: ${formatTime(countdown)}` : 'Mã OTP đã hết hạn!'}
+                </div>
+              </div>
+
+              <button type="submit" className="btn-auth-submit" disabled={loading || countdown === 0}>
+                {loading ? 'Đang xác nhận...' : 'XÁC NHẬN'}
+              </button>
+
+              <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setStep(1)} 
+                  style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Quay lại sửa thông tin
+                </button>
+              </div>
+            </form>
+          )}
 
           <div className="auth-footer">
             <p>Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p>

@@ -52,6 +52,8 @@ public class JwtTokenProvider {
                     .build()
                     .parseSignedClaims(token);
             return true;
+        } catch (ExpiredJwtException e) {
+            throw e; // Ném ra để Filter bắt được
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

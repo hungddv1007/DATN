@@ -17,6 +17,12 @@ const authService = {
     return response.data;
   },
 
+  // Gửi OTP
+  sendOtp: async (email, phone) => {
+    const response = await api.post('/auth/send-otp', { email, phone });
+    return response.data;
+  },
+
   // Đăng xuất
   logout: () => {
     localStorage.removeItem('token');
