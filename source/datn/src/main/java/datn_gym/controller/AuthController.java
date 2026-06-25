@@ -2,6 +2,7 @@ package datn_gym.controller;
 
 import datn_gym.dto.request.LoginRequest;
 import datn_gym.dto.request.RegisterRequest;
+import datn_gym.dto.request.SendOtpRequest;
 import datn_gym.dto.response.JwtResponse;
 import datn_gym.dto.response.MessageResponse;
 import datn_gym.service.AuthService;
@@ -25,11 +26,29 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    // POST /api/auth/send-otp
+    @PostMapping("/send-otp")
+    public ResponseEntity<MessageResponse> sendOtp(@Valid @RequestBody SendOtpRequest request) {
+        MessageResponse response = authService.sendOtp(request);
+        return ResponseEntity.ok(response);
+    }
+
     // POST /api/auth/register
     @PostMapping("/register")
     public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterRequest request) {
         MessageResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // POST /api/auth/google
+    @PostMapping("/google")
+    public ResponseEntity<JwtResponse> loginWithGoogle(@RequestBody java.util.Map<String, String> body) {
+        String idToken = body.get("idToken");
+        if (idToken == null || idToken.isBlank()) {
+            throw new IllegalArgumentException("Token Google không được để trống!");
+        }
+        JwtResponse response = authService.loginWithGoogle(idToken);
+        return ResponseEntity.ok(response);
     }
 
     // GET /api/auth/test - API test kiểm tra server chạy

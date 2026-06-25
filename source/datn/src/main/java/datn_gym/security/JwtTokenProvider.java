@@ -34,6 +34,19 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    // Tạo token từ email (dùng cho Google OAuth - không cần Authentication object)
+    public String generateTokenFromEmail(String email) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpiration);
+
+        return Jwts.builder()
+                .subject(email)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
     // Lấy email từ token
     public String getEmailFromToken(String token) {
         Claims claims = Jwts.parser()
@@ -52,6 +65,8 @@ public class JwtTokenProvider {
                     .build()
                     .parseSignedClaims(token);
             return true;
+        } catch (ExpiredJwtException e) {
+            throw e; // Ném ra để Filter bắt được
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

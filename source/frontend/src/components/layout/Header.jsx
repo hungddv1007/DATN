@@ -41,6 +41,17 @@ const Header = () => {
               onMouseEnter={() => setShowDropdown(true)}
               onMouseLeave={() => setShowDropdown(false)}
             >
+              {user.avatar ? (
+                <img 
+                  src={user.avatar} 
+                  alt="Avatar" 
+                  className="header-avatar"
+                />
+              ) : (
+                <div className="header-avatar header-avatar-fallback">
+                  {user.fullName?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
               <span className="user-greeting">
                 Xin chào, <strong>{user.fullName}</strong> ▾
               </span>

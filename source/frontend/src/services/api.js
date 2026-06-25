@@ -30,7 +30,8 @@ api.interceptors.response.use(
       if (!isLoginRequest) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        window.location.href = '/login?expired=true';
       }
     }
     return Promise.reject(error);

@@ -6,7 +6,6 @@ import datn_gym.entity.Membership;
 import datn_gym.entity.User;
 import datn_gym.repository.MembershipRepository;
 import datn_gym.repository.ReviewRepository;
-import datn_gym.repository.TrainingRouteRepository;
 import datn_gym.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,14 +21,13 @@ public class PtDashboardService {
 
     private final UserRepository userRepository;
     private final MembershipRepository membershipRepository;
-    private final TrainingRouteRepository trainingRouteRepository;
     private final ReviewRepository reviewRepository;
 
     public PtDashboardResponse getDashboardStats(String email) {
         User pt = getUserByEmail(email);
 
         long activeMembers = membershipRepository.countByPt_IdAndStatus(pt.getId(), "ACTIVE");
-        long totalTemplates = trainingRouteRepository.findByPt_IdAndIsTemplateTrue(pt.getId()).size();
+        long totalTemplates = 0L;
         long totalReviews = reviewRepository.countByPt_Id(pt.getId());
 
         return PtDashboardResponse.builder()

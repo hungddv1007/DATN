@@ -6,8 +6,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class User {
 
@@ -22,7 +24,7 @@ public class User {
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "password", nullable = false, length = 255)
+    @Column(name = "password", length = 255)
     private String password;
 
     @Column(name = "full_name", nullable = false, length = 100)
@@ -38,11 +40,15 @@ public class User {
     @Builder.Default
     private Boolean status = true;
 
+    @Column(name = "provider", length = 20)
+    @Builder.Default
+    private String provider = "LOCAL";
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @PrePersist
-    protected void onCreate() { 
-        this.createdAt = LocalDateTime.now(); 
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
     }
 }

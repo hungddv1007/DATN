@@ -9,7 +9,6 @@ const PtDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     activeMembers: 0,
-    totalTemplates: 0,
     totalReviews: 0
   });
   const [members, setMembers] = useState([]);
@@ -42,11 +41,7 @@ const PtDashboard = () => {
           <div className="stat-label">Học viên đang quản lý</div>
           <div className="stat-value">{stats.activeMembers}</div>
         </div>
-        <div className="stat-card">
-          <ClipboardList size={28} className="stat-icon" />
-          <div className="stat-label">Lộ trình mẫu</div>
-          <div className="stat-value">{stats.totalTemplates}</div>
-        </div>
+
         <div className="stat-card">
           <MessageSquare size={28} className="stat-icon" />
           <div className="stat-label">Lượt đánh giá</div>
@@ -67,9 +62,7 @@ const PtDashboard = () => {
         <Link to="/pt/profile" className="tab-btn" style={{ textDecoration: 'none' }}>
           Cập nhật hồ sơ
         </Link>
-        <Link to="/pt/templates" className="tab-btn" style={{ textDecoration: 'none' }}>
-          Quản lý lộ trình
-        </Link>
+
       </div>
 
       {/* Recent Members Table */}

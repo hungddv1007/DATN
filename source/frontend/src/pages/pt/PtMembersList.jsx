@@ -108,9 +108,7 @@ const PtMembersList = () => {
                       <button className="btn-icon confirm" title="Xem chi tiết" onClick={() => navigate(`/pt/members/${member.memberId}`)}>
                         <Eye size={18} />
                       </button>
-                      <button className="btn-icon" title="Lên lộ trình" onClick={() => navigate('/pt/templates')} style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.1)' }}>
-                        <ClipboardList size={18} />
-                      </button>
+
                     </div>
                   </td>
                 </tr>

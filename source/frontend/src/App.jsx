@@ -24,8 +24,6 @@ import PtDashboard from './pages/pt/PtDashboard';
 import PtMembersList from './pages/pt/PtMembersList';
 import PtMemberDetail from './pages/pt/PtMemberDetail';
 import PtProfilePage from './pages/pt/PtProfilePage';
-import PtTemplatesPage from './pages/pt/PtTemplatesPage';
-import PtRouteDetail from './pages/pt/PtRouteDetail';
 import PtReviewsPage from './pages/pt/PtReviewsPage';
 
 // Admin Pages
@@ -102,16 +100,6 @@ function App() {
           <Route path="/pt/profile" element={
             <ProtectedRoute allowedRoles={['PT']}>
               <PtProfilePage />
-            </ProtectedRoute>
-          } />
-          <Route path="/pt/templates" element={
-            <ProtectedRoute allowedRoles={['PT']}>
-              <PtTemplatesPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/pt/templates/:routeId" element={
-            <ProtectedRoute allowedRoles={['PT']}>
-              <PtRouteDetail />
             </ProtectedRoute>
           } />
           <Route path="/pt/reviews" element={

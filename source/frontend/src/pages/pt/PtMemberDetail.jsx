@@ -10,13 +10,10 @@ const PtMemberDetail = () => {
   const navigate = useNavigate();
   const [member, setMember] = useState(null);
   const [notes, setNotes] = useState([]);
-  const [routes, setRoutes] = useState([]);
-  const [allTemplates, setAllTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState('');
   const [editingNote, setEditingNote] = useState(null);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [assignLoading, setAssignLoading] = useState(false);
+
 
   useEffect(() => {
     fetchData();
@@ -24,18 +21,13 @@ const PtMemberDetail = () => {
 
   const fetchData = async () => {
     try {
-      const [membersRes, notesRes, routesRes] = await Promise.all([
+      const [membersRes, notesRes] = await Promise.all([
         api.get('/pt/members'),
-        api.get(`/pt/notes/member/${memberId}`),
-        api.get('/pt/training-routes')
+        api.get(`/pt/notes/member/${memberId}`)
       ]);
       const found = membersRes.data.find(m => m.memberId === parseInt(memberId));
       setMember(found || null);
       setNotes(notesRes.data);
-      // Lộ trình đã gán cho member này
-      setRoutes(routesRes.data.filter(r => r.memberId === parseInt(memberId)));
-      // Lộ trình mẫu (template) chưa gán → cho phép chọn để gán
-      setAllTemplates(routesRes.data.filter(r => (r.isTemplate || r.template) && r.status === 'TEMPLATE'));
     } catch (err) {
       console.error('Lỗi tải dữ liệu:', err);
     } finally {
@@ -83,29 +75,7 @@ const PtMemberDetail = () => {
     setNoteText('');
   };
 
-  // ===== GÁN LỘ TRÌNH =====
-  const handleAssignRoute = async (routeId) => {
-    setAssignLoading(true);
-    try {
-      await api.post(`/pt/training-routes/${routeId}/assign/${memberId}`);
-      setShowAssignModal(false);
-      fetchData();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi gán lộ trình');
-    } finally {
-      setAssignLoading(false);
-    }
-  };
 
-  const handleCompleteRoute = async (routeId) => {
-    if (!window.confirm('Đánh dấu lộ trình này là hoàn thành?')) return;
-    try {
-      await api.put(`/pt/training-routes/${routeId}/complete`);
-      fetchData();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra');
-    }
-  };
 
   if (loading) {
     return <PtLayout><div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Đang tải...</div></PtLayout>;
@@ -177,44 +147,7 @@ const PtMemberDetail = () => {
       {/* Two columns: Routes + Notes */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
 
-        {/* Assigned Routes */}
-        <div className="admin-table-container" style={{ marginTop: 0 }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ color: '#f1f5f9', margin: 0 }}>Lộ trình đã gán</h3>
-            <button className="btn-submit" onClick={() => setShowAssignModal(true)}
-              style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Plus size={14} /> Gán lộ trình
-            </button>
-          </div>
-          {routes.length === 0 ? (
-            <div style={{ padding: '30px 20px', textAlign: 'center', color: '#64748b' }}>
-              Chưa gán lộ trình nào cho học viên này.
-            </div>
-          ) : (
-            <table className="admin-table">
-              <thead><tr><th>Tên lộ trình</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-              <tbody>
-                {routes.map(r => (
-                  <tr key={r.id}>
-                    <td style={{ fontWeight: '500' }}>{r.name}</td>
-                    <td>
-                      <span className={`status-badge ${r.status === 'ASSIGNED' ? 'status-confirmed' : r.status === 'COMPLETED' ? 'status-pending' : 'status-cancelled'}`}>
-                        {r.status === 'ASSIGNED' ? 'Đang tập' : r.status === 'COMPLETED' ? 'Hoàn thành' : r.status}
-                      </span>
-                    </td>
-                    <td>
-                      {r.status === 'ASSIGNED' && (
-                        <button className="btn-icon confirm" title="Đánh dấu hoàn thành" onClick={() => handleCompleteRoute(r.id)}>
-                          <CheckCircle size={16} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+
 
         {/* Notes */}
         <div className="admin-table-container" style={{ marginTop: 0, display: 'flex', flexDirection: 'column' }}>
@@ -271,49 +204,7 @@ const PtMemberDetail = () => {
         </div>
       </div>
 
-      {/* === MODAL: Gán lộ trình === */}
-      {showAssignModal && (
-        <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2>Gán Lộ Trình Cho {member.memberName}</h2>
-            {allTemplates.length === 0 ? (
-              <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
-                <p>Bạn chưa tạo lộ trình mẫu nào.</p>
-                <button className="btn-submit" onClick={() => navigate('/pt/templates')} style={{ marginTop: '10px' }}>
-                  <Plus size={16} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Tạo lộ trình mẫu
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {allTemplates.map(t => (
-                  <div key={t.id} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '14px 16px', background: 'rgba(15,23,42,0.5)',
-                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px',
-                    transition: 'border-color 0.2s'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(249,115,22,0.4)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
-                  >
-                    <div>
-                      <div style={{ color: '#f1f5f9', fontWeight: '500' }}>{t.name}</div>
-                      <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '2px' }}>{t.totalSessions || 0} buổi tập</div>
-                    </div>
-                    <button className="btn-submit" onClick={() => handleAssignRoute(t.id)}
-                      disabled={assignLoading}
-                      style={{ padding: '6px 14px', fontSize: '0.85rem' }}>
-                      Gán
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
-              <button className="btn-cancel" onClick={() => setShowAssignModal(false)}>Đóng</button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </PtLayout>
   );
 };

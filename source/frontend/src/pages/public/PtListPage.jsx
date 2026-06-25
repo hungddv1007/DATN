@@ -43,7 +43,9 @@ const PtListPage = () => {
                     {pt.avatar ? (
                       <img src={pt.avatar} alt={pt.fullName} />
                     ) : (
-                      <div className="avatar-placeholder"><User size={48} color="#cbd5e1" /></div>
+                      <div className="avatar-placeholder avatar-initial">
+                        {pt.fullName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
                     )}
                   </div>
                   <div className="pt-info">
