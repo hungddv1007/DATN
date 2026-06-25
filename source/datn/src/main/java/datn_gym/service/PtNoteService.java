@@ -4,7 +4,7 @@ import datn_gym.dto.request.PtNoteRequest;
 import datn_gym.dto.response.PtNoteResponse;
 import datn_gym.entity.PtNote;
 import datn_gym.entity.User;
-import datn_gym.repository.MembershipRepository; // IMPORT THÊM REPOSITORY NÀY
+import datn_gym.repository.MembershipRepository;
 import datn_gym.repository.PtNoteRepository;
 import datn_gym.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +22,11 @@ public class PtNoteService {
 
     private final PtNoteRepository ptNoteRepository;
     private final UserRepository userRepository;
-    
-    // TIÊM (INJECT) MEMBERSHIP REPOSITORY VÀO ĐÂY
-    private final MembershipRepository membershipRepository; 
+
+    // FIX KIẾN TRÚC: Inject đúng MembershipRepository
+    // (Bản trước gọi sai qua ptNoteRepository.existsActiveMembershipByPtAndMember
+    //  -> method này không tồn tại trong PtNoteRepository -> lỗi compile)
+    private final MembershipRepository membershipRepository;
 
     // ----------------------------------------------------------------
     // PT: Lấy tất cả ghi chú của mình (toàn bộ hội viên)
@@ -44,7 +46,7 @@ public class PtNoteService {
     public List<PtNoteResponse> getNotesByMember(String ptEmail, Integer memberId) {
         User pt = getUserByEmail(ptEmail);
 
-        // FIX IDOR: Check tại DB — member có thuộc PT này không
+        // FIX IDOR: Check tại DB qua MembershipRepository — member có thuộc PT này không
         validatePtOwnsMember(pt.getId(), memberId);
 
         return ptNoteRepository
@@ -61,7 +63,7 @@ public class PtNoteService {
     public PtNoteResponse createNote(String ptEmail, PtNoteRequest request) {
         User pt = getUserByEmail(ptEmail);
 
-        // FIX IDOR: Chỉ cho tạo ghi chú nếu member đang thuộc PT này
+        // FIX IDOR: Validate TRƯỚC khi load member — tránh query thừa nếu fail
         // Ngăn PT ghi chú cho Admin hoặc hội viên của PT khác
         validatePtOwnsMember(pt.getId(), request.getMemberId());
 
@@ -83,13 +85,18 @@ public class PtNoteService {
     public PtNoteResponse updateNote(String ptEmail, Integer noteId, PtNoteRequest request) {
         User pt = getUserByEmail(ptEmail);
 
+        // FIX Lỗi 404 vs 403: Tách 2 bước để phân biệt rõ
+        if (!ptNoteRepository.existsById(noteId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Không tìm thấy ghi chú");
+        }
+
         // FIX IDOR + Truy vấn dư thừa:
         // findByIdAndPt_Id → 1 câu SQL vừa tìm vừa check ownership tại DB
-        // Thay vì findById() rồi check pt.getId() bằng Java (2 bước)
         PtNote note = ptNoteRepository.findByIdAndPt_Id(noteId, pt.getId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.FORBIDDEN,
-                        "Ghi chú không tồn tại hoặc bạn không có quyền sửa"));
+                        "Bạn không có quyền sửa ghi chú này"));
 
         note.setContent(request.getContent());
         return toResponse(ptNoteRepository.save(note));
@@ -102,22 +109,25 @@ public class PtNoteService {
     public void deleteNote(String ptEmail, Integer noteId) {
         User pt = getUserByEmail(ptEmail);
 
-        // FIX IDOR + Truy vấn dư thừa: tương tự updateNote
+        // FIX Lỗi 404 vs 403: Tách 2 bước để phân biệt rõ
+        if (!ptNoteRepository.existsById(noteId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Không tìm thấy ghi chú");
+        }
+
         PtNote note = ptNoteRepository.findByIdAndPt_Id(noteId, pt.getId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.FORBIDDEN,
-                        "Ghi chú không tồn tại hoặc bạn không có quyền xóa"));
+                        "Bạn không có quyền xóa ghi chú này"));
 
         ptNoteRepository.delete(note);
     }
 
     // ----------------------------------------------------------------
     // HELPER: Check tại DB — member có đang ACTIVE với PT này không
-    // FIX IDOR: Ngăn PT tạo/xem ghi chú cho hội viên không thuộc mình
+    // FIX KIẾN TRÚC: Gọi đúng membershipRepository, không "cầm nhầm" PtNoteRepository
     // ----------------------------------------------------------------
     private void validatePtOwnsMember(Integer ptId, Integer memberId) {
-        
-        // SỬA Ở ĐÂY: Sử dụng membershipRepository thay vì ptNoteRepository
         boolean isAssigned = membershipRepository
                 .existsActiveMembershipByPtAndMember(ptId, memberId);
 
@@ -148,6 +158,7 @@ public class PtNoteService {
 
     // ----------------------------------------------------------------
     // HELPER: Chuyển Entity → Response DTO
+    // FIX N+1: @EntityGraph trong Repository đã load sẵn pt, member
     // ----------------------------------------------------------------
     private PtNoteResponse toResponse(PtNote note) {
         return PtNoteResponse.builder()
