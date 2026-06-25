@@ -21,6 +21,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.util.UUID;
 
 import java.util.Collections;
 import java.util.Optional;
@@ -111,7 +112,7 @@ public class AuthService {
                         .avatar(avatar)
                         .role(roleMember)
                         .status(true)
-                        .provider("GOOGLE")
+                        .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                         .build();
 
                 userRepository.save(user);

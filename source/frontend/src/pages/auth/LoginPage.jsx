@@ -1,110 +1,140 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import MainLayout from '../../components/layout/MainLayout';
-import './AuthPages.css';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import MainLayout from "../../components/layout/MainLayout";
+import "./AuthPages.css";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, loginGoogle } = useAuth();
+  const { login, loginGoogle } = useAuth(); // Giả định loginGoogle đã có trong AuthContext
 
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Ref để Google nhúng nút đăng nhập chuẩn vào
+  const googleButtonRef = useRef(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+    setError("");
   };
 
+  // Hàm xử lý sau khi Google trả về token
+  const handleGoogleResponse = useCallback(
+    async (response) => {
+      try {
+        setLoading(true);
+        setError("");
+        // Gửi idToken (response.credential) xuống Backend
+        const data = await loginGoogle(response.credential);
+
+        // Chuyển hướng theo Role
+        if (data.role === "ADMIN") {
+          navigate("/admin");
+        } else if (data.role === "PT") {
+          navigate("/pt/dashboard");
+        } else {
+          navigate("/member/dashboard");
+        }
+      } catch (err) {
+        const resData = err.response?.data;
+        setError(
+          resData?.message ||
+            "Đăng nhập bằng Google thất bại. Vui lòng thử lại!",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loginGoogle, navigate],
+  );
+
+  // Khởi tạo Google Sign-In Script và Render Button
+  useEffect(() => {
+    const loadGoogleScript = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+        });
+
+        // Vẽ nút Google chuẩn vào thẻ div có ref = googleButtonRef
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: "outline",
+          size: "large",
+          width: "100%",
+          text: "signin_with",
+        });
+      }
+    };
+
+    // Kiểm tra xem script đã tồn tại chưa để tránh add nhiều lần
+    if (
+      document.querySelector(
+        "script[src='https://accounts.google.com/gsi/client']",
+      )
+    ) {
+      loadGoogleScript();
+    } else {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = loadGoogleScript;
+      document.body.appendChild(script);
+    }
+  }, [handleGoogleResponse]);
+
+  // Xử lý đăng nhập bằng Mật khẩu (Local)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       const data = await login(formData.email, formData.password);
-      
-      if (data.role === 'ADMIN') {
-        navigate('/admin');
-      } else if (data.role === 'PT') {
-        navigate('/pt/dashboard');
+
+      // Chuyển hướng theo Role
+      if (data.role === "ADMIN") {
+        navigate("/admin");
+      } else if (data.role === "PT") {
+        navigate("/pt/dashboard");
       } else {
-        navigate('/member/dashboard');
+        navigate("/member/dashboard");
       }
     } catch (err) {
       const resData = err.response?.data;
-      if (resData) {
-        if (resData.message) {
-          setError(resData.message);
-        } else if (typeof resData === 'object') {
-          const firstError = Object.values(resData)[0];
-          setError(firstError || 'Email hoặc mật khẩu không đúng!');
-        } else {
-          setError('Email hoặc mật khẩu không đúng!');
-        }
-      } else {
-        setError('Lỗi kết nối đến máy chủ!');
-      }
+      setError(resData?.message || "Email hoặc mật khẩu không chính xác!");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Google Sign-In callback
-  const handleGoogleResponse = useCallback(async (response) => {
-    setError('');
-    setLoading(true);
-    try {
-      const data = await loginGoogle(response.credential);
-      
-      if (data.role === 'ADMIN') {
-        navigate('/admin');
-      } else if (data.role === 'PT') {
-        navigate('/pt/dashboard');
-      } else {
-        navigate('/member/dashboard');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Đăng nhập Google thất bại!');
-    } finally {
-      setLoading(false);
-    }
-  }, [loginGoogle, navigate]);
-
-  // Khởi tạo Google Sign-In
-  useEffect(() => {
-    if (window.google && GOOGLE_CLIENT_ID) {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleResponse,
-      });
-    }
-  }, [handleGoogleResponse]);
-
-  const handleGoogleClick = () => {
-    if (window.google && GOOGLE_CLIENT_ID) {
-      window.google.accounts.id.prompt();
-    } else {
-      setError('Google Sign-In chưa sẵn sàng. Vui lòng thử lại sau.');
     }
   };
 
   return (
     <MainLayout>
-      <div className="auth-page">
+      <div className="auth-container">
         <div className="auth-card">
-          <div className="auth-header">
-            <h1>Đăng Nhập</h1>
-            <p>Chào mừng trở lại! Vui lòng đăng nhập để tiếp tục.</p>
-          </div>
+          <h2>ĐĂNG NHẬP</h2>
 
-          {error && <div className="auth-error">{error}</div>}
+          {/* Hiển thị lỗi nếu có */}
+          {error && (
+            <div
+              className="auth-error"
+              style={{
+                color: "red",
+                marginBottom: "10px",
+                textAlign: "center",
+              }}
+            >
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
@@ -117,6 +147,7 @@ const LoginPage = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </div>
 
@@ -130,28 +161,41 @@ const LoginPage = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </div>
 
-            <button type="submit" className="btn-auth-submit" disabled={loading}>
-              {loading ? 'Đang đăng nhập...' : 'ĐĂNG NHẬP'}
+            <button
+              type="submit"
+              className="btn-auth-submit"
+              disabled={loading}
+            >
+              {loading ? "Đang xử lý..." : "ĐĂNG NHẬP"}
             </button>
           </form>
 
-          <div className="auth-divider">hoặc</div>
-
-          <button 
-            type="button" 
-            className="btn-google" 
-            onClick={handleGoogleClick}
-            disabled={loading}
+          <div
+            className="auth-divider"
+            style={{ textAlign: "center", margin: "20px 0" }}
           >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-            Đăng nhập bằng Google
-          </button>
+            hoặc
+          </div>
 
-          <div className="auth-footer">
-            <p>Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link></p>
+          {/* Vùng chứa nút Đăng nhập Google chuẩn */}
+          <div
+            ref={googleButtonRef}
+            className="google-button-wrapper"
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: "15px",
+            }}
+          ></div>
+
+          <div className="auth-footer" style={{ textAlign: "center" }}>
+            <p>
+              Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+            </p>
           </div>
         </div>
       </div>
