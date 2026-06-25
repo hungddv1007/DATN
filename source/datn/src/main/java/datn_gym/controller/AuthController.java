@@ -40,6 +40,17 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    // POST /api/auth/google
+    @PostMapping("/google")
+    public ResponseEntity<JwtResponse> loginWithGoogle(@RequestBody java.util.Map<String, String> body) {
+        String idToken = body.get("idToken");
+        if (idToken == null || idToken.isBlank()) {
+            throw new IllegalArgumentException("Token Google không được để trống!");
+        }
+        JwtResponse response = authService.loginWithGoogle(idToken);
+        return ResponseEntity.ok(response);
+    }
+
     // GET /api/auth/test - API test kiểm tra server chạy
     @GetMapping("/test")
     public ResponseEntity<MessageResponse> test() {

@@ -144,8 +144,8 @@ const ProfilePage = () => {
                 {formData.avatar ? (
                   <img src={formData.avatar} alt="Avatar" className="profile-avatar" />
                 ) : (
-                  <div className="avatar-placeholder">
-                    <UserIcon size={60} color="#cbd5e1" />
+                  <div className="avatar-placeholder avatar-initial">
+                    {formData.fullName?.charAt(0)?.toUpperCase() || user?.fullName?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                 )}
                 

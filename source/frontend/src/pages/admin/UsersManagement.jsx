@@ -132,13 +132,21 @@ const UsersManagement = () => {
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ 
-                        width: '35px', height: '35px', borderRadius: '50%', background: '#334155',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+                        width: '35px', height: '35px', borderRadius: '50%', 
+                        overflow: 'hidden', flexShrink: 0,
+                        border: '2px solid #f97316'
                       }}>
                         {user.avatar ? (
                           <img src={user.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <span style={{ fontSize: '14px', fontWeight: 'bold' }}>{user.fullName.charAt(0)}</span>
+                          <div style={{ 
+                            width: '100%', height: '100%', 
+                            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#fff', fontWeight: '700', fontSize: '0.95rem'
+                          }}>
+                            {user.fullName?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
                         )}
                       </div>
                       <strong style={{ color: '#f1f5f9' }}>{user.fullName}</strong>

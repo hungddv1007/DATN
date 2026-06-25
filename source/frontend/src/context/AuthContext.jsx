@@ -23,6 +23,13 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  // Đăng nhập bằng Google
+  const loginGoogle = async (idToken) => {
+    const data = await authService.loginWithGoogle(idToken);
+    setUser(data);
+    return data;
+  };
+
   // Đăng xuất
   const logout = () => {
     authService.logout();
@@ -39,6 +46,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    loginGoogle,
     logout,
     updateUser,
     isLoggedIn: !!user,

@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import authService from '../../services/authService';
 import MainLayout from '../../components/layout/MainLayout';
 import './AuthPages.css';
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const { loginGoogle } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -107,6 +111,44 @@ const RegisterPage = () => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // Google Sign-In callback
+  const handleGoogleResponse = useCallback(async (response) => {
+    setError('');
+    setLoading(true);
+    try {
+      const data = await loginGoogle(response.credential);
+      setSuccess('Đăng ký bằng Google thành công!');
+      if (data.role === 'ADMIN') {
+        navigate('/admin');
+      } else if (data.role === 'PT') {
+        navigate('/pt/dashboard');
+      } else {
+        navigate('/member/dashboard');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Đăng ký Google thất bại!');
+    } finally {
+      setLoading(false);
+    }
+  }, [loginGoogle, navigate]);
+
+  useEffect(() => {
+    if (window.google && GOOGLE_CLIENT_ID) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+      });
+    }
+  }, [handleGoogleResponse]);
+
+  const handleGoogleClick = () => {
+    if (window.google && GOOGLE_CLIENT_ID) {
+      window.google.accounts.id.prompt();
+    } else {
+      setError('Google Sign-In chưa sẵn sàng. Vui lòng thử lại sau.');
+    }
   };
 
   return (
@@ -230,6 +272,22 @@ const RegisterPage = () => {
               </div>
             </form>
           )}
+
+          {step === 1 && (
+            <>
+              <div className="auth-divider">hoặc</div>
+              <button 
+                type="button" 
+                className="btn-google" 
+                onClick={handleGoogleClick}
+                disabled={loading}
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+                Đăng ký bằng Google
+              </button>
+            </>
+          )}
+
 
           <div className="auth-footer">
             <p>Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p>

@@ -112,6 +112,32 @@
   color: #f97316;
 }
 
+/* --- User Avatar --- */
+.header-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #f97316;
+  flex-shrink: 0;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.user-menu:hover .header-avatar {
+  border-color: #fb923c;
+  transform: scale(1.05);
+}
+
+.header-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
 .user-dropdown {
   position: absolute;
   top: 100%;
