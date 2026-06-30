@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
+import memberPlanService from '../../services/memberPlanService';
 import { Package, CreditCard, Bell, User, Dumbbell, Star } from 'lucide-react';
 import './DashboardPage.css';
 
 const MemberDashboard = () => {
   const { user } = useAuth();
   const [membership, setMembership] = useState(null);
+  const [activePlan, setActivePlan] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,9 +20,14 @@ const MemberDashboard = () => {
         setMembership(currentData);
       } catch (error) {
         console.log('User has no active membership or error occurred');
-      } finally {
-        setLoading(false);
       }
+      try {
+        const planData = await memberPlanService.getActivePlan();
+        if (planData) setActivePlan(planData);
+      } catch (error) {
+        console.log('User has no active plan');
+      }
+      setLoading(false);
     };
     fetchDashboardData();
   }, []);
@@ -59,8 +66,14 @@ const MemberDashboard = () => {
           <div className="dash-card">
             <Dumbbell size={32} className="dash-icon" />
             <h3>Lộ trình tập</h3>
-            <p className="dash-value">Chưa có lộ trình</p>
-            <span className="dash-link">Xem chi tiết →</span>
+            {loading ? (
+              <p className="dash-value">Đang tải...</p>
+            ) : activePlan ? (
+              <p className="dash-value" style={{ color: '#3b82f6' }}>{activePlan.title}</p>
+            ) : (
+              <p className="dash-value">Chưa có lộ trình</p>
+            )}
+            <Link to="/member/plan" className="dash-link">Xem chi tiết →</Link>
           </div>
           <div className="dash-card">
             <Star size={32} className="dash-icon" />

@@ -18,6 +18,7 @@ import RegisterPage from './pages/auth/RegisterPage';
 import MemberDashboard from './pages/member/MemberDashboard';
 import BuyPackagePage from './pages/member/BuyPackagePage';
 import MemberTransactions from './pages/member/MemberTransactions';
+import MemberPlanDetail from './pages/member/MemberPlanDetail';
 
 // PT Pages
 import PtDashboard from './pages/pt/PtDashboard';
@@ -25,6 +26,9 @@ import PtMembersList from './pages/pt/PtMembersList';
 import PtMemberDetail from './pages/pt/PtMemberDetail';
 import PtProfilePage from './pages/pt/PtProfilePage';
 import PtReviewsPage from './pages/pt/PtReviewsPage';
+import PtPlansPage from './pages/pt/PtPlansPage';
+import PtPlanDetail from './pages/pt/PtPlanDetail';
+import PtAssignmentsPage from './pages/pt/PtAssignmentsPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -80,11 +84,31 @@ function App() {
               <MemberTransactions />
             </ProtectedRoute>
           } />
+          <Route path="/member/plan" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MemberPlanDetail />
+            </ProtectedRoute>
+          } />
 
           {/* === PT (cần đăng nhập + role PT) === */}
           <Route path="/pt/dashboard" element={
             <ProtectedRoute allowedRoles={['PT']}>
               <PtDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/pt/plans" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtPlansPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/pt/plans/:id" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtPlanDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/pt/assignments" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtAssignmentsPage />
             </ProtectedRoute>
           } />
           <Route path="/pt/members" element={
