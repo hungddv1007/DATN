@@ -29,8 +29,10 @@ const PtLayout = ({ children }) => {
         </div>
         <ul className="admin-nav">
           <li><Link to="/pt/dashboard" className={isActive('/pt/dashboard')}><LayoutDashboard size={18} /> Tổng quan</Link></li>
-          <li><Link to="/pt/profile" className={isActive('/pt/profile')}><UserCircle size={18} /> Hồ sơ của tôi</Link></li>
+          <li><Link to="/pt/plans" className={isActive('/pt/plans')}><BookOpen size={18} /> Lộ trình tập</Link></li>
+          <li><Link to="/pt/assignments" className={isActive('/pt/assignments')}><Users size={18} /> Phân công</Link></li>
           <li><Link to="/pt/members" className={isActive('/pt/members')}><Users size={18} /> Học viên của tôi</Link></li>
+          <li><Link to="/pt/profile" className={isActive('/pt/profile')}><UserCircle size={18} /> Hồ sơ của tôi</Link></li>
           <li><Link to="/pt/reviews" className={isActive('/pt/reviews')}><MessageSquare size={18} /> Đánh giá</Link></li>
           <li style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
             <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}><LogOut size={18} /> Đăng xuất</a>
