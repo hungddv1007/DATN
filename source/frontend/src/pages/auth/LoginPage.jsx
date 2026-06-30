@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import MainLayout from '../../components/layout/MainLayout';
@@ -9,6 +9,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, loginGoogle } = useAuth();
+  const googleButtonRef = useRef(null);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -29,7 +30,7 @@ const LoginPage = () => {
 
     try {
       const data = await login(formData.email, formData.password);
-      
+
       if (data.role === 'ADMIN') {
         navigate('/admin');
       } else if (data.role === 'PT') {
@@ -62,7 +63,7 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const data = await loginGoogle(response.credential);
-      
+
       if (data.role === 'ADMIN') {
         navigate('/admin');
       } else if (data.role === 'PT') {
@@ -77,23 +78,22 @@ const LoginPage = () => {
     }
   }, [loginGoogle, navigate]);
 
-  // Khởi tạo Google Sign-In
+  // Khởi tạo Google Sign-In và render nút chuẩn của Google
   useEffect(() => {
-    if (window.google && GOOGLE_CLIENT_ID) {
+    if (window.google && GOOGLE_CLIENT_ID && googleButtonRef.current) {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: handleGoogleResponse,
       });
+
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: '100%',
+        text: 'signin_with',
+      });
     }
   }, [handleGoogleResponse]);
-
-  const handleGoogleClick = () => {
-    if (window.google && GOOGLE_CLIENT_ID) {
-      window.google.accounts.id.prompt();
-    } else {
-      setError('Google Sign-In chưa sẵn sàng. Vui lòng thử lại sau.');
-    }
-  };
 
   return (
     <MainLayout>
@@ -140,15 +140,11 @@ const LoginPage = () => {
 
           <div className="auth-divider">hoặc</div>
 
-          <button 
-            type="button" 
-            className="btn-google" 
-            onClick={handleGoogleClick}
-            disabled={loading}
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-            Đăng nhập bằng Google
-          </button>
+          {/* Nút chuẩn của Google sẽ tự render ở đây (thay cho nút custom cũ) */}
+          <div
+            ref={googleButtonRef}
+            style={{ display: 'flex', justifyContent: 'center', opacity: loading ? 0.6 : 1, pointerEvents: loading ? 'none' : 'auto' }}
+          ></div>
 
           <div className="auth-footer">
             <p>Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link></p>
