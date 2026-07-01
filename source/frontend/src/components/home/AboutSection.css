@@ -6,7 +6,7 @@
   /* Kéo khối này đè lên một chút phần hero section */
   margin-top: -60px;
   border-radius: 20px 20px 0 0;
-  box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.1);
 }
 
 .about-container {
@@ -33,18 +33,19 @@
   border-radius: 16px;
   padding: 32px 20px;
   text-align: center;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   transition: transform 0.3s ease, box-shadow 0.3s;
 }
 
 .stat-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 15px 25px -5px rgba(0,0,0,0.1);
+  box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1);
   border-color: #f97316;
 }
 
 .stat-icon {
-  color: #f97316; /* Cam */
+  color: #f97316;
+  /* Cam */
   margin-bottom: 16px;
 }
 
@@ -56,7 +57,7 @@
 }
 
 .stat-text {
-  color: #64748b;
+  color: #0f172a;
   font-weight: 500;
   font-size: 1.1rem;
 }
@@ -86,7 +87,7 @@
   justify-content: center;
   background: white;
   border-radius: 50%;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   padding: 12px;
 }
 
@@ -108,12 +109,26 @@
 }
 
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 900px) {
-  .stats-cards { flex-direction: column; }
-  .about-container { flex-direction: column; align-items: stretch; }
-  .tech-stack-container { margin-top: 20px; }
+  .stats-cards {
+    flex-direction: column;
+  }
+
+  .about-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tech-stack-container {
+    margin-top: 20px;
+  }
 }

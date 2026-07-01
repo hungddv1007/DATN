@@ -85,6 +85,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/search/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/pt-profiles/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
 
                 // 7. Còn lại cần đăng nhập
                 .anyRequest().authenticated()

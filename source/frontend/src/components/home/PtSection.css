@@ -3,6 +3,14 @@
   background-color: #1e293b; /* Nền xám đậm hơn một chút so với nền chính */
 }
 
+.pt-section .section-title {
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #f1f5f9; /* Sửa lại màu font sáng để nổi bật trên nền tối */
+  margin-bottom: 60px;
+}
+
 .carousel-wrapper {
   margin: 0 -16px;
   padding: 0 20px; /* Chỗ cho nút bấm mũi tên */
@@ -12,23 +20,23 @@
   padding: 16px;
 }
 
-.pt-card {
-  background: #ffffff;
+.pt-section .pt-card {
+  background: rgba(30, 41, 59, 0.7);
   border-radius: 12px;
   padding: 32px 24px;
   text-align: center;
-  color: #0f172a;
-  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-  border: 2px solid transparent;
+  color: #f1f5f9; /* Sáng màu chữ */
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
 }
 
-.pt-card:hover {
+.pt-section .pt-card:hover {
   border-color: #ea580c;
   transform: translateY(-5px);
 }
 
-.pt-img-wrapper {
+.pt-section .pt-img-wrapper {
   width: 120px;
   height: 120px;
   margin: 0 auto 20px;
@@ -37,45 +45,57 @@
   background: linear-gradient(135deg, #ea580c, #fcd34d);
 }
 
-.pt-img {
+.pt-section .pt-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
-  border: 4px solid white;
+  border: 4px solid #1e293b; /* Viền tối phù hợp nền */
 }
 
-.pt-name {
+.pt-section .pt-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 800;
+  border: 4px solid #1e293b;
+}
+
+.pt-section .pt-name {
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 8px;
+  color: #f1f5f9;
 }
 
-.pt-spec {
+.pt-section .pt-spec {
   font-size: 0.95rem;
-  color: #64748b;
+  color: #94a3b8;
   margin-bottom: 16px;
   line-height: 1.4;
 }
 
-.pt-spec b {
-  color: #334155;
+.pt-section .pt-spec b {
+  color: #cbd5e1; /* Sáng hơn cho chữ in đậm */
 }
 
-.pt-rating {
+.pt-section .pt-rating {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   font-weight: 700;
-  color: #0f172a;
+  color: #f1f5f9; /* Chữ điểm số sáng */
   margin-bottom: 24px;
 }
 
-.btn-view-profile {
+.pt-section .btn-view-profile {
   background: transparent;
-  color: #0f172a;
-  border: 2px solid #0f172a;
+  color: #cbd5e1;
+  border: 2px solid #475569;
   padding: 10px 24px;
   border-radius: 6px;
   font-weight: 700;
@@ -85,9 +105,10 @@
   width: 100%;
 }
 
-.btn-view-profile:hover {
-  background: #0f172a;
+.pt-section .btn-view-profile:hover {
+  background: #ea580c;
   color: white;
+  border-color: #ea580c;
 }
 
 /* Slick Carousel overrides for dark theme */

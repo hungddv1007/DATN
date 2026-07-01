@@ -22,12 +22,31 @@ public class BlogService {
     private final BlogRepository blogRepository;
     private final UserRepository userRepository;
 
-    // Lấy tất cả bài viết (Trừ DELETED)
+    // Lấy tất cả bài viết (Trừ DELETED) — Admin
     public List<BlogResponse> getAllBlogs() {
         return blogRepository.findAll().stream()
                 .filter(b -> !"DELETED".equals(b.getStatus()))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    // Lấy bài viết PUBLISHED — Public
+    public List<BlogResponse> getPublishedBlogs() {
+        return blogRepository.findAll().stream()
+                .filter(b -> "PUBLISHED".equals(b.getStatus()))
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    // Lấy 1 bài viết PUBLISHED theo ID — Public
+    public BlogResponse getPublishedBlogById(Integer id) {
+        Blog blog = blogRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy bài viết"));
+        if (!"PUBLISHED".equals(blog.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bài viết không tồn tại");
+        }
+        return toResponse(blog);
     }
 
     // Tạo bài viết mới

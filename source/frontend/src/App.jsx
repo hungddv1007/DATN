@@ -7,6 +7,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import HomePage from './pages/public/HomePage';
 import PackagesPage from './pages/public/PackagesPage';
 import BlogListPage from './pages/public/BlogListPage';
+import BlogDetailPage from './pages/public/BlogDetailPage';
 import AboutPage from './pages/public/AboutPage';
 import PtListPage from './pages/public/PtListPage';
 
@@ -54,6 +55,7 @@ function App() {
           <Route path="/packages" element={<PackagesPage />} />
           <Route path="/services" element={<PackagesPage />} />
           <Route path="/blog" element={<BlogListPage />} />
+          <Route path="/blog/:id" element={<BlogDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/pts" element={<PtListPage />} />
 

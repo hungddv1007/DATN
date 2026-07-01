@@ -1,6 +1,22 @@
 import api from './api';
 
 const blogService = {
+  // === PUBLIC (không cần đăng nhập) ===
+  
+  // Lấy danh sách blog đã publish (public)
+  getPublicBlogs: async () => {
+    const response = await api.get('/blogs');
+    return response.data;
+  },
+
+  // Lấy 1 blog theo ID (public)
+  getPublicBlogById: async (id) => {
+    const response = await api.get(`/blogs/${id}`);
+    return response.data;
+  },
+
+  // === ADMIN ===
+
   // Lấy danh sách (Admin)
   getAllBlogs: async () => {
     const response = await api.get('/admin/blogs');
