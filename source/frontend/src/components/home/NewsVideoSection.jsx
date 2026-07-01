@@ -1,60 +1,93 @@
-import React from 'react';
-import { PlayCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Clock, User, ArrowRight } from 'lucide-react';
+import blogService from '../../services/blogService';
 import './NewsVideoSection.css';
 
 const NewsVideoSection = () => {
+  const [blogs, setBlogs] = useState([]);
+
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        const data = await blogService.getPublicBlogs();
+        // Lấy 4 bài mới nhất
+        setBlogs(data.slice(0, 4));
+      } catch (err) {
+        console.error('Lỗi tải blog:', err);
+      }
+    };
+    fetchBlogs();
+  }, []);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('vi-VN');
+  };
+
+  if (blogs.length === 0) return null;
+
   return (
     <section className="news-video-section">
       <div className="container">
-        <h2 className="section-title">TIN TỨC & VIDEO CÔNG KHAI</h2>
+        <h2 className="section-title">TIN TỨC & BÀI VIẾT MỚI NHẤT</h2>
         
         <div className="content-grid">
-          {/* Cột Trái - Tin tức */}
+          {/* Bài viết nổi bật (bài đầu tiên) */}
           <div className="news-column">
-            <h3 className="column-title">TIN TỨC MỚI</h3>
-            <div className="news-list">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="news-item">
-                  <div className="news-thumb-wrapper">
-                    <img 
-                      src={`https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=150&auto=format&fit=crop&sig=${item}`} 
-                      alt="News thumbnail" 
-                      className="news-thumb" 
-                    />
-                  </div>
-                  <div className="news-content">
-                    <h4 className="news-title">Tập tự do - Làm sao để không theo đám đông nhưng vẫn hiệu quả</h4>
-                    <p className="news-desc">Cùng chuyên gia đánh giá và nhận định các bài tập nâng cao sức bền trong quá trình tập luyện của bạn...</p>
-                  </div>
+            <h3 className="column-title">BÀI VIẾT NỔI BẬT</h3>
+            <Link to={`/blog/${blogs[0].id}`} className="featured-news-item">
+              {blogs[0].thumbnail && (
+                <div className="featured-thumb-wrapper">
+                  <img 
+                    src={blogs[0].thumbnail.startsWith('http') ? blogs[0].thumbnail : `http://localhost:8080/api/public/uploads/${blogs[0].thumbnail}`} 
+                    alt={blogs[0].title} 
+                    className="featured-thumb" 
+                  />
                 </div>
-              ))}
-            </div>
+              )}
+              <div className="featured-content">
+                <h4 className="featured-title">{blogs[0].title}</h4>
+                <p className="news-desc">{blogs[0].content?.substring(0, 120)}...</p>
+                <div className="news-meta-row">
+                  <span><User size={13} /> {blogs[0].authorName}</span>
+                  <span><Clock size={13} /> {formatDate(blogs[0].createdAt)}</span>
+                </div>
+              </div>
+            </Link>
           </div>
 
-          {/* Cột Phải - Video */}
+          {/* Danh sách bài viết còn lại */}
           <div className="video-column">
-            <h3 className="column-title">VIDEO HƯỚNG DẪN</h3>
-            <div className="main-video-wrapper">
-               <img 
-                 src="https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=800&auto=format&fit=crop" 
-                 alt="Main video" 
-                 className="main-video-thumb" 
-               />
-               <div className="play-overlay">
-                 <PlayCircle size={64} className="play-icon" fill="#ea580c" color="white" />
-               </div>
+            <h3 className="column-title">BÀI VIẾT KHÁC</h3>
+            <div className="news-list">
+              {blogs.slice(1).map((blog) => (
+                <Link to={`/blog/${blog.id}`} key={blog.id} className="news-item">
+                  <div className="news-thumb-wrapper">
+                    {blog.thumbnail ? (
+                      <img 
+                        src={blog.thumbnail.startsWith('http') ? blog.thumbnail : `http://localhost:8080/api/public/uploads/${blog.thumbnail}`} 
+                        alt={blog.title} 
+                        className="news-thumb" 
+                      />
+                    ) : (
+                      <div className="news-thumb news-thumb-placeholder">📝</div>
+                    )}
+                  </div>
+                  <div className="news-content">
+                    <h4 className="news-title">{blog.title}</h4>
+                    <div className="news-meta-row">
+                      <span><User size={12} /> {blog.authorName}</span>
+                      <span><Clock size={12} /> {formatDate(blog.createdAt)}</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
-            
-            <div className="video-list">
-               <div className="video-item">
-                 <img src="https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=150&auto=format&fit=crop" alt="vid1" className="video-thumb-small" />
-                 <h5 className="video-title-small">Xem ngay các bài tập cơ bụng số 1</h5>
-               </div>
-               <div className="video-item">
-                 <img src="https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=150&auto=format&fit=crop" alt="vid2" className="video-thumb-small" />
-                 <h5 className="video-title-small">Tập tạ đơn - Các lỗi sai cơ bản thường gặp</h5>
-               </div>
-            </div>
+            <Link to="/blog" className="view-all-btn">
+              Xem tất cả bài viết <ArrowRight size={16} />
+            </Link>
           </div>
         </div>
       </div>

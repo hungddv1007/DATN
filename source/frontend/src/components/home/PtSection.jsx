@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SliderRaw from 'react-slick';
 import { Star } from 'lucide-react';
+import ptService from '../../services/ptService';
 import "slick-carousel/slick/slick.css"; 
 import "slick-carousel/slick/slick-theme.css";
 import './PtSection.css';
@@ -10,26 +11,37 @@ const Slider = SliderRaw.default || SliderRaw;
 
 const PtSection = () => {
   const navigate = useNavigate();
-  const pts = [
-    { id: 1, name: 'Nguyễn Thành', spec: 'Giảm mỡ', rating: 4.9, img: 'https://images.unsplash.com/photo-1567598508481-65985588e295?q=80&w=200&auto=format&fit=crop' },
-    { id: 2, name: 'Ngọc Trinh', spec: 'Giảm mỡ', rating: 4.9, img: 'https://images.unsplash.com/photo-1534438097544-77e891396a56?q=80&w=200&auto=format&fit=crop' },
-    { id: 3, name: 'Ngọc Nam', spec: 'Tăng cơ', rating: 5.0, img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=200&auto=format&fit=crop' },
-    { id: 4, name: 'Ngọc Thảo', spec: 'Tăng cơ', rating: 4.8, img: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=200&auto=format&fit=crop' },
-    { id: 5, name: 'Tuấn Anh', spec: 'Thể lực', rating: 4.9, img: 'https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=200&auto=format&fit=crop' },
-  ];
+  const [pts, setPts] = useState([]);
+
+  useEffect(() => {
+    const fetchPts = async () => {
+      try {
+        const data = await ptService.getAllPtProfiles();
+        // Chỉ lấy PT đang hoạt động, tối đa 8 người cho slider
+        setPts(data.filter(pt => pt.ratingScore > 0).slice(0, 8));
+      } catch (err) {
+        console.error('Lỗi tải danh sách PT:', err);
+      }
+    };
+    fetchPts();
+  }, []);
 
   const settings = {
     dots: true,
-    infinite: true,
+    infinite: pts.length > 4,
     speed: 500,
-    slidesToShow: 4,
+    slidesToShow: Math.min(pts.length, 4),
     slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 4000,
     responsive: [
-      { breakpoint: 1024, settings: { slidesToShow: 3 } },
-      { breakpoint: 768, settings: { slidesToShow: 2 } },
+      { breakpoint: 1024, settings: { slidesToShow: Math.min(pts.length, 3) } },
+      { breakpoint: 768, settings: { slidesToShow: Math.min(pts.length, 2) } },
       { breakpoint: 480, settings: { slidesToShow: 1 } }
     ]
   };
+
+  if (pts.length === 0) return null;
 
   return (
     <section className="pt-section">
@@ -41,13 +53,19 @@ const PtSection = () => {
               <div key={pt.id} className="pt-slide">
                 <div className="pt-card">
                   <div className="pt-img-wrapper">
-                     <img src={pt.img} alt={pt.name} className="pt-img" />
+                    {pt.avatar ? (
+                      <img src={pt.avatar.startsWith('http') ? pt.avatar : `http://localhost:8080/api/public/uploads/${pt.avatar}`} alt={pt.fullName} className="pt-img" />
+                    ) : (
+                      <div className="pt-img pt-avatar-fallback">
+                        {pt.fullName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                    )}
                   </div>
-                  <h3 className="pt-name">{pt.name}</h3>
-                  <p className="pt-spec">Chuyên môn<br/><b>{pt.spec}</b></p>
+                  <h3 className="pt-name">{pt.fullName}</h3>
+                  <p className="pt-spec">Chuyên môn<br/><b>{pt.specialization || 'Đa năng'}</b></p>
                   <div className="pt-rating">
                     <Star size={18} fill="#eab308" color="#eab308" />
-                    <span>{pt.rating}/5</span>
+                    <span>{pt.ratingScore ? `${pt.ratingScore}/5` : 'Mới'}</span>
                   </div>
                   <button className="btn-view-profile" onClick={() => navigate('/pts')}>XEM HỒ SƠ</button>
                 </div>
