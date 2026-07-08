@@ -49,12 +49,14 @@ public class GymPackageService {
     public GymPackageResponse createPackage(GymPackageRequest request) {
         GymPackage pkg = GymPackage.builder()
                 .name(request.getName())
-                .price(request.getPrice())
-                .durationDays(request.getDurationDays())
+                .dailyPrice(request.getDailyPrice())
+                .minDays(request.getMinDays())
                 .description(request.getDescription())
                 .hasPt(request.getHasPt() != null ? request.getHasPt() : false)
                 .canChoosePt(request.getCanChoosePt() != null ? request.getCanChoosePt() : false)
                 .hasMealPlan(request.getHasMealPlan() != null ? request.getHasMealPlan() : false)
+                .maxHoldTimes(request.getMaxHoldTimes() != null ? request.getMaxHoldTimes() : 0)
+                .holdReturnPercent(request.getHoldReturnPercent() != null ? request.getHoldReturnPercent() : 0)
                 .build();
 
         return toResponse(gymPackageRepository.save(pkg));
@@ -70,12 +72,14 @@ public class GymPackageService {
                         HttpStatus.NOT_FOUND, "Không tìm thấy gói tập với id: " + id));
 
         pkg.setName(request.getName());
-        pkg.setPrice(request.getPrice());
-        pkg.setDurationDays(request.getDurationDays());
+        pkg.setDailyPrice(request.getDailyPrice());
+        pkg.setMinDays(request.getMinDays());
         pkg.setDescription(request.getDescription());
         pkg.setHasPt(request.getHasPt() != null ? request.getHasPt() : false);
         pkg.setCanChoosePt(request.getCanChoosePt() != null ? request.getCanChoosePt() : false);
         pkg.setHasMealPlan(request.getHasMealPlan() != null ? request.getHasMealPlan() : false);
+        pkg.setMaxHoldTimes(request.getMaxHoldTimes() != null ? request.getMaxHoldTimes() : 0);
+        pkg.setHoldReturnPercent(request.getHoldReturnPercent() != null ? request.getHoldReturnPercent() : 0);
 
         return toResponse(gymPackageRepository.save(pkg));
     }
@@ -118,12 +122,14 @@ public class GymPackageService {
         return GymPackageResponse.builder()
                 .id(pkg.getId())
                 .name(pkg.getName())
-                .price(pkg.getPrice())
-                .durationDays(pkg.getDurationDays())
+                .dailyPrice(pkg.getDailyPrice())
+                .minDays(pkg.getMinDays())
                 .description(pkg.getDescription())
                 .hasPt(pkg.getHasPt())
                 .canChoosePt(pkg.getCanChoosePt())
                 .hasMealPlan(pkg.getHasMealPlan())
+                .maxHoldTimes(pkg.getMaxHoldTimes())
+                .holdReturnPercent(pkg.getHoldReturnPercent())
                 .isActive(pkg.getIsActive() != null ? pkg.getIsActive() : true)
                 .build();
     }

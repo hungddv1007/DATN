@@ -31,4 +31,8 @@ public class PtProfile {
     @Column(name = "rating_score", precision = 2, scale = 1)
     @Builder.Default
     private BigDecimal ratingScore = BigDecimal.ZERO;
+
+    @Column(name = "max_members")
+    @Builder.Default
+    private Integer maxMembers = 5;
 }

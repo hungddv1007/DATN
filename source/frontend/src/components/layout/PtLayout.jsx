@@ -30,6 +30,7 @@ const PtLayout = ({ children }) => {
         <ul className="admin-nav">
           <li><Link to="/pt/dashboard" className={isActive('/pt/dashboard')}><LayoutDashboard size={18} /> Tổng quan</Link></li>
           <li><Link to="/pt/plans" className={isActive('/pt/plans')}><BookOpen size={18} /> Lộ trình tập</Link></li>
+          <li><Link to="/pt/schedules" className={isActive('/pt/schedules')}><Users size={18} /> Lịch kèm</Link></li>
           <li><Link to="/pt/assignments" className={isActive('/pt/assignments')}><Users size={18} /> Phân công</Link></li>
           <li><Link to="/pt/members" className={isActive('/pt/members')}><Users size={18} /> Học viên của tôi</Link></li>
           <li><Link to="/pt/profile" className={isActive('/pt/profile')}><UserCircle size={18} /> Hồ sơ của tôi</Link></li>

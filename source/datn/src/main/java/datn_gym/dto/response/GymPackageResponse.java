@@ -12,11 +12,13 @@ import java.math.BigDecimal;
 public class GymPackageResponse {
     private Integer id;
     private String name;
-    private BigDecimal price;
-    private Integer durationDays;
+    private BigDecimal dailyPrice;
+    private Integer minDays;
     private String description;
     private Boolean hasPt;
     private Boolean canChoosePt;
     private Boolean hasMealPlan;
+    private Integer maxHoldTimes;
+    private Integer holdReturnPercent;
     private Boolean isActive;
 }

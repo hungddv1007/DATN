@@ -13,7 +13,7 @@ const PackagesSection = () => {
     const fetchPackages = async () => {
       try {
         const data = await packageService.getAllPackages();
-        const sorted = data.sort((a, b) => a.price - b.price);
+        const sorted = data.sort((a, b) => a.dailyPrice - b.dailyPrice);
         setPackages(sorted);
       } catch (err) {
         console.error('Lỗi tải gói tập:', err);
@@ -47,7 +47,10 @@ const PackagesSection = () => {
             <div className={`package-card ${getCardClass(index)}`} key={pkg.id}>
               {index === packages.length - 1 && <div className="special-badge">SPECIAL</div>}
               <h3 className="package-name">{pkg.name}</h3>
-              <div className="package-price">Giá: {formatPrice(pkg.price)}đ/{pkg.durationDays} ngày</div>
+              <div className="package-price" style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
+                <span>Giá: {formatPrice(pkg.dailyPrice)}đ / ngày</span>
+                <span style={{fontSize: '0.8em', opacity: 0.8}}>Đăng ký tối thiểu {pkg.minDays} ngày</span>
+              </div>
               <ul className="package-features">
                 <li><Check className={index >= 2 ? 'check-icon-vip' : 'check-icon'} /> Sử dụng thiết bị phòng tập</li>
                 <li className={pkg.hasPt ? '' : 'disabled'}>

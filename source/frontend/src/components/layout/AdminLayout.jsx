@@ -31,6 +31,7 @@ const AdminLayout = ({ children }) => {
           <li><Link to="/admin" className={isActive('/admin')}><LayoutDashboard size={18} /> Tổng quan</Link></li>
           <li><Link to="/admin/transactions" className={isActive('/admin/transactions')}><CreditCard size={18} /> Giao dịch</Link></li>
           <li><Link to="/admin/packages" className={isActive('/admin/packages')}><Package size={18} /> Gói tập</Link></li>
+          <li><Link to="/admin/discounts" className={isActive('/admin/discounts')}><Tag size={18} /> Chiết khấu</Link></li>
           <li><Link to="/admin/promotions" className={isActive('/admin/promotions')}><Tag size={18} /> Khuyến mãi</Link></li>
           <li><Link to="/admin/users" className={isActive('/admin/users')}><Users size={18} /> Quản lý Users</Link></li>
           <li><Link to="/admin/blogs" className={isActive('/admin/blogs')}><FileText size={18} /> Bài viết</Link></li>

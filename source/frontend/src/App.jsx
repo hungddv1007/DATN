@@ -20,6 +20,7 @@ import MemberDashboard from './pages/member/MemberDashboard';
 import BuyPackagePage from './pages/member/BuyPackagePage';
 import MemberTransactions from './pages/member/MemberTransactions';
 import MemberPlanDetail from './pages/member/MemberPlanDetail';
+import MembershipManagePage from './pages/member/MembershipManagePage';
 
 // PT Pages
 import PtDashboard from './pages/pt/PtDashboard';
@@ -30,6 +31,10 @@ import PtReviewsPage from './pages/pt/PtReviewsPage';
 import PtPlansPage from './pages/pt/PtPlansPage';
 import PtPlanDetail from './pages/pt/PtPlanDetail';
 import PtAssignmentsPage from './pages/pt/PtAssignmentsPage';
+import PtSchedulesPage from './pages/pt/PtSchedulesPage';
+
+// Member
+import MemberSchedulesPage from './pages/member/MemberSchedulesPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -39,6 +44,7 @@ import UsersManagement from './pages/admin/UsersManagement';
 import PromotionsManagement from './pages/admin/PromotionsManagement';
 import BlogsManagement from './pages/admin/BlogsManagement';
 import ExercisesManagement from './pages/admin/ExercisesManagement';
+import DiscountsManagement from './pages/admin/DiscountsManagement';
 
 // Profile Page
 import ProfilePage from './pages/profile/ProfilePage';
@@ -91,6 +97,16 @@ function App() {
               <MemberPlanDetail />
             </ProtectedRoute>
           } />
+          <Route path="/member/membership" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MembershipManagePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/member/schedules" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MemberSchedulesPage />
+            </ProtectedRoute>
+          } />
 
           {/* === PT (cần đăng nhập + role PT) === */}
           <Route path="/pt/dashboard" element={
@@ -133,6 +149,11 @@ function App() {
               <PtReviewsPage />
             </ProtectedRoute>
           } />
+          <Route path="/pt/schedules" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <PtSchedulesPage />
+            </ProtectedRoute>
+          } />
 
           {/* === Admin (cần đăng nhập + role ADMIN) === */}
           <Route path="/admin" element={
@@ -153,6 +174,11 @@ function App() {
           <Route path="/admin/users" element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <UsersManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/discounts" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <DiscountsManagement />
             </ProtectedRoute>
           } />
           <Route path="/admin/promotions" element={

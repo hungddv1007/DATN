@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
 import memberPlanService from '../../services/memberPlanService';
-import { Package, CreditCard, Bell, User, Dumbbell, Star } from 'lucide-react';
+import { Package, CreditCard, Bell, User, Dumbbell, Star, Calendar } from 'lucide-react';
 import './DashboardPage.css';
 
 const MemberDashboard = () => {
@@ -16,7 +16,7 @@ const MemberDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const currentData = await membershipService.getCurrentMembership();
+        const currentData = await membershipService.getMyCurrentMembership();
         setMembership(currentData);
       } catch (error) {
         console.log('User has no active membership or error occurred');
@@ -51,7 +51,7 @@ const MemberDashboard = () => {
             ) : (
               <p className="dash-value">Chưa đăng ký</p>
             )}
-            <Link to="/packages" className="dash-link">Xem gói tập →</Link>
+            <Link to="/member/membership" className="dash-link">Xem & Quản lý gói →</Link>
           </div>
           <div className="dash-card">
             <CreditCard size={32} className="dash-icon" />
@@ -86,6 +86,12 @@ const MemberDashboard = () => {
               <p className="dash-value">Chưa được gán</p>
             )}
             <span className="dash-link">Xem hồ sơ PT →</span>
+          </div>
+          <div className="dash-card">
+            <Calendar size={32} className="dash-icon" />
+            <h3>Lịch tập với PT</h3>
+            <p className="dash-value">Xem lịch cố định</p>
+            <Link to="/member/schedules" className="dash-link">Xem chi tiết →</Link>
           </div>
           <div className="dash-card">
             <Bell size={32} className="dash-icon" />

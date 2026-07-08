@@ -18,11 +18,9 @@ public class GymPackage {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
-    @Column(name = "price", nullable = false, precision = 12, scale = 0)
-    private BigDecimal price;
-
-    @Column(name = "duration_days", nullable = false)
-    private Integer durationDays;
+    // Đơn giá 1 ngày (VD: 20.000đ)
+    @Column(name = "daily_price", nullable = false, precision = 12, scale = 0)
+    private BigDecimal dailyPrice;
 
     @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
@@ -38,6 +36,21 @@ public class GymPackage {
     @Column(name = "has_meal_plan")
     @Builder.Default
     private Boolean hasMealPlan = false;
+
+    // Số ngày đăng ký tối thiểu (VD: VIP = 30)
+    @Column(name = "min_days")
+    @Builder.Default
+    private Integer minDays = 1;
+
+    // Số lần bảo lưu tối đa (0 = không được bảo lưu, VD: BASIC = 0)
+    @Column(name = "max_hold_times")
+    @Builder.Default
+    private Integer maxHoldTimes = 0;
+
+    // % ngày trả lại khi bảo lưu (VD: VIP = 90, PREMIUM = 80)
+    @Column(name = "hold_return_percent")
+    @Builder.Default
+    private Integer holdReturnPercent = 0;
 
     @Column(name = "is_active")
     @Builder.Default
