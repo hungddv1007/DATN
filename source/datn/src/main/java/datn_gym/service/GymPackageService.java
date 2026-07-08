@@ -23,10 +23,10 @@ public class GymPackageService {
     // PUBLIC: Lấy danh sách tất cả gói tập (trang công khai)
     // ----------------------------------------------------------------
     public List<GymPackageResponse> getAllPackages(boolean showAll) {
-        List<GymPackage> packages = showAll 
-            ? gymPackageRepository.findAll() 
+        List<GymPackage> packages = showAll
+            ? gymPackageRepository.findAll()
             : gymPackageRepository.findByIsActiveTrue();
-            
+
         return packages.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -50,8 +50,8 @@ public class GymPackageService {
         GymPackage pkg = GymPackage.builder()
                 .name(request.getName())
                 .dailyPrice(request.getDailyPrice())
-                .minDays(request.getMinDays())
                 .description(request.getDescription())
+                .minDays(request.getMinDays() != null ? request.getMinDays() : 1)
                 .hasPt(request.getHasPt() != null ? request.getHasPt() : false)
                 .canChoosePt(request.getCanChoosePt() != null ? request.getCanChoosePt() : false)
                 .hasMealPlan(request.getHasMealPlan() != null ? request.getHasMealPlan() : false)
@@ -73,8 +73,8 @@ public class GymPackageService {
 
         pkg.setName(request.getName());
         pkg.setDailyPrice(request.getDailyPrice());
-        pkg.setMinDays(request.getMinDays());
         pkg.setDescription(request.getDescription());
+        pkg.setMinDays(request.getMinDays() != null ? request.getMinDays() : 1);
         pkg.setHasPt(request.getHasPt() != null ? request.getHasPt() : false);
         pkg.setCanChoosePt(request.getCanChoosePt() != null ? request.getCanChoosePt() : false);
         pkg.setHasMealPlan(request.getHasMealPlan() != null ? request.getHasMealPlan() : false);
@@ -95,7 +95,7 @@ public class GymPackageService {
         }
         try {
             gymPackageRepository.deleteById(id);
-            gymPackageRepository.flush(); // Bắt buộc flush để trigger lỗi constraint ngay tại đây
+            gymPackageRepository.flush();
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Không thể xóa gói tập này vì đã có hội viên đăng ký. Hãy tạo gói mới thay vì xóa gói cũ!");

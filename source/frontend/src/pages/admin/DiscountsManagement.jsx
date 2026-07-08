@@ -1,229 +1,233 @@
 import React, { useState, useEffect } from 'react';
-import AdminLayout from '../../components/layout/AdminLayout';
-import discountService from '../../services/discountService';
 import packageService from '../../services/packageService';
-import { Edit, Trash2, Plus } from 'lucide-react';
-import './AdminManagement.css';
+import { Tag, Plus, Edit2, Trash2, ShieldAlert } from 'lucide-react';
+import './DiscountsManagement.css';
 
 const DiscountsManagement = () => {
   const [discounts, setDiscounts] = useState([]);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  // Modal state
+  // Form / Modal state
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
-  // Form state
-  const [formData, setFormData] = useState({
-    packageId: '', // rỗng = áp dụng cho tất cả
-    minDays: '',
-    discountPercent: ''
-  });
+  const [pkgId, setPkgId] = useState('');
+  const [minDays, setMinDays] = useState(30);
+  const [discountPercent, setDiscountPercent] = useState(5);
+  const [submitting, setSubmitting] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const loadData = async () => {
     try {
-      const [discountsData, packagesData] = await Promise.all([
-        discountService.getAllDiscounts(),
-        packageService.getAllPackages(false)
-      ]);
-      setDiscounts(discountsData);
-      setPackages(packagesData);
-    } catch (error) {
-      console.error('Lỗi tải chiết khấu:', error);
+      const discountData = await packageService.getAdminDiscounts();
+      setDiscounts(discountData);
+
+      const pkgData = await packageService.getAllPackages(false); // get both active and inactive
+      setPackages(pkgData);
+    } catch (err) {
+      setError('Lỗi tải dữ liệu chiết khấu');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    loadData();
   }, []);
 
-  const handleAddNew = () => {
+  const handleOpenAdd = () => {
     setEditingId(null);
-    setFormData({ packageId: '', minDays: '', discountPercent: '' });
+    setPkgId('');
+    setMinDays(30);
+    setDiscountPercent(5);
+    setError('');
+    setSuccess('');
     setShowModal(true);
   };
 
-  const handleEdit = (d) => {
-    setEditingId(d.id);
-    setFormData({ 
-      packageId: d.packageId || '', 
-      minDays: d.minDays, 
-      discountPercent: d.discountPercent 
-    });
+  const handleOpenEdit = (discount) => {
+    setEditingId(discount.id);
+    setPkgId(discount.packageId || '');
+    setMinDays(discount.minDays);
+    setDiscountPercent(discount.discountPercent);
+    setError('');
+    setSuccess('');
     setShowModal(true);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa chiết khấu này?')) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa mốc chiết khấu này không?")) return;
     try {
-      await discountService.deleteDiscount(id);
-      alert('Xóa thành công!');
-      fetchData();
-    } catch (error) {
-      alert(error.response?.data?.message || 'Lỗi khi xóa chiết khấu');
+      await packageService.deleteDiscount(id);
+      setSuccess('Xóa mốc chiết khấu thành công');
+      loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Xóa thất bại');
     }
   };
 
-  const handleSave = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const payload = {
-        packageId: formData.packageId ? parseInt(formData.packageId) : null,
-        minDays: parseInt(formData.minDays),
-        discountPercent: parseFloat(formData.discountPercent)
-      };
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
 
+    const payload = {
+      packageId: pkgId ? parseInt(pkgId) : null,
+      minDays: parseInt(minDays),
+      discountPercent: parseInt(discountPercent)
+    };
+
+    try {
       if (editingId) {
-        await discountService.updateDiscount(editingId, payload);
-        alert('Cập nhật thành công!');
+        await packageService.updateDiscount(editingId, payload);
+        setSuccess('Cập nhật mốc chiết khấu thành công');
       } else {
-        await discountService.createDiscount(payload);
-        alert('Thêm mới thành công!');
+        await packageService.createDiscount(payload);
+        setSuccess('Thêm mốc chiết khấu thành công');
       }
       setShowModal(false);
-      fetchData();
-    } catch (error) {
-      const resData = error.response?.data;
-      if (resData && typeof resData === 'object') {
-        const firstError = resData.message || Object.values(resData)[0];
-        alert(firstError || 'Có lỗi xảy ra');
-      } else {
-        alert('Lỗi kết nối máy chủ!');
-      }
+      loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const getPackageName = (pkgId) => {
-    if (!pkgId) return 'TẤT CẢ CÁC GÓI';
-    const pkg = packages.find(p => p.id === pkgId);
-    return pkg ? pkg.name : `Gói ID: ${pkgId}`;
-  };
+  if (loading) {
+    return <div className="admin-loading">Đang tải cấu hình chiết khấu...</div>;
+  }
 
   return (
-    <AdminLayout>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1>Quản lý Chiết Khấu Gia Hạn</h1>
-        <button 
-          onClick={handleAddNew}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            background: '#f97316', color: 'white', border: 'none',
-            padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
-          }}
-        >
-          <Plus size={20} /> Thêm chiết khấu
+    <div className="discounts-management">
+      <div className="admin-header-row">
+        <div>
+          <h1>Chiết Khấu Đăng Ký Dài Hạn</h1>
+          <p className="admin-sub">Quản lý các mốc giảm giá tự động khi khách hàng đăng ký dài hạn (ví dụ: mua 3 tháng giảm 5%)</p>
+        </div>
+        <button className="btn-add-discount" onClick={handleOpenAdd}>
+          <Plus size={18} /> Thêm mốc chiết khấu
         </button>
       </div>
 
-      <div className="admin-table-container">
+      {error && <div className="admin-alert error">{error}</div>}
+      {success && <div className="admin-alert success">{success}</div>}
+
+      <div className="discounts-table-container">
         <table className="admin-table">
           <thead>
             <tr>
               <th>ID</th>
-              <th>Áp dụng cho</th>
-              <th>Số ngày tối thiểu</th>
-              <th>Chiết khấu (%)</th>
-              <th>Hành động</th>
+              <th>Gói tập áp dụng</th>
+              <th>Đăng ký từ (ngày)</th>
+              <th>Đăng ký từ (tháng tương ứng)</th>
+              <th>Phần trăm giảm giá</th>
+              <th style={{ textAlign: 'center' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center' }}>Đang tải...</td></tr>
-            ) : discounts.length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center' }}>Không có chiết khấu nào</td></tr>
-            ) : (
+            {discounts.length > 0 ? (
               discounts.map(d => (
                 <tr key={d.id}>
-                  <td>{d.id}</td>
-                  <td style={{ fontWeight: 'bold', color: d.packageId ? '#60a5fa' : '#4ade80' }}>
-                    {getPackageName(d.packageId)}
-                  </td>
-                  <td style={{ color: '#f1f5f9' }}>{d.minDays} ngày</td>
-                  <td style={{ color: '#f97316', fontWeight: 'bold' }}>{d.discountPercent}%</td>
+                  <td>#{d.id}</td>
                   <td>
-                    <div className="action-btns">
-                      <button className="btn-icon" style={{ color: '#60a5fa', background: 'rgba(59,130,246,0.1)' }} onClick={() => handleEdit(d)} title="Sửa">
-                        <Edit size={18} />
+                    <span className={`pkg-badge ${d.packageId ? 'specific' : 'all'}`}>
+                      {d.packageName}
+                    </span>
+                  </td>
+                  <td><strong>{d.minDays} ngày</strong></td>
+                  <td>~ {Math.round(d.minDays / 30 * 10) / 10} tháng</td>
+                  <td className="discount-pct-cell">-{d.discountPercent}%</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div className="table-actions">
+                      <button className="btn-edit" onClick={() => handleOpenEdit(d)}>
+                        <Edit2 size={16} /> Sửa
                       </button>
-                      <button className="btn-icon cancel" onClick={() => handleDelete(d.id)} title="Xóa">
-                        <Trash2 size={18} />
+                      <button className="btn-delete" onClick={() => handleDelete(d.id)}>
+                        <Trash2 size={16} /> Xóa
                       </button>
                     </div>
                   </td>
                 </tr>
               ))
+            ) : (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', color: '#94a3b8' }}>Chưa có cấu hình chiết khấu nào. Hãy tạo mới!</td>
+              </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Modal Form */}
+      {/* Modal Thêm/Sửa */}
       {showModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }} onClick={() => setShowModal(false)}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: '#1e293b', padding: '30px', borderRadius: '12px', width: '90%', maxWidth: '500px',
-            border: '2px solid #3b82f6', boxShadow: '0 25px 50px rgba(0,0,0,0.5)'
-          }}>
-            <h2 style={{ color: '#ffffff', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '10px' }}>
-              {editingId ? 'Cập nhật Chiết khấu' : 'Thêm Chiết khấu'}
-            </h2>
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Áp dụng cho gói tập</label>
-                <select 
-                  value={formData.packageId} 
-                  onChange={e => setFormData({...formData, packageId: e.target.value})}
-                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px' }}
-                >
-                  <option value="">-- TẤT CẢ CÁC GÓI --</option>
-                  {packages.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
+        <div className="admin-modal-overlay">
+          <div className="admin-modal">
+            <div className="modal-header">
+              <h2>{editingId ? 'Sửa mốc chiết khấu' : 'Thêm mốc chiết khấu mới'}</h2>
+              <button className="btn-close" onClick={() => setShowModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label htmlFor="packageSelect">Gói tập áp dụng</label>
+                  <select
+                    id="packageSelect"
+                    value={pkgId}
+                    onChange={(e) => setPkgId(e.target.value)}
+                  >
+                    <option value="">Tất cả gói tập (Mặc định)</option>
+                    {packages.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                  <small style={{ color: '#94a3b8', marginTop: '5px', display: 'block' }}>
+                    Chọn gói tập cụ thể hoặc để trống để áp dụng chung cho tất cả gói.
+                  </small>
+                </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Số ngày tối thiểu để được giảm</label>
-                <input 
-                  required
-                  type="number" 
-                  min="1"
-                  value={formData.minDays} 
-                  onChange={e => setFormData({...formData, minDays: e.target.value})}
-                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px' }}
-                />
-              </div>
+                <div className="form-group">
+                  <label htmlFor="minDaysInput">Số ngày đăng ký tối thiểu (ngày)</label>
+                  <input
+                    id="minDaysInput"
+                    type="number"
+                    min={1}
+                    value={minDays}
+                    onChange={(e) => setMinDays(parseInt(e.target.value) || 0)}
+                    required
+                  />
+                  <small style={{ color: '#94a3b8', marginTop: '5px', display: 'block' }}>
+                    Ví dụ: 90 ngày (~3 tháng), 180 ngày (~6 tháng), 365 ngày (~1 năm).
+                  </small>
+                </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Phần trăm giảm giá (%)</label>
-                <input 
-                  required
-                  type="number" 
-                  min="0" max="100" step="0.1"
-                  value={formData.discountPercent} 
-                  onChange={e => setFormData({...formData, discountPercent: e.target.value})}
-                  style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px' }}
-                />
+                <div className="form-group">
+                  <label htmlFor="pctInput">Phần trăm giảm giá (%)</label>
+                  <input
+                    id="pctInput"
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={discountPercent}
+                    onChange={(e) => setDiscountPercent(parseInt(e.target.value) || 0)}
+                    required
+                  />
+                </div>
               </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '20px' }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: '12px 24px', background: 'transparent', border: '1px solid #475569', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Hủy</button>
-                <button type="submit" style={{ padding: '12px 24px', background: 'linear-gradient(to right, #f97316, #ea580c)', boxShadow: '0 4px 6px rgba(249, 115, 22, 0.3)', border: 'none', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Lưu thay đổi</button>
+              <div className="modal-footer">
+                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>Hủy</button>
+                <button type="submit" className="btn-save" disabled={submitting}>
+                  {submitting ? 'Đang xử lý...' : 'Lưu thiết lập'}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </AdminLayout>
+    </div>
   );
 };
 

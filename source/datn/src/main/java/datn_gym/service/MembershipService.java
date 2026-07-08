@@ -1,7 +1,10 @@
 package datn_gym.service;
 
 import datn_gym.dto.request.MembershipRequest;
+import datn_gym.dto.request.RenewRequest;
+import datn_gym.dto.request.UpgradeRequest;
 import datn_gym.dto.response.MembershipResponse;
+import datn_gym.dto.response.PricePreviewResponse;
 import datn_gym.entity.*;
 import datn_gym.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -11,11 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,30 +30,36 @@ public class MembershipService {
     private final PromotionRepository promotionRepository;
     private final TransactionRepository transactionRepository;
     private final PackageDiscountRepository discountRepository;
+    private final PtProfileRepository ptProfileRepository;
 
-    // ----------------------------------------------------------------
-    // 1. REGISTER NEW (Đăng ký mới)
-    // ----------------------------------------------------------------
+    // ================================================================
+    // A. ĐĂNG KÝ GÓI MỚI (NEW)
+    // ================================================================
     @Transactional
     public MembershipResponse registerPackage(String memberEmail, MembershipRequest request) {
         User member = getUserByEmail(memberEmail);
 
-        // Kiểm tra chưa có gói ACTIVE hoặc PAUSED
-        if (membershipRepository.findByUser_IdAndStatus(member.getId(), "ACTIVE").isPresent() ||
-            membershipRepository.findByUser_IdAndStatus(member.getId(), "PAUSED").isPresent()) {
-            throw new IllegalArgumentException("Bạn đang có gói tập đang hoạt động hoặc bảo lưu. Vui lòng gia hạn hoặc nâng cấp!");
-        }
+        // Kiểm tra đã có gói ACTIVE chưa
+        membershipRepository.findByUser_IdAndStatus(member.getId(), "ACTIVE")
+                .ifPresent(m -> {
+                    throw new IllegalArgumentException(
+                            "Bạn đang có gói tập đang hoạt động. Vui lòng gia hạn, nâng cấp hoặc hủy gói hiện tại!");
+                });
 
         GymPackage gymPackage = getActivePackage(request.getPackageId());
 
-        if (request.getDurationDays() == null || request.getDurationDays() < gymPackage.getMinDays()) {
-            throw new IllegalArgumentException("Gói tập này yêu cầu đăng ký tối thiểu " + gymPackage.getMinDays() + " ngày.");
+        // Kiểm tra min_days
+        if (request.getDurationDays() < gymPackage.getMinDays()) {
+            throw new IllegalArgumentException(
+                    "Gói " + gymPackage.getName() + " yêu cầu đăng ký tối thiểu " + gymPackage.getMinDays() + " ngày!");
         }
 
-        User pt = validatePtSelection(gymPackage, request.getPtId());
+        // Xử lý PT
+        User pt = resolvePt(gymPackage, request.getPtId());
 
-        // Tính tiền (gốc, chiết khấu, mã KM)
-        PricingResult pricing = calculatePricing(gymPackage, request.getDurationDays(), request.getPromotionCode());
+        // Tính tiền
+        PriceCalc calc = calculatePrice(gymPackage, request.getDurationDays(),
+                request.getPromotionCode(), BigDecimal.ZERO);
 
         // Tạo Membership
         LocalDate startDate = LocalDate.now();
@@ -63,177 +71,121 @@ public class MembershipService {
                 .pt(pt)
                 .startDate(startDate)
                 .endDate(endDate)
+                .status("ACTIVE")
                 .durationDays(request.getDurationDays())
                 .dailyPrice(gymPackage.getDailyPrice())
-                .status("ACTIVE")
                 .build();
+
         membershipRepository.save(membership);
 
         // Tạo Transaction
-        Transaction transaction = Transaction.builder()
-                .membership(membership)
-                .promotion(pricing.promotion)
-                .originalAmount(pricing.grossAmount)
-                .amount(pricing.finalAmount)
-                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "BANK")
-                .status("PENDING")
-                .type("NEW")
-                .build();
-        transactionRepository.save(transaction);
+        Transaction transaction = createTransaction(membership, calc, request.getPaymentMethod(), "NEW");
 
-        return toResponse(membership, transaction, pricing.promotion, pricing.discountPercent);
+        return toResponse(membership, transaction);
     }
 
-    // ----------------------------------------------------------------
-    // 2. RENEW (Gia hạn cùng gói)
-    // ----------------------------------------------------------------
+    // ================================================================
+    // B. GIA HẠN (RENEW) — cùng gói
+    // ================================================================
     @Transactional
-    public MembershipResponse renewPackage(String memberEmail, MembershipRequest request) {
+    public MembershipResponse renewMembership(String memberEmail, RenewRequest request) {
         User member = getUserByEmail(memberEmail);
-        Membership membership = getActiveOrPausedMembership(member.getId());
+        Membership membership = getActiveMembership(member.getId());
+        GymPackage gymPackage = membership.getGymPackage();
 
-        if (request.getDurationDays() == null || request.getDurationDays() < membership.getGymPackage().getMinDays()) {
-            throw new IllegalArgumentException("Yêu cầu gia hạn tối thiểu " + membership.getGymPackage().getMinDays() + " ngày.");
+        if (request.getDurationDays() < gymPackage.getMinDays()) {
+            throw new IllegalArgumentException(
+                    "Gói " + gymPackage.getName() + " yêu cầu gia hạn tối thiểu " + gymPackage.getMinDays() + " ngày!");
         }
 
-        PricingResult pricing = calculatePricing(membership.getGymPackage(), request.getDurationDays(), request.getPromotionCode());
+        // Tính tiền (dùng daily_price hiện tại của gói)
+        PriceCalc calc = calculatePrice(gymPackage, request.getDurationDays(),
+                request.getPromotionCode(), BigDecimal.ZERO);
 
+        // Cập nhật endDate
         membership.setEndDate(membership.getEndDate().plusDays(request.getDurationDays()));
         membership.setDurationDays(membership.getDurationDays() + request.getDurationDays());
         membershipRepository.save(membership);
 
-        Transaction transaction = Transaction.builder()
-                .membership(membership)
-                .promotion(pricing.promotion)
-                .originalAmount(pricing.grossAmount)
-                .amount(pricing.finalAmount)
-                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "BANK")
-                .status("PENDING")
-                .type("RENEW")
-                .build();
-        transactionRepository.save(transaction);
+        Transaction transaction = createTransaction(membership, calc, request.getPaymentMethod(), "RENEW");
 
-        return toResponse(membership, transaction, pricing.promotion, pricing.discountPercent);
+        return toResponse(membership, transaction);
     }
 
-    // ----------------------------------------------------------------
-    // 3. UPGRADE (Nâng cấp tại chỗ)
-    // ----------------------------------------------------------------
+    // ================================================================
+    // C. NÂNG CẤP (UPGRADE) — có hoặc không gia hạn thêm
+    // ================================================================
     @Transactional
-    public MembershipResponse upgradePackage(String memberEmail, MembershipRequest request) {
+    public MembershipResponse upgradeMembership(String memberEmail, UpgradeRequest request) {
         User member = getUserByEmail(memberEmail);
-        Membership membership = getActiveOrPausedMembership(member.getId());
-
+        Membership membership = getActiveMembership(member.getId());
+        GymPackage oldPackage = membership.getGymPackage();
         GymPackage newPackage = getActivePackage(request.getNewPackageId());
+
+        if (newPackage.getDailyPrice().compareTo(oldPackage.getDailyPrice()) <= 0) {
+            throw new IllegalArgumentException("Chỉ có thể nâng cấp lên gói cao hơn!");
+        }
 
         long remainingDays = ChronoUnit.DAYS.between(LocalDate.now(), membership.getEndDate());
         if (remainingDays <= 0) {
-            throw new IllegalArgumentException("Gói tập đã hết hạn, không thể nâng cấp.");
+            throw new IllegalArgumentException("Gói tập đã hết hạn! Vui lòng đăng ký gói mới.");
         }
 
-        if (remainingDays < newPackage.getMinDays()) {
-            throw new IllegalArgumentException("Số ngày còn lại (" + remainingDays + ") không đủ điều kiện tối thiểu (" + newPackage.getMinDays() + ") của gói mới. Vui lòng chọn nâng cấp kèm gia hạn!");
+        int extraDays = (request.getExtraDays() != null && request.getExtraDays() > 0)
+                ? request.getExtraDays() : 0;
+
+        // Nếu nâng cấp tại chỗ, check remaining >= minDays gói mới
+        if (extraDays == 0 && remainingDays < newPackage.getMinDays()) {
+            throw new IllegalArgumentException(
+                    "Gói " + newPackage.getName() + " yêu cầu tối thiểu " + newPackage.getMinDays()
+                            + " ngày. Bạn chỉ còn " + remainingDays + " ngày. Hãy gia hạn thêm!");
         }
 
-        User pt = validatePtSelection(newPackage, request.getPtId());
+        int totalNewDays = (int) remainingDays + extraDays;
 
-        // Tính PRORATION
-        BigDecimal credit = membership.getDailyPrice().multiply(BigDecimal.valueOf(remainingDays));
-        BigDecimal costNew = newPackage.getDailyPrice().multiply(BigDecimal.valueOf(remainingDays));
-        
-        BigDecimal upgradeCost = costNew.subtract(credit);
-        if (upgradeCost.compareTo(BigDecimal.ZERO) < 0) {
-            upgradeCost = BigDecimal.ZERO; // Không hoàn tiền
-        }
+        // PRORATION: credit từ gói cũ
+        BigDecimal credit = membership.getDailyPrice()
+                .multiply(BigDecimal.valueOf(remainingDays));
+
+        // Tính giá gói mới
+        PriceCalc calc = calculatePrice(newPackage, totalNewDays,
+                request.getPromotionCode(), credit);
+
+        // Xử lý PT mới (nếu gói mới có canChoosePt)
+        User pt = resolvePt(newPackage, request.getPtId());
 
         // Cập nhật membership
         membership.setGymPackage(newPackage);
         membership.setDailyPrice(newPackage.getDailyPrice());
         if (pt != null) membership.setPt(pt);
+        if (extraDays > 0) {
+            membership.setEndDate(membership.getEndDate().plusDays(extraDays));
+            membership.setDurationDays(membership.getDurationDays() + extraDays);
+        }
         membershipRepository.save(membership);
 
-        Transaction transaction = Transaction.builder()
-                .membership(membership)
-                .promotion(null)
-                .originalAmount(costNew)
-                .amount(upgradeCost)
-                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "BANK")
-                .status("PENDING")
-                .type("UPGRADE")
-                .build();
-        transactionRepository.save(transaction);
+        Transaction transaction = createTransaction(membership, calc,
+                request.getPaymentMethod(), "UPGRADE");
 
-        return toResponse(membership, transaction, null, null);
+        return toResponse(membership, transaction);
     }
 
-    // ----------------------------------------------------------------
-    // 4. UPGRADE & RENEW (Nâng cấp kèm gia hạn)
-    // ----------------------------------------------------------------
-    @Transactional
-    public MembershipResponse upgradeAndRenewPackage(String memberEmail, MembershipRequest request) {
-        User member = getUserByEmail(memberEmail);
-        Membership membership = getActiveOrPausedMembership(member.getId());
-
-        GymPackage newPackage = getActivePackage(request.getNewPackageId());
-
-        long remainingDays = ChronoUnit.DAYS.between(LocalDate.now(), membership.getEndDate());
-        if (remainingDays < 0) remainingDays = 0;
-
-        int addedDays = request.getDurationDays() != null ? request.getDurationDays() : 0;
-        long totalNewDays = remainingDays + addedDays;
-
-        if (totalNewDays < newPackage.getMinDays()) {
-            throw new IllegalArgumentException("Tổng số ngày (" + totalNewDays + ") không đủ điều kiện tối thiểu (" + newPackage.getMinDays() + ") của gói mới.");
-        }
-
-        User pt = validatePtSelection(newPackage, request.getPtId());
-
-        // Tính PRORATION
-        BigDecimal credit = membership.getDailyPrice().multiply(BigDecimal.valueOf(remainingDays));
-        
-        PricingResult pricing = calculatePricing(newPackage, (int) totalNewDays, request.getPromotionCode());
-        
-        BigDecimal upgradeCost = pricing.finalAmount.subtract(credit);
-        if (upgradeCost.compareTo(BigDecimal.ZERO) < 0) {
-            upgradeCost = BigDecimal.ZERO; // Không hoàn tiền
-        }
-
-        membership.setGymPackage(newPackage);
-        membership.setDailyPrice(newPackage.getDailyPrice());
-        membership.setEndDate(LocalDate.now().plusDays(totalNewDays));
-        membership.setDurationDays((int) totalNewDays);
-        if (pt != null) membership.setPt(pt);
-        membershipRepository.save(membership);
-
-        Transaction transaction = Transaction.builder()
-                .membership(membership)
-                .promotion(pricing.promotion)
-                .originalAmount(pricing.grossAmount)
-                .amount(upgradeCost)
-                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "BANK")
-                .status("PENDING")
-                .type("UPGRADE")
-                .build();
-        transactionRepository.save(transaction);
-
-        return toResponse(membership, transaction, pricing.promotion, pricing.discountPercent);
-    }
-
-    // ----------------------------------------------------------------
-    // 5. PAUSE (Bảo lưu)
-    // ----------------------------------------------------------------
+    // ================================================================
+    // D. BẢO LƯU (PAUSE)
+    // ================================================================
     @Transactional
     public MembershipResponse pauseMembership(String memberEmail) {
         User member = getUserByEmail(memberEmail);
-        Membership membership = membershipRepository.findByUser_IdAndStatus(member.getId(), "ACTIVE")
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói tập đang hoạt động."));
-
+        Membership membership = getActiveMembership(member.getId());
         GymPackage gymPackage = membership.getGymPackage();
-        if (gymPackage.getMaxHoldTimes() == null || gymPackage.getMaxHoldTimes() <= 0) {
-            throw new IllegalArgumentException("Gói tập này không hỗ trợ bảo lưu.");
+
+        if (gymPackage.getMaxHoldTimes() <= 0) {
+            throw new IllegalArgumentException("Gói " + gymPackage.getName() + " không hỗ trợ bảo lưu!");
         }
+
         if (membership.getHoldCount() >= gymPackage.getMaxHoldTimes()) {
-            throw new IllegalArgumentException("Bạn đã hết lượt bảo lưu cho gói tập này.");
+            throw new IllegalArgumentException(
+                    "Bạn đã sử dụng hết " + gymPackage.getMaxHoldTimes() + " lượt bảo lưu cho gói này!");
         }
 
         membership.setStatus("PAUSED");
@@ -241,24 +193,25 @@ public class MembershipService {
         membership.setHoldCount(membership.getHoldCount() + 1);
         membershipRepository.save(membership);
 
-        return toResponse(membership, null, null, null);
+        return toResponse(membership, getLatestTransaction(membership.getId()));
     }
 
-    // ----------------------------------------------------------------
-    // 6. RESUME (Hủy bảo lưu)
-    // ----------------------------------------------------------------
+    // ================================================================
+    // E. HỦY BẢO LƯU (RESUME)
+    // ================================================================
     @Transactional
     public MembershipResponse resumeMembership(String memberEmail) {
         User member = getUserByEmail(memberEmail);
         Membership membership = membershipRepository.findByUser_IdAndStatus(member.getId(), "PAUSED")
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói tập đang bảo lưu."));
+                .orElseThrow(() -> new IllegalArgumentException("Bạn không có gói đang bảo lưu!"));
 
         GymPackage gymPackage = membership.getGymPackage();
-        long holdDays = ChronoUnit.DAYS.between(membership.getPausedAt(), LocalDate.now());
-        
-        // Tính % trả lại ngày
-        int percent = gymPackage.getHoldReturnPercent() != null ? gymPackage.getHoldReturnPercent() : 0;
-        long returnDays = (long) Math.floor(holdDays * percent / 100.0);
+        LocalDate pausedAt = membership.getPausedAt();
+        long holdDays = ChronoUnit.DAYS.between(pausedAt, LocalDate.now());
+
+        // Tính return_days = holdDays × holdReturnPercent / 100
+        int returnPercent = gymPackage.getHoldReturnPercent() != null ? gymPackage.getHoldReturnPercent() : 0;
+        long returnDays = (long) Math.floor(holdDays * returnPercent / 100.0);
 
         membership.setEndDate(membership.getEndDate().plusDays(returnDays));
         membership.setStatus("ACTIVE");
@@ -266,181 +219,255 @@ public class MembershipService {
         membership.setTotalHoldDays(membership.getTotalHoldDays() + (int) holdDays);
         membershipRepository.save(membership);
 
-        return toResponse(membership, null, null, null);
+        return toResponse(membership, getLatestTransaction(membership.getId()));
     }
 
-    // ----------------------------------------------------------------
-    // 7. CANCEL (Hủy gói)
-    // ----------------------------------------------------------------
+    // ================================================================
+    // F. HỦY GÓI (CANCEL)
+    // ================================================================
     @Transactional
-    public void cancelMembership(String memberEmail) {
+    public MembershipResponse cancelMembership(String memberEmail) {
         User member = getUserByEmail(memberEmail);
-        Membership membership = getActiveOrPausedMembership(member.getId());
+        Membership membership = membershipRepository.findByUser_IdAndStatusIn(
+                member.getId(), List.of("ACTIVE", "PAUSED"))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói tập để hủy!"));
+
         membership.setStatus("CANCELLED");
+        membership.setPausedAt(null);
         membershipRepository.save(membership);
+
+        return toResponse(membership, getLatestTransaction(membership.getId()));
     }
 
-    // ----------------------------------------------------------------
-    // PREVIEW APIs
-    // ----------------------------------------------------------------
-    public Map<String, Object> previewUpgrade(String memberEmail, Integer newPackageId) {
+    // ================================================================
+    // PREVIEW ENDPOINTS (xem trước giá)
+    // ================================================================
+    public PricePreviewResponse previewRenew(String memberEmail, int days) {
         User member = getUserByEmail(memberEmail);
-        Membership membership = getActiveOrPausedMembership(member.getId());
-        GymPackage newPackage = getActivePackage(newPackageId);
+        Membership membership = getActiveMembership(member.getId());
+        GymPackage pkg = membership.getGymPackage();
 
-        long remainingDays = ChronoUnit.DAYS.between(LocalDate.now(), membership.getEndDate());
-        if (remainingDays <= 0) remainingDays = 0;
+        int discountPct = discountRepository.findBestDiscount(pkg.getId(), days).orElse(0);
+        BigDecimal gross = pkg.getDailyPrice().multiply(BigDecimal.valueOf(days));
+        BigDecimal afterDiscount = applyPercent(gross, discountPct);
 
-        BigDecimal credit = membership.getDailyPrice().multiply(BigDecimal.valueOf(remainingDays));
-        BigDecimal costNew = newPackage.getDailyPrice().multiply(BigDecimal.valueOf(remainingDays));
-        BigDecimal upgradeCost = costNew.subtract(credit);
-        if (upgradeCost.compareTo(BigDecimal.ZERO) < 0) upgradeCost = BigDecimal.ZERO;
-
-        Map<String, Object> res = new HashMap<>();
-        res.put("remainingDays", remainingDays);
-        res.put("creditAmount", credit);
-        res.put("newCostAmount", costNew);
-        res.put("upgradeCost", upgradeCost);
-        return res;
+        return PricePreviewResponse.builder()
+                .currentPackageName(pkg.getName())
+                .newPackageName(pkg.getName())
+                .currentDailyPrice(pkg.getDailyPrice())
+                .newDailyPrice(pkg.getDailyPrice())
+                .remainingDays((int) ChronoUnit.DAYS.between(LocalDate.now(), membership.getEndDate()))
+                .extraDays(days)
+                .totalNewDays(days)
+                .grossAmount(gross)
+                .longTermDiscount(discountPct)
+                .afterDiscount(afterDiscount)
+                .credit(BigDecimal.ZERO)
+                .finalAmount(afterDiscount)
+                .type("RENEW")
+                .build();
     }
 
-    public Map<String, Object> previewRenew(String memberEmail, Integer packageId, Integer days) {
-        GymPackage gymPackage = getActivePackage(packageId);
-        PricingResult pricing = calculatePricing(gymPackage, days, null);
-        
-        Map<String, Object> res = new HashMap<>();
-        res.put("durationDays", days);
-        res.put("grossAmount", pricing.grossAmount);
-        res.put("discountPercent", pricing.discountPercent);
-        res.put("finalAmount", pricing.finalAmount);
-        return res;
+    public PricePreviewResponse previewUpgrade(String memberEmail, int newPackageId, Integer extraDays) {
+        User member = getUserByEmail(memberEmail);
+        Membership membership = getActiveMembership(member.getId());
+        GymPackage oldPkg = membership.getGymPackage();
+        GymPackage newPkg = getActivePackage(newPackageId);
+
+        long remaining = ChronoUnit.DAYS.between(LocalDate.now(), membership.getEndDate());
+        int extra = (extraDays != null && extraDays > 0) ? extraDays : 0;
+        int totalNewDays = (int) remaining + extra;
+
+        BigDecimal credit = membership.getDailyPrice().multiply(BigDecimal.valueOf(remaining));
+        int discountPct = discountRepository.findBestDiscount(newPkg.getId(), totalNewDays).orElse(0);
+        BigDecimal gross = newPkg.getDailyPrice().multiply(BigDecimal.valueOf(totalNewDays));
+        BigDecimal afterDiscount = applyPercent(gross, discountPct);
+        BigDecimal finalAmt = afterDiscount.subtract(credit).max(BigDecimal.ZERO);
+
+        return PricePreviewResponse.builder()
+                .currentPackageName(oldPkg.getName())
+                .newPackageName(newPkg.getName())
+                .currentDailyPrice(membership.getDailyPrice())
+                .newDailyPrice(newPkg.getDailyPrice())
+                .remainingDays((int) remaining)
+                .extraDays(extra)
+                .totalNewDays(totalNewDays)
+                .grossAmount(gross)
+                .longTermDiscount(discountPct)
+                .afterDiscount(afterDiscount)
+                .credit(credit)
+                .finalAmount(finalAmt)
+                .type(extra > 0 ? "UPGRADE_RENEW" : "UPGRADE")
+                .build();
     }
 
-    // ----------------------------------------------------------------
-    // GET APIs
-    // ----------------------------------------------------------------
+    // ================================================================
+    // XEM GÓI HIỆN TẠI + LỊCH SỬ
+    // ================================================================
     public MembershipResponse getMyCurrentMembership(String email) {
         User user = getUserByEmail(email);
-        Membership membership = membershipRepository.findByUser_IdAndStatus(user.getId(), "ACTIVE")
-                .orElseGet(() -> membershipRepository.findByUser_IdAndStatus(user.getId(), "PAUSED").orElse(null));
-
-        if (membership == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bạn chưa đăng ký gói tập nào");
-        }
-
-        List<Transaction> transactions = transactionRepository.findByMembership_Id(membership.getId());
-        Transaction latestTx = transactions.isEmpty() ? null : transactions.get(transactions.size() - 1);
-
-        return toResponse(membership, latestTx, latestTx != null ? latestTx.getPromotion() : null, null);
+        Membership membership = membershipRepository.findByUser_IdAndStatusIn(
+                user.getId(), List.of("ACTIVE", "PAUSED"))
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Bạn chưa đăng ký gói tập nào"));
+        return toResponse(membership, getLatestTransaction(membership.getId()));
     }
 
     public List<MembershipResponse> getMyMembershipHistory(String email) {
         User user = getUserByEmail(email);
         return membershipRepository.findByUser_IdOrderByCreatedAtDesc(user.getId())
                 .stream()
-                .map(m -> {
-                    List<Transaction> txList = transactionRepository.findByMembership_Id(m.getId());
-                    Transaction tx = txList.isEmpty() ? null : txList.get(txList.size() - 1);
-                    return toResponse(m, tx, tx != null ? tx.getPromotion() : null, null);
-                })
+                .map(m -> toResponse(m, getLatestTransaction(m.getId())))
                 .collect(Collectors.toList());
     }
 
-    // ----------------------------------------------------------------
+    // ================================================================
     // HELPERS
-    // ----------------------------------------------------------------
+    // ================================================================
     private User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
-
-    private Membership getActiveOrPausedMembership(Integer userId) {
-        return membershipRepository.findByUser_IdAndStatus(userId, "ACTIVE")
-                .orElseGet(() -> membershipRepository.findByUser_IdAndStatus(userId, "PAUSED")
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói tập đang hoạt động hoặc bảo lưu.")));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
     }
 
     private GymPackage getActivePackage(Integer packageId) {
         GymPackage pkg = gymPackageRepository.findById(packageId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy gói tập"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy gói tập"));
         if (Boolean.FALSE.equals(pkg.getIsActive())) {
             throw new IllegalArgumentException("Gói tập này hiện đã ngừng cung cấp.");
         }
         return pkg;
     }
 
-    private User validatePtSelection(GymPackage gymPackage, Integer ptId) {
+    private Membership getActiveMembership(Integer userId) {
+        return membershipRepository.findByUser_IdAndStatus(userId, "ACTIVE")
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Bạn không có gói tập đang hoạt động!"));
+    }
+
+    private User resolvePt(GymPackage gymPackage, Integer ptId) {
         if (Boolean.TRUE.equals(gymPackage.getCanChoosePt()) && ptId != null) {
             User pt = userRepository.findById(ptId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy PT"));
             if (!"PT".equals(pt.getRole().getName())) {
                 throw new IllegalArgumentException("Người dùng được chọn không phải là PT!");
             }
+
+            // Kiểm tra số lượng học viên tối đa của PT
+            PtProfile ptProfile = ptProfileRepository.findByUser_Id(pt.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hồ sơ của Huấn luyện viên!"));
+            long activeMembers = membershipRepository.countByPt_IdAndStatus(pt.getId(), "ACTIVE");
+            int maxMembers = ptProfile.getMaxMembers() != null ? ptProfile.getMaxMembers() : 5;
+            if (activeMembers >= maxMembers) {
+                throw new IllegalArgumentException("Huấn luyện viên " + pt.getFullName() + " đã nhận đủ số lượng học viên tối đa (" + maxMembers + ")!");
+            }
+
             return pt;
         }
         return null;
     }
 
-    private static class PricingResult {
+    private Transaction getLatestTransaction(Integer membershipId) {
+        List<Transaction> txList = transactionRepository.findByMembership_Id(membershipId);
+        return txList.isEmpty() ? null : txList.get(0);
+    }
+
+    // --- Tính giá ---
+
+    private static class PriceCalc {
         BigDecimal grossAmount;
-        Integer discountPercent;
+        BigDecimal afterDiscount;
         BigDecimal finalAmount;
+        int longTermDiscountPercent;
         Promotion promotion;
     }
 
-    private PricingResult calculatePricing(GymPackage pkg, int days, String promoCode) {
-        PricingResult res = new PricingResult();
-        res.grossAmount = pkg.getDailyPrice().multiply(BigDecimal.valueOf(days));
-        
-        // 1. Áp chiết khấu dài hạn
-        res.discountPercent = discountRepository.findBestDiscount(pkg.getId(), days).orElse(0);
-        BigDecimal afterDiscount = res.grossAmount;
-        if (res.discountPercent > 0) {
-            afterDiscount = res.grossAmount.subtract(
-                    res.grossAmount.multiply(BigDecimal.valueOf(res.discountPercent)).divide(BigDecimal.valueOf(100))
-            );
-        }
+    private PriceCalc calculatePrice(GymPackage pkg, int days, String promoCode, BigDecimal credit) {
+        PriceCalc calc = new PriceCalc();
 
-        res.finalAmount = afterDiscount;
+        calc.grossAmount = pkg.getDailyPrice().multiply(BigDecimal.valueOf(days));
 
-        // 2. Áp mã KM
+        // Chiết khấu dài hạn
+        calc.longTermDiscountPercent = discountRepository.findBestDiscount(pkg.getId(), days).orElse(0);
+        calc.afterDiscount = applyPercent(calc.grossAmount, calc.longTermDiscountPercent);
+
+        // Mã khuyến mãi
+        calc.promotion = null;
+        BigDecimal afterPromo = calc.afterDiscount;
+
         if (promoCode != null && !promoCode.isBlank()) {
-            res.promotion = promotionRepository.findValidPromotion(promoCode, LocalDate.now(), pkg.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("Mã khuyến mãi không hợp lệ hoặc đã hết hạn!"));
-            
-            res.finalAmount = afterDiscount.subtract(
-                    afterDiscount.multiply(BigDecimal.valueOf(res.promotion.getDiscountPercent())).divide(BigDecimal.valueOf(100))
-            );
+            Promotion promotion = promotionRepository.findValidPromotion(
+                    promoCode, LocalDate.now(), pkg.getId()
+            ).orElseThrow(() -> new IllegalArgumentException("Mã khuyến mãi không hợp lệ hoặc đã hết hạn!"));
 
-            res.promotion.setCurrentUsage(res.promotion.getCurrentUsage() + 1);
-            promotionRepository.save(res.promotion);
+            afterPromo = applyPercent(calc.afterDiscount, promotion.getDiscountPercent());
+            promotion.setCurrentUsage(promotion.getCurrentUsage() + 1);
+            promotionRepository.save(promotion);
+            calc.promotion = promotion;
         }
 
-        return res;
+        // Trừ credit (proration)
+        calc.finalAmount = afterPromo.subtract(credit).max(BigDecimal.ZERO);
+        return calc;
     }
 
-    private MembershipResponse toResponse(Membership m, Transaction tx, Promotion promo, Integer packageDiscountPercent) {
+    private BigDecimal applyPercent(BigDecimal amount, int discountPercent) {
+        if (discountPercent <= 0) return amount;
+        return amount.multiply(BigDecimal.valueOf(100 - discountPercent))
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+    }
+
+    private Transaction createTransaction(Membership membership, PriceCalc calc,
+                                           String paymentMethod, String type) {
+        Transaction transaction = Transaction.builder()
+                .membership(membership)
+                .promotion(calc.promotion)
+                .originalAmount(calc.grossAmount)
+                .amount(calc.finalAmount)
+                .paymentMethod(paymentMethod != null ? paymentMethod : "BANK")
+                .type(type)
+                .status("PENDING")
+                .build();
+        transactionRepository.save(transaction);
+        return transaction;
+    }
+
+    private MembershipResponse toResponse(Membership m, Transaction tx) {
+        long remainingDays = 0;
+        if ("ACTIVE".equals(m.getStatus())) {
+            remainingDays = ChronoUnit.DAYS.between(LocalDate.now(), m.getEndDate());
+            if (remainingDays < 0) remainingDays = 0;
+        }
+
+        GymPackage pkg = m.getGymPackage();
+
         return MembershipResponse.builder()
                 .id(m.getId())
-                .packageName(m.getGymPackage().getName())
-                .dailyPrice(m.getDailyPrice() != null ? m.getDailyPrice() : m.getGymPackage().getDailyPrice())
-                .durationDays(m.getDurationDays() != null ? m.getDurationDays() : (int) ChronoUnit.DAYS.between(m.getStartDate(), m.getEndDate()))
+                .packageId(pkg.getId())
+                .packageName(pkg.getName())
+                .dailyPrice(m.getDailyPrice())
+                .durationDays(m.getDurationDays())
                 .startDate(m.getStartDate())
                 .endDate(m.getEndDate())
                 .status(m.getStatus())
                 .ptName(m.getPt() != null ? m.getPt().getFullName() : null)
+                .ptId(m.getPt() != null ? m.getPt().getId() : null)
                 .createdAt(m.getCreatedAt())
                 .holdCount(m.getHoldCount())
-                .pausedAt(m.getPausedAt())
+                .maxHoldTimes(pkg.getMaxHoldTimes())
+                .holdReturnPercent(pkg.getHoldReturnPercent())
                 .totalHoldDays(m.getTotalHoldDays())
+                .pausedAt(m.getPausedAt())
                 .transactionId(tx != null ? tx.getId() : null)
+                .transactionType(tx != null ? tx.getType() : null)
                 .originalAmount(tx != null ? tx.getOriginalAmount() : null)
                 .finalAmount(tx != null ? tx.getAmount() : null)
                 .paymentMethod(tx != null ? tx.getPaymentMethod() : null)
                 .transactionStatus(tx != null ? tx.getStatus() : null)
-                .transactionType(tx != null ? tx.getType() : null)
-                .promotionCode(promo != null ? promo.getCode() : null)
-                .discountPercent(packageDiscountPercent)
+                .promotionCode(tx != null && tx.getPromotion() != null ? tx.getPromotion().getCode() : null)
+                .discountPercent(tx != null && tx.getPromotion() != null ? tx.getPromotion().getDiscountPercent() : null)
+                .remainingDays(remainingDays)
                 .build();
     }
 }

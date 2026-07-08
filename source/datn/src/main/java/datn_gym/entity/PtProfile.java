@@ -32,6 +32,7 @@ public class PtProfile {
     @Builder.Default
     private BigDecimal ratingScore = BigDecimal.ZERO;
 
+    // Admin thiết lập: số HV tối đa PT nhận được
     @Column(name = "max_members")
     @Builder.Default
     private Integer maxMembers = 5;

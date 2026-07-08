@@ -1,5 +1,6 @@
 package datn_gym.dto.request;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -9,11 +10,9 @@ public class MembershipRequest {
     @NotNull(message = "Vui lòng chọn gói tập")
     private Integer packageId;
 
-    // Số ngày đăng ký / gia hạn
+    @NotNull(message = "Vui lòng nhập số ngày đăng ký")
+    @Min(value = 1, message = "Số ngày phải >= 1")
     private Integer durationDays;
-
-    // ID gói tập mới (dùng khi nâng cấp)
-    private Integer newPackageId;
 
     // Mã khuyến mãi (tùy chọn)
     private String promotionCode;
@@ -21,6 +20,6 @@ public class MembershipRequest {
     // CASH | BANK | ONLINE
     private String paymentMethod;
 
-    // ID của PT muốn chọn (chỉ dùng cho gói có canChoosePt = true)
+    // ID của PT muốn chọn (chỉ gói VIP có canChoosePt = true)
     private Integer ptId;
 }

@@ -1,72 +1,60 @@
 package datn_gym.controller;
 
-import datn_gym.dto.request.PtScheduleRequest;
-import datn_gym.dto.response.MessageResponse;
-import datn_gym.dto.response.PtScheduleResponse;
+import datn_gym.dto.request.ScheduleRequest;
+import datn_gym.dto.response.ScheduleSlotResponse;
 import datn_gym.service.PtScheduleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
 @RequiredArgsConstructor
 public class PtScheduleController {
 
-    private final PtScheduleService scheduleService;
+    private final PtScheduleService ptScheduleService;
 
-    // ==========================================
-    // API CHO PT
-    // ==========================================
+    // ================================================================
+    // PT Endpoints
+    // ================================================================
 
-    @GetMapping("/pt/schedules")
+    // GET /api/pt/schedules - Lấy toàn bộ lịch huấn luyện của PT đang đăng nhập
+    @GetMapping("/api/pt/schedules")
     @PreAuthorize("hasRole('PT')")
-    public ResponseEntity<List<PtScheduleResponse>> getPtSchedules(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(scheduleService.getSchedulesByPt(userDetails.getUsername()));
+    public ResponseEntity<List<ScheduleSlotResponse>> getPtSchedules(Authentication auth) {
+        return ResponseEntity.ok(ptScheduleService.getAllByPt(auth.getName()));
     }
 
-    @GetMapping("/pt/schedules/member/{memberId}")
+    // GET /api/pt/schedules/member/{memberId} - Lấy lịch huấn luyện với 1 học viên
+    @GetMapping("/api/pt/schedules/member/{memberId}")
     @PreAuthorize("hasRole('PT')")
-    public ResponseEntity<List<PtScheduleResponse>> getPtSchedulesForMember(
-            @AuthenticationPrincipal UserDetails userDetails,
+    public ResponseEntity<List<ScheduleSlotResponse>> getPtMemberSchedule(
+            Authentication auth,
             @PathVariable Integer memberId) {
-        return ResponseEntity.ok(scheduleService.getSchedulesByPtAndMember(userDetails.getUsername(), memberId));
+        return ResponseEntity.ok(ptScheduleService.getByPtAndMember(auth.getName(), memberId));
     }
 
-    @PostMapping("/pt/schedules")
+    // POST /api/pt/schedules - Lưu hoặc cập nhật thời khóa biểu của 1 học viên
+    @PostMapping("/api/pt/schedules")
     @PreAuthorize("hasRole('PT')")
-    public ResponseEntity<PtScheduleResponse> createSchedule(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody PtScheduleRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(scheduleService.createSchedule(userDetails.getUsername(), request));
+    public ResponseEntity<List<ScheduleSlotResponse>> saveMemberSchedule(
+            Authentication auth,
+            @Valid @RequestBody ScheduleRequest request) {
+        return ResponseEntity.ok(ptScheduleService.saveMemberSchedule(auth.getName(), request));
     }
 
-    @DeleteMapping("/pt/schedules/{id}")
-    @PreAuthorize("hasRole('PT')")
-    public ResponseEntity<MessageResponse> deleteSchedule(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Integer id) {
-        scheduleService.deleteSchedule(userDetails.getUsername(), id);
-        return ResponseEntity.ok(new MessageResponse("Đã xóa slot kèm thành công."));
-    }
+    // ================================================================
+    // MEMBER Endpoints
+    // ================================================================
 
-    // ==========================================
-    // API CHO MEMBER
-    // ==========================================
-
-    @GetMapping("/member/schedules")
+    // GET /api/member/schedule - Học viên xem lịch biểu kèm PT của mình
+    @GetMapping("/api/member/schedule")
     @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<List<PtScheduleResponse>> getMemberSchedules(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(scheduleService.getMySchedules(userDetails.getUsername()));
+    public ResponseEntity<List<ScheduleSlotResponse>> getMemberSchedule(Authentication auth) {
+        return ResponseEntity.ok(ptScheduleService.getMySchedule(auth.getName()));
     }
 }

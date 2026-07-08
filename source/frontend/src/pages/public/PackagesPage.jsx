@@ -16,7 +16,7 @@ const PackagesPage = () => {
     const fetchPackages = async () => {
       try {
         const data = await packageService.getAllPackages();
-        // Sắp xếp theo giá để render đẹp mắt
+        // Sắp xếp theo đơn giá/ngày tăng dần
         const sorted = data.sort((a, b) => a.dailyPrice - b.dailyPrice);
         setPackages(sorted);
       } catch (error) {
@@ -73,9 +73,14 @@ const PackagesPage = () => {
                   
                   <h2 className="pkg-name" style={{ color: style.color }}>{pkg.name}</h2>
                   <div className="pkg-price">
-                    {formatCurrency(pkg.dailyPrice)}<span>/ngày</span>
-                    <div style={{fontSize: '12px', marginTop: '5px', color: '#64748b'}}>Tối thiểu {pkg.minDays} ngày</div>
+                    {formatCurrency(pkg.dailyPrice)}<span>/ ngày</span>
                   </div>
+                  
+                  {pkg.minDays > 1 && (
+                    <div className="pkg-min-days" style={{ fontSize: '0.9rem', color: '#f97316', marginTop: '-10px', marginBottom: '15px', fontWeight: 'bold' }}>
+                      Đăng ký tối thiểu: {pkg.minDays} ngày
+                    </div>
+                  )}
                   
                   <p className="pkg-desc">{pkg.description}</p>
                   
@@ -93,7 +98,7 @@ const PackagesPage = () => {
                       Chế độ ăn riêng biệt
                     </li>
                     <li><Check size={16} className="icon-check" />Sử dụng thiết bị phòng tập</li>
-                    <li><Check size={16} className="icon-check" />Xem lộ trình tập luyện</li>
+                    <li><Check size={16} className="icon-check" />Lịch kèm riêng 1-1 với PT</li>
                   </ul>
                   
                   <a 

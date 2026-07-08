@@ -34,15 +34,15 @@ public class Transaction {
     @Column(name = "payment_method", length = 20)
     private String paymentMethod; 
 
+    // NEW | RENEW | UPGRADE
+    @Column(name = "type", length = 20)
+    @Builder.Default
+    private String type = "NEW";
+
     // PENDING | CONFIRMED | CANCELLED
     @Column(name = "status", length = 20)
     @Builder.Default
     private String status = "PENDING"; 
-
-    // NEW | RENEW | UPGRADE
-    @Column(name = "type", length = 20)
-    @Builder.Default
-    private String type = "NEW"; 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "confirmed_by")

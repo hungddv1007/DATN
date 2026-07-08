@@ -16,13 +16,13 @@ const PackagesManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     dailyPrice: '',
-    minDays: '',
-    maxHoldTimes: 1,
-    holdReturnPercent: 80,
+    minDays: 1,
     description: '',
     hasPt: false,
     canChoosePt: false,
-    hasMealPlan: false
+    hasMealPlan: false,
+    maxHoldTimes: 0,
+    holdReturnPercent: 0
   });
 
   const fetchPackages = async () => {
@@ -44,8 +44,9 @@ const PackagesManagement = () => {
   const handleAddNew = () => {
     setEditingPkg(null);
     setFormData({
-      name: '', dailyPrice: '', minDays: '', maxHoldTimes: 1, holdReturnPercent: 80, description: '',
-      hasPt: false, canChoosePt: false, hasMealPlan: false
+      name: '', dailyPrice: '', minDays: 1, description: '',
+      hasPt: false, canChoosePt: false, hasMealPlan: false,
+      maxHoldTimes: 0, holdReturnPercent: 0
     });
     setShowModal(true);
   };
@@ -128,9 +129,10 @@ const PackagesManagement = () => {
             <tr>
               <th>ID</th>
               <th>Tên Gói</th>
-              <th>Giá Tiền/Ngày</th>
+              <th>Đơn giá/ngày</th>
               <th>Tối thiểu</th>
-              <th>Bảo lưu</th>
+              <th>Bảo lưu tối đa</th>
+              <th>Hoàn ngày (%)</th>
               <th>Tính năng</th>
               <th>Trạng thái</th>
               <th>Hành động</th>
@@ -138,17 +140,18 @@ const PackagesManagement = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="8" style={{ textAlign: 'center' }}>Đang tải...</td></tr>
+              <tr><td colSpan="9" style={{ textAlign: 'center' }}>Đang tải...</td></tr>
             ) : packages.length === 0 ? (
-              <tr><td colSpan="8" style={{ textAlign: 'center' }}>Không có gói tập nào</td></tr>
+              <tr><td colSpan="9" style={{ textAlign: 'center' }}>Không có gói tập nào</td></tr>
             ) : (
               packages.map(pkg => (
                 <tr key={pkg.id} style={{ opacity: pkg.isActive ? 1 : 0.5 }}>
                   <td>{pkg.id}</td>
                   <td style={{ fontWeight: 'bold', color: '#f1f5f9' }}>{pkg.name}</td>
-                  <td style={{ color: '#f97316', fontWeight: 'bold' }}>{formatCurrency(pkg.dailyPrice)}</td>
+                  <td style={{ color: '#f97316', fontWeight: 'bold' }}>{formatCurrency(pkg.dailyPrice)}/ngày</td>
                   <td>{pkg.minDays} ngày</td>
-                  <td>{pkg.maxHoldTimes} lần ({pkg.holdReturnPercent}%)</td>
+                  <td>{pkg.maxHoldTimes} lần</td>
+                  <td>{pkg.holdReturnPercent}%</td>
                   <td>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       {pkg.hasPt && <span className="status-badge" style={{ background: 'rgba(59,130,246,0.2)', color: '#60a5fa' }}>PT Kèm</span>}
@@ -210,7 +213,7 @@ const PackagesManagement = () => {
               
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Giá/Ngày (VNĐ)</label>
+                  <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Giá/ngày (VNĐ)</label>
                   <input 
                     required
                     type="number" 
@@ -233,7 +236,7 @@ const PackagesManagement = () => {
 
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Số lần bảo lưu tối đa</label>
+                  <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Lượt bảo lưu tối đa</label>
                   <input 
                     required
                     type="number" 
@@ -243,10 +246,12 @@ const PackagesManagement = () => {
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Phần trăm hoàn ({'%'})</label>
+                  <label style={{ display: 'block', marginBottom: '5px', color: '#ffffff', fontWeight: 'bold' }}>Hoàn ngày khi bảo lưu (%)</label>
                   <input 
                     required
                     type="number" 
+                    min={0}
+                    max={100}
                     value={formData.holdReturnPercent} 
                     onChange={e => setFormData({...formData, holdReturnPercent: e.target.value})}
                     style={{ width: '100%', padding: '12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px' }}
@@ -273,7 +278,7 @@ const PackagesManagement = () => {
                   Được chọn PT
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontWeight: 'bold' }}>
-                  <input type="checkbox" checked={formData.hasMealPlan} onChange={e => setFormData({...formData, hasMealPlan: e.target.checked})} />
+                  <input type="checkbox" checked={formData.hasMealPlan} onChange={e => setFormData({...formData, hasMealPlan: e.checked})} />
                   Có Meal Plan
                 </label>
               </div>

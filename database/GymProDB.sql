@@ -1,7 +1,7 @@
 -- ============================================================
 -- GYMPRO DATABASE - SQL Server 2025
 -- Website Quan Ly Phong Tap Gym
--- 22 bang (Đã chuẩn hóa Data mẫu theo file Chi tiết dự án)
+-- 19 bang (Đã chuẩn hóa Data mẫu theo file Chi tiết dự án)
 -- ============================================================
 
 IF DB_ID('GymProDB') IS NOT NULL
@@ -42,18 +42,6 @@ CREATE TABLE users (
 );
 
 -- ============================================================
--- 2.5. OTPS
--- ============================================================
-CREATE TABLE otps (
-    id              INT IDENTITY(1,1) PRIMARY KEY,
-    email           NVARCHAR(100) NOT NULL,
-    otp             NVARCHAR(6) NOT NULL,
-    expiration_time DATETIME2 NOT NULL,
-    created_at      DATETIME2 DEFAULT GETDATE(),
-    used            BIT DEFAULT 0
-);
-
--- ============================================================
 -- 3. PT_PROFILES
 -- ============================================================
 CREATE TABLE pt_profiles (
@@ -63,6 +51,7 @@ CREATE TABLE pt_profiles (
     bio             NVARCHAR(MAX),
     certificates    NVARCHAR(MAX),
     rating_score    DECIMAL(2,1) DEFAULT 0,
+    max_members     INT DEFAULT 5,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
@@ -220,7 +209,7 @@ CREATE TABLE plan_assignments (
     member_id       INT NOT NULL,
     pt_id           INT NOT NULL,
     start_date      DATE,
-    status          NVARCHAR(20) DEFAULT 'ACTIVE',
+    status          NVARCHAR(20) DEFAULT ''ACTIVE'',
     note            NVARCHAR(500),
     created_at      DATETIME2 DEFAULT GETDATE(),
     FOREIGN KEY (plan_id) REFERENCES training_plans(id) ON DELETE CASCADE,
@@ -320,12 +309,13 @@ CREATE TABLE pt_schedules (
     pt_id           INT NOT NULL,
     member_id       INT NOT NULL,
     day_of_week     INT NOT NULL,
-    time_slot       NVARCHAR(20) NOT NULL,
+    slot_index      INT NOT NULL,
+    exercise_note   NVARCHAR(200),
     status          NVARCHAR(20) DEFAULT 'ACTIVE',
     created_at      DATETIME2 DEFAULT GETDATE(),
     FOREIGN KEY (pt_id) REFERENCES users(id),
     FOREIGN KEY (member_id) REFERENCES users(id),
-    CONSTRAINT UQ_pt_schedules UNIQUE (pt_id, day_of_week, time_slot)
+    CONSTRAINT UQ_pt_schedules UNIQUE (pt_id, day_of_week, slot_index)
 );
 
 -- ============================================================
@@ -363,5 +353,38 @@ CREATE INDEX IX_diets_date ON diets(date);
 GO
 
 -- ============================================================
--- SEED DATA (mở rộng ~150-200 members, tiếng Việt tự nhiên)
+-- ============================================================
+-- SEED DATA
+-- ============================================================
+
+-- 1. Insert Roles
+INSERT INTO roles (name, description) VALUES ('ADMIN', 'Quản trị viên hệ thống');
+INSERT INTO roles (name, description) VALUES ('PT', 'Huấn luyện viên cá nhân');
+INSERT INTO roles (name, description) VALUES ('MEMBER', 'Hội viên phòng gym');
+
+-- 2. Insert Users (password '123456' encoded with BCrypt)
+-- Hash: $2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.
+INSERT INTO users (role_id, email, password, full_name, phone, status) VALUES 
+(1, 'admin@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Nguyễn Quản Trị', '0912345678', 1),
+(2, 'pt1@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Trần Huấn Luyện 1', '0923456789', 1),
+(2, 'pt2@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Lê Huấn Luyện 2', '0934567890', 1),
+(3, 'member1@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Phạm Hội Viên 1', '0945678901', 1),
+(3, 'member2@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Vũ Hội Viên 2', '0956789012', 1);
+
+-- 3. Insert PT Profiles
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES 
+(2, N'Thể hình & Giảm cân', N'Kinh nghiệm 5 năm huấn luyện cá nhân', N'Chứng chỉ PT Quốc tế NASM', 4.8, 5),
+(3, N'Yoga & Stretch', N'Kinh nghiệm 3 năm huấn luyện Yoga', N'Bằng Yoga Alliance 200h', 4.5, 5);
+
+-- 4. Insert Packages
+INSERT INTO packages (name, daily_price, description, has_pt, can_choose_pt, has_meal_plan, min_days, max_hold_times, hold_return_percent, is_active) VALUES 
+('BASIC', 16000, N'Gói tập cơ bản sử dụng thiết bị phòng gym tự do', 0, 0, 0, 30, 0, 0, 1),
+('PREMIUM', 50000, N'Gói tập nâng cao có PT hướng dẫn', 1, 1, 0, 30, 1, 50, 1),
+('VIP', 83000, N'Gói tập cao cấp nhất được chọn PT + Meal Plan dinh dưỡng', 1, 1, 1, 30, 3, 90, 1);
+
+-- 5. Insert Package Discounts
+INSERT INTO package_discounts (package_id, min_days, discount_percent) VALUES 
+(NULL, 90, 5),
+(NULL, 180, 10),
+(NULL, 365, 15);
 -- ============================================================

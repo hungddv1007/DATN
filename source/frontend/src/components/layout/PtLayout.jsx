@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, UserCircle, BookOpen, LogOut, Dumbbell, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, UserCircle, Calendar, Utensils, LogOut, Dumbbell, MessageSquare } from 'lucide-react';
 import '../../pages/member/DashboardPage.css';
 
 const PtLayout = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,19 +24,49 @@ const PtLayout = ({ children }) => {
     <div className="admin-page">
       <aside className="admin-sidebar">
         <div className="admin-sidebar-logo">
-          <h2><Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}><Dumbbell size={22} style={{ marginRight: '8px', verticalAlign: 'middle' }} />GymPro</Link></h2>
+          <h2>
+            <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Dumbbell size={22} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+              GymPro
+            </Link>
+          </h2>
           <span>PT Workspace</span>
         </div>
         <ul className="admin-nav">
-          <li><Link to="/pt/dashboard" className={isActive('/pt/dashboard')}><LayoutDashboard size={18} /> Tổng quan</Link></li>
-          <li><Link to="/pt/plans" className={isActive('/pt/plans')}><BookOpen size={18} /> Lộ trình tập</Link></li>
-          <li><Link to="/pt/schedules" className={isActive('/pt/schedules')}><Users size={18} /> Lịch kèm</Link></li>
-          <li><Link to="/pt/assignments" className={isActive('/pt/assignments')}><Users size={18} /> Phân công</Link></li>
-          <li><Link to="/pt/members" className={isActive('/pt/members')}><Users size={18} /> Học viên của tôi</Link></li>
-          <li><Link to="/pt/profile" className={isActive('/pt/profile')}><UserCircle size={18} /> Hồ sơ của tôi</Link></li>
-          <li><Link to="/pt/reviews" className={isActive('/pt/reviews')}><MessageSquare size={18} /> Đánh giá</Link></li>
+          <li>
+            <Link to="/pt/dashboard" className={isActive('/pt/dashboard')}>
+              <LayoutDashboard size={18} /> Tổng quan
+            </Link>
+          </li>
+          <li>
+            <Link to="/pt/members" className={isActive('/pt/members')}>
+              <Users size={18} /> Học viên của tôi
+            </Link>
+          </li>
+          <li>
+            <Link to="/pt/schedule" className={isActive('/pt/schedule')}>
+              <Calendar size={18} /> Lịch trình huấn luyện
+            </Link>
+          </li>
+          <li>
+            <Link to="#" className="disabled-nav-item" style={{ pointerEvents: 'none', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', color: '#64748b' }}>
+              <Utensils size={18} /> Khẩu phần ăn
+            </Link>
+          </li>
+          <li>
+            <Link to="/pt/profile" className={isActive('/pt/profile')}>
+              <UserCircle size={18} /> Hồ sơ của tôi
+            </Link>
+          </li>
+          <li>
+            <Link to="/pt/reviews" className={isActive('/pt/reviews')}>
+              <MessageSquare size={18} /> Đánh giá
+            </Link>
+          </li>
           <li style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-            <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}><LogOut size={18} /> Đăng xuất</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
+              <LogOut size={18} /> Đăng xuất
+            </a>
           </li>
         </ul>
       </aside>

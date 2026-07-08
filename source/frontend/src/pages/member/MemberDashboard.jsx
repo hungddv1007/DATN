@@ -3,29 +3,29 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
-import memberPlanService from '../../services/memberPlanService';
-import { Package, CreditCard, Bell, User, Dumbbell, Star, Calendar } from 'lucide-react';
+import ptScheduleService from '../../services/ptScheduleService';
+import { Package, CreditCard, Bell, User, Calendar, Star } from 'lucide-react';
 import './DashboardPage.css';
 
 const MemberDashboard = () => {
   const { user } = useAuth();
   const [membership, setMembership] = useState(null);
-  const [activePlan, setActivePlan] = useState(null);
+  const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const currentData = await membershipService.getMyCurrentMembership();
+        const currentData = await membershipService.getCurrentMembership();
         setMembership(currentData);
       } catch (error) {
         console.log('User has no active membership or error occurred');
       }
       try {
-        const planData = await memberPlanService.getActivePlan();
-        if (planData) setActivePlan(planData);
+        const scheduleData = await ptScheduleService.getMemberSchedule();
+        setSchedule(scheduleData);
       } catch (error) {
-        console.log('User has no active plan');
+        console.log('User has no active schedule');
       }
       setLoading(false);
     };
@@ -51,7 +51,11 @@ const MemberDashboard = () => {
             ) : (
               <p className="dash-value">Chưa đăng ký</p>
             )}
-            <Link to="/member/membership" className="dash-link">Xem & Quản lý gói →</Link>
+            {membership ? (
+              <Link to="/member/membership" className="dash-link">Quản lý gói tập →</Link>
+            ) : (
+              <Link to="/packages" className="dash-link">Xem gói tập →</Link>
+            )}
           </div>
           <div className="dash-card">
             <CreditCard size={32} className="dash-icon" />
@@ -64,16 +68,16 @@ const MemberDashboard = () => {
             <Link to="/member/transactions" className="dash-link">Xem lịch sử →</Link>
           </div>
           <div className="dash-card">
-            <Dumbbell size={32} className="dash-icon" />
-            <h3>Lộ trình tập</h3>
+            <Calendar size={32} className="dash-icon" />
+            <h3>Lịch kèm PT</h3>
             {loading ? (
               <p className="dash-value">Đang tải...</p>
-            ) : activePlan ? (
-              <p className="dash-value" style={{ color: '#3b82f6' }}>{activePlan.title}</p>
+            ) : schedule.length > 0 ? (
+              <p className="dash-value" style={{ color: '#3b82f6' }}>{schedule.length} buổi / tuần</p>
             ) : (
-              <p className="dash-value">Chưa có lộ trình</p>
+              <p className="dash-value">Chưa xếp lịch</p>
             )}
-            <Link to="/member/plan" className="dash-link">Xem chi tiết →</Link>
+            <Link to="/member/schedule" className="dash-link">Xem thời khóa biểu →</Link>
           </div>
           <div className="dash-card">
             <Star size={32} className="dash-icon" />
@@ -86,12 +90,6 @@ const MemberDashboard = () => {
               <p className="dash-value">Chưa được gán</p>
             )}
             <span className="dash-link">Xem hồ sơ PT →</span>
-          </div>
-          <div className="dash-card">
-            <Calendar size={32} className="dash-icon" />
-            <h3>Lịch tập với PT</h3>
-            <p className="dash-value">Xem lịch cố định</p>
-            <Link to="/member/schedules" className="dash-link">Xem chi tiết →</Link>
           </div>
           <div className="dash-card">
             <Bell size={32} className="dash-icon" />

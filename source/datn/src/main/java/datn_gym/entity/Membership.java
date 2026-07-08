@@ -43,26 +43,24 @@ public class Membership {
     @Column(name = "pause_reason", length = 255)
     private String pauseReason;
 
-    // ===== CỘT MỚI — PRORATION & BẢO LƯU =====
-
-    // Số ngày member đã đăng ký (snapshot tại thời điểm đăng ký)
+    // Snapshot: số ngày member đã đăng ký
     @Column(name = "duration_days")
     private Integer durationDays;
 
-    // Đơn giá/ngày tại thời điểm đăng ký (snapshot)
+    // Snapshot: đơn giá tại thời điểm đăng ký
     @Column(name = "daily_price", precision = 12, scale = 0)
     private BigDecimal dailyPrice;
 
-    // Số lần đã bảo lưu
+    // Bảo lưu: số lần đã dùng
     @Column(name = "hold_count")
     @Builder.Default
     private Integer holdCount = 0;
 
-    // Ngày bắt đầu bảo lưu (null = không đang bảo lưu)
+    // Bảo lưu: ngày bắt đầu pause
     @Column(name = "paused_at")
     private LocalDate pausedAt;
 
-    // Tổng số ngày đã bảo lưu (cộng dồn qua các lần)
+    // Bảo lưu: tổng số ngày đã bảo lưu (lũy kế)
     @Column(name = "total_hold_days")
     @Builder.Default
     private Integer totalHoldDays = 0;

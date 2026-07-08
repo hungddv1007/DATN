@@ -1,68 +1,65 @@
 import api from './api';
 
 const membershipService = {
-  // Lấy gói tập hiện tại
-  getMyCurrentMembership: async () => {
-    const response = await api.get('/member/membership/current');
-    return response.data;
-  },
-
-  // Lấy lịch sử
-  getMyMembershipHistory: async () => {
-    const response = await api.get('/member/membership/history');
-    return response.data;
-  },
-
-  // 1. Đăng ký
+  // Hội viên đăng ký gói tập mới
   registerPackage: async (data) => {
-    const response = await api.post('/member/membership/register', data);
+    const response = await api.post('/member/memberships', data);
     return response.data;
   },
 
-  // 2. Gia hạn
-  renewPackage: async (data) => {
-    const response = await api.post('/member/membership/renew', data);
+  // Lấy gói tập hiện tại của hội viên
+  getCurrentMembership: async () => {
+    const response = await api.get('/member/memberships/current');
     return response.data;
   },
 
-  // 3. Nâng cấp
-  upgradePackage: async (data) => {
-    const response = await api.post('/member/membership/upgrade', data);
+  // Lấy lịch sử đăng ký của hội viên
+  getMembershipHistory: async () => {
+    const response = await api.get('/member/memberships/history');
     return response.data;
   },
 
-  // 4. Nâng cấp & Gia hạn
-  upgradeAndRenewPackage: async (data) => {
-    const response = await api.post('/member/membership/upgrade-renew', data);
+  // Gia hạn gói tập
+  renewMembership: async (data) => {
+    const response = await api.post('/member/memberships/renew', data);
     return response.data;
   },
 
-  // 5. Bảo lưu
+  // Nâng cấp gói tập
+  upgradeMembership: async (data) => {
+    const response = await api.post('/member/memberships/upgrade', data);
+    return response.data;
+  },
+
+  // Bảo lưu gói tập
   pauseMembership: async () => {
-    const response = await api.post('/member/membership/pause');
+    const response = await api.post('/member/memberships/pause');
     return response.data;
   },
 
-  // 6. Huỷ bảo lưu
+  // Hủy bảo lưu gói tập
   resumeMembership: async () => {
-    const response = await api.post('/member/membership/resume');
+    const response = await api.post('/member/memberships/resume');
     return response.data;
   },
 
-  // 7. Hủy gói
+  // Hủy gói tập
   cancelMembership: async () => {
-    const response = await api.post('/member/membership/cancel');
+    const response = await api.post('/member/memberships/cancel');
     return response.data;
   },
 
-  // Previews
-  previewUpgrade: async (packageId) => {
-    const response = await api.get(`/member/membership/preview-upgrade?packageId=${packageId}`);
+  // Xem trước giá gia hạn
+  previewRenew: async (days) => {
+    const response = await api.get(`/member/memberships/preview/renew`, { params: { days } });
     return response.data;
   },
 
-  previewRenew: async (packageId, days) => {
-    const response = await api.get(`/member/membership/preview-renew?packageId=${packageId}&days=${days}`);
+  // Xem trước giá nâng cấp
+  previewUpgrade: async (packageId, extraDays) => {
+    const response = await api.get(`/member/memberships/preview/upgrade`, {
+      params: { packageId, extraDays: extraDays || 0 }
+    });
     return response.data;
   }
 };

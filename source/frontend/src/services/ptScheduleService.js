@@ -1,30 +1,27 @@
 import api from './api';
 
 const ptScheduleService = {
-  // === PT APIs ===
+  // PT lấy toàn bộ lịch huấn luyện của mình
   getPtSchedules: async () => {
     const response = await api.get('/pt/schedules');
     return response.data;
   },
 
-  getPtSchedulesForMember: async (memberId) => {
+  // PT lấy lịch tập của 1 member cụ thể
+  getPtMemberSchedule: async (memberId) => {
     const response = await api.get(`/pt/schedules/member/${memberId}`);
     return response.data;
   },
 
-  createSchedule: async (data) => {
+  // PT lưu/cập nhật thời khóa biểu cho học viên
+  saveMemberSchedule: async (data) => {
     const response = await api.post('/pt/schedules', data);
     return response.data;
   },
 
-  deleteSchedule: async (id) => {
-    const response = await api.delete(`/pt/schedules/${id}`);
-    return response.data;
-  },
-
-  // === MEMBER APIs ===
-  getMemberSchedules: async () => {
-    const response = await api.get('/member/schedules');
+  // Học viên xem lịch biểu kèm PT của mình
+  getMemberSchedule: async () => {
+    const response = await api.get('/member/schedule');
     return response.data;
   }
 };
