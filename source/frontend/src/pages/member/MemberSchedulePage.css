@@ -1,0 +1,138 @@
+.member-schedule-page {
+  max-width: 1200px;
+  margin: 80px auto;
+  padding: 0 20px;
+  color: #f1f5f9;
+}
+
+.schedule-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.schedule-header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
+}
+
+.schedule-header p {
+  color: #94a3b8;
+  font-size: 1.1rem;
+}
+
+.schedule-error-box {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.pt-info-summary {
+  display: flex;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 15px 25px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #cbd5e1;
+}
+
+.pt-info-summary svg {
+  color: #f97316;
+  margin-right: 8px;
+}
+
+.pt-info-summary strong {
+  color: white;
+}
+
+/* Timetable styling similar to PT side but without hover cursor pointer */
+.timetable-container {
+  overflow-x: auto;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.timetable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.timetable th, .timetable td {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 12px;
+  text-align: center;
+}
+
+.timetable th {
+  background: rgba(15, 23, 42, 0.5);
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+
+.period-cell {
+  background: rgba(15, 23, 42, 0.3);
+  font-weight: 800;
+  color: #f97316;
+  font-size: 1.1rem;
+}
+
+.time-cell {
+  background: rgba(15, 23, 42, 0.2);
+  font-weight: 700;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.schedule-cell {
+  height: 70px;
+  width: 140px;
+  vertical-align: middle;
+}
+
+.cell-empty {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.cell-booked {
+  background: rgba(249, 115, 22, 0.08);
+  border: 2px solid rgba(249, 115, 22, 0.5) !important;
+}
+
+.cell-details {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.exercise-badge {
+  background: #f97316;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+  max-width: 125px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

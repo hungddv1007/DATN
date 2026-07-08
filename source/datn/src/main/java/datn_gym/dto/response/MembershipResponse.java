@@ -13,27 +13,34 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class MembershipResponse {
     private Integer id;
+    private Integer packageId;
     private String packageName;
-    private BigDecimal dailyPrice; // snapshot
-    private Integer durationDays; // snapshot
+    private BigDecimal dailyPrice;
+    private Integer durationDays;
     private LocalDate startDate;
     private LocalDate endDate;
     private String status;
     private String ptName;
+    private Integer ptId;
     private LocalDateTime createdAt;
-    
-    // Hold info
-    private Integer holdCount;
-    private LocalDate pausedAt;
-    private Integer totalHoldDays;
 
-    // Transaction info
+    // Bảo lưu
+    private Integer holdCount;
+    private Integer maxHoldTimes;
+    private Integer holdReturnPercent;
+    private Integer totalHoldDays;
+    private LocalDate pausedAt;
+
+    // Thông tin giao dịch (mới nhất)
     private Integer transactionId;
+    private String transactionType;
     private BigDecimal originalAmount;
     private BigDecimal finalAmount;
     private String paymentMethod;
     private String transactionStatus;
-    private String transactionType;
     private String promotionCode;
     private Integer discountPercent;
+
+    // Tính toán
+    private Long remainingDays;
 }

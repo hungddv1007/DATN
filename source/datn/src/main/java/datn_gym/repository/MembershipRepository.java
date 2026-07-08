@@ -14,9 +14,13 @@ import java.util.Optional;
 public interface MembershipRepository extends JpaRepository<Membership, Integer> {
 
     Optional<Membership> findByUser_IdAndStatus(Integer userId, String status);
+    Optional<Membership> findByUser_IdAndStatusIn(Integer userId, List<String> statuses);
     List<Membership> findByUser_IdOrderByCreatedAtDesc(Integer userId);
     List<Membership> findByPt_IdAndStatus(Integer ptId, String status);
     List<Membership> findByPt_Id(Integer ptId);
+
+    @Query("SELECT m FROM Membership m JOIN FETCH m.user JOIN FETCH m.gymPackage WHERE m.pt.id = ?1 AND m.status = ?2")
+    List<Membership> findByPtIdAndStatusWithDetails(Integer ptId, String status);
 
     @Query("SELECT m FROM Membership m WHERE " +
            "m.pt IS NULL AND m.status = 'ACTIVE' " +

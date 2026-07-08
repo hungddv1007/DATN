@@ -47,14 +47,16 @@ const PackagesSection = () => {
             <div className={`package-card ${getCardClass(index)}`} key={pkg.id}>
               {index === packages.length - 1 && <div className="special-badge">SPECIAL</div>}
               <h3 className="package-name">{pkg.name}</h3>
-              <div className="package-price" style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
-                <span>Giá: {formatPrice(pkg.dailyPrice)}đ / ngày</span>
-                <span style={{fontSize: '0.8em', opacity: 0.8}}>Đăng ký tối thiểu {pkg.minDays} ngày</span>
-              </div>
+              <div className="package-price">Đơn giá: {formatPrice(pkg.dailyPrice)}đ/ngày</div>
+              {pkg.minDays > 1 && (
+                <div style={{ fontSize: '0.85rem', color: '#f97316', fontWeight: 'bold', marginBottom: '15px' }}>
+                  Đăng ký từ {pkg.minDays} ngày
+                </div>
+              )}
               <ul className="package-features">
                 <li><Check className={index >= 2 ? 'check-icon-vip' : 'check-icon'} /> Sử dụng thiết bị phòng tập</li>
                 <li className={pkg.hasPt ? '' : 'disabled'}>
-                  {pkg.hasPt ? <Check className={index >= 2 ? 'check-icon-vip' : 'check-icon'} /> : <X className="x-icon" />} PT hướng dẫn
+                  {pkg.hasPt ? <Check className={index >= 2 ? 'check-icon-vip' : 'check-icon'} /> : <X className="x-icon" />} Lịch kèm 1-1 với PT
                 </li>
                 <li className={pkg.canChoosePt ? '' : 'disabled'}>
                   {pkg.canChoosePt ? <Check className={index >= 2 ? 'check-icon-vip' : 'check-icon'} /> : <X className="x-icon" />} Được chọn PT

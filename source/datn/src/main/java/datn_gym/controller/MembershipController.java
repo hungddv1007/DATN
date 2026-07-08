@@ -1,126 +1,96 @@
 package datn_gym.controller;
 
 import datn_gym.dto.request.MembershipRequest;
+import datn_gym.dto.request.RenewRequest;
+import datn_gym.dto.request.UpgradeRequest;
 import datn_gym.dto.response.MembershipResponse;
-import datn_gym.dto.response.MessageResponse;
+import datn_gym.dto.response.PricePreviewResponse;
 import datn_gym.service.MembershipService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
-@RequestMapping("/api/member/membership")
+@RequestMapping("/api/member/memberships")
 @RequiredArgsConstructor
 public class MembershipController {
 
     private final MembershipService membershipService;
 
-    // 1. Đăng ký gói mới
-    @PostMapping("/register")
-    @PreAuthorize("hasRole('MEMBER')")
+    // POST — Đăng ký gói mới
+    @PostMapping
     public ResponseEntity<MembershipResponse> registerPackage(
-            @AuthenticationPrincipal UserDetails userDetails,
+            Authentication auth,
             @Valid @RequestBody MembershipRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(membershipService.registerPackage(userDetails.getUsername(), request));
+                .body(membershipService.registerPackage(auth.getName(), request));
     }
 
-    // 2. Gia hạn cùng gói
+    // POST /renew — Gia hạn cùng gói
     @PostMapping("/renew")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<MembershipResponse> renewPackage(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody MembershipRequest request) {
-        return ResponseEntity.ok(membershipService.renewPackage(userDetails.getUsername(), request));
+    public ResponseEntity<MembershipResponse> renewMembership(
+            Authentication auth,
+            @Valid @RequestBody RenewRequest request) {
+        return ResponseEntity.ok(membershipService.renewMembership(auth.getName(), request));
     }
 
-    // 3. Nâng cấp tại chỗ (không thêm ngày)
+    // POST /upgrade — Nâng cấp gói (có/không gia hạn thêm)
     @PostMapping("/upgrade")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<MembershipResponse> upgradePackage(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody MembershipRequest request) {
-        return ResponseEntity.ok(membershipService.upgradePackage(userDetails.getUsername(), request));
+    public ResponseEntity<MembershipResponse> upgradeMembership(
+            Authentication auth,
+            @Valid @RequestBody UpgradeRequest request) {
+        return ResponseEntity.ok(membershipService.upgradeMembership(auth.getName(), request));
     }
 
-    // 4. Nâng cấp + Gia hạn
-    @PostMapping("/upgrade-renew")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<MembershipResponse> upgradeAndRenewPackage(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody MembershipRequest request) {
-        return ResponseEntity.ok(membershipService.upgradeAndRenewPackage(userDetails.getUsername(), request));
-    }
-
-    // 5. Bảo lưu
+    // POST /pause — Bảo lưu
     @PostMapping("/pause")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<MembershipResponse> pauseMembership(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(membershipService.pauseMembership(userDetails.getUsername()));
+    public ResponseEntity<MembershipResponse> pauseMembership(Authentication auth) {
+        return ResponseEntity.ok(membershipService.pauseMembership(auth.getName()));
     }
 
-    // 6. Hủy bảo lưu
+    // POST /resume — Huỷ bảo lưu
     @PostMapping("/resume")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<MembershipResponse> resumeMembership(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(membershipService.resumeMembership(userDetails.getUsername()));
+    public ResponseEntity<MembershipResponse> resumeMembership(Authentication auth) {
+        return ResponseEntity.ok(membershipService.resumeMembership(auth.getName()));
     }
 
-    // 7. Hủy gói
+    // POST /cancel — Huỷ gói
     @PostMapping("/cancel")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<MessageResponse> cancelMembership(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        membershipService.cancelMembership(userDetails.getUsername());
-        return ResponseEntity.ok(new MessageResponse("Đã hủy gói tập hiện tại."));
+    public ResponseEntity<MembershipResponse> cancelMembership(Authentication auth) {
+        return ResponseEntity.ok(membershipService.cancelMembership(auth.getName()));
     }
 
-    // ----------------------------------------------------------------
-    // PREVIEW APIs
-    // ----------------------------------------------------------------
-
-    @GetMapping("/preview-upgrade")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<Map<String, Object>> previewUpgrade(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam Integer packageId) {
-        return ResponseEntity.ok(membershipService.previewUpgrade(userDetails.getUsername(), packageId));
-    }
-
-    @GetMapping("/preview-renew")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<Map<String, Object>> previewRenew(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam Integer packageId,
-            @RequestParam Integer days) {
-        return ResponseEntity.ok(membershipService.previewRenew(userDetails.getUsername(), packageId, days));
-    }
-
-    // ----------------------------------------------------------------
-    // GET APIs
-    // ----------------------------------------------------------------
-
+    // GET /current — Gói tập hiện tại
     @GetMapping("/current")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<MembershipResponse> getMyCurrentMembership(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(membershipService.getMyCurrentMembership(userDetails.getUsername()));
+    public ResponseEntity<MembershipResponse> getCurrentMembership(Authentication auth) {
+        return ResponseEntity.ok(membershipService.getMyCurrentMembership(auth.getName()));
     }
 
+    // GET /history — Lịch sử đăng ký
     @GetMapping("/history")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<List<MembershipResponse>> getMyMembershipHistory(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(membershipService.getMyMembershipHistory(userDetails.getUsername()));
+    public ResponseEntity<List<MembershipResponse>> getMembershipHistory(Authentication auth) {
+        return ResponseEntity.ok(membershipService.getMyMembershipHistory(auth.getName()));
+    }
+
+    // GET /preview/renew?days=90 — Xem trước giá gia hạn
+    @GetMapping("/preview/renew")
+    public ResponseEntity<PricePreviewResponse> previewRenew(
+            Authentication auth,
+            @RequestParam int days) {
+        return ResponseEntity.ok(membershipService.previewRenew(auth.getName(), days));
+    }
+
+    // GET /preview/upgrade?packageId=2&extraDays=30 — Xem trước giá nâng cấp
+    @GetMapping("/preview/upgrade")
+    public ResponseEntity<PricePreviewResponse> previewUpgrade(
+            Authentication auth,
+            @RequestParam int packageId,
+            @RequestParam(required = false) Integer extraDays) {
+        return ResponseEntity.ok(membershipService.previewUpgrade(auth.getName(), packageId, extraDays));
     }
 }

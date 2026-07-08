@@ -14,12 +14,12 @@ public class PackageDiscount {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // NULL = áp dụng tất cả gói tập
+    // NULL = áp dụng tất cả gói
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "package_id")
     private GymPackage gymPackage;
 
-    // Đăng ký từ X ngày trở lên mới được chiết khấu
+    // Đăng ký từ X ngày trở lên thì được giảm
     @Column(name = "min_days", nullable = false)
     private Integer minDays;
 

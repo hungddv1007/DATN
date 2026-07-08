@@ -18,7 +18,7 @@ public class GymPackage {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
-    // Đơn giá 1 ngày (VD: 20.000đ)
+    // Đơn giá 1 ngày (VD: 20000 = 20k/ngày)
     @Column(name = "daily_price", nullable = false, precision = 12, scale = 0)
     private BigDecimal dailyPrice;
 
@@ -42,12 +42,12 @@ public class GymPackage {
     @Builder.Default
     private Integer minDays = 1;
 
-    // Số lần bảo lưu tối đa (0 = không được bảo lưu, VD: BASIC = 0)
+    // Bảo lưu: số lần tối đa (0 = không cho phép)
     @Column(name = "max_hold_times")
     @Builder.Default
     private Integer maxHoldTimes = 0;
 
-    // % ngày trả lại khi bảo lưu (VD: VIP = 90, PREMIUM = 80)
+    // Bảo lưu: % ngày trả lại (VD: 80 hoặc 90)
     @Column(name = "hold_return_percent")
     @Builder.Default
     private Integer holdReturnPercent = 0;

@@ -40,10 +40,6 @@ public class PlanAssignment {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "schedule_id")
-    private PtSchedule ptSchedule;
 
     @PrePersist
     protected void onCreate() {
