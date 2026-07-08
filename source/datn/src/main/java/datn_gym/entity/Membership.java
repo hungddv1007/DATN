@@ -2,6 +2,7 @@ package datn_gym.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -37,16 +38,40 @@ public class Membership {
     // ACTIVE | EXPIRED | PAUSED | CANCELLED
     @Column(name = "status", length = 20)
     @Builder.Default
-    private String status = "ACTIVE"; 
+    private String status = "ACTIVE";
 
     @Column(name = "pause_reason", length = 255)
     private String pauseReason;
+
+    // ===== CỘT MỚI — PRORATION & BẢO LƯU =====
+
+    // Số ngày member đã đăng ký (snapshot tại thời điểm đăng ký)
+    @Column(name = "duration_days")
+    private Integer durationDays;
+
+    // Đơn giá/ngày tại thời điểm đăng ký (snapshot)
+    @Column(name = "daily_price", precision = 12, scale = 0)
+    private BigDecimal dailyPrice;
+
+    // Số lần đã bảo lưu
+    @Column(name = "hold_count")
+    @Builder.Default
+    private Integer holdCount = 0;
+
+    // Ngày bắt đầu bảo lưu (null = không đang bảo lưu)
+    @Column(name = "paused_at")
+    private LocalDate pausedAt;
+
+    // Tổng số ngày đã bảo lưu (cộng dồn qua các lần)
+    @Column(name = "total_hold_days")
+    @Builder.Default
+    private Integer totalHoldDays = 0;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @PrePersist
-    protected void onCreate() { 
-        this.createdAt = LocalDateTime.now(); 
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
     }
 }

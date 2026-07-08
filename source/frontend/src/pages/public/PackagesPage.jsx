@@ -17,7 +17,7 @@ const PackagesPage = () => {
       try {
         const data = await packageService.getAllPackages();
         // Sắp xếp theo giá để render đẹp mắt
-        const sorted = data.sort((a, b) => a.price - b.price);
+        const sorted = data.sort((a, b) => a.dailyPrice - b.dailyPrice);
         setPackages(sorted);
       } catch (error) {
         console.error('Failed to fetch packages:', error);
@@ -73,7 +73,8 @@ const PackagesPage = () => {
                   
                   <h2 className="pkg-name" style={{ color: style.color }}>{pkg.name}</h2>
                   <div className="pkg-price">
-                    {formatCurrency(pkg.price)}<span>/{pkg.durationDays} ngày</span>
+                    {formatCurrency(pkg.dailyPrice)}<span>/ngày</span>
+                    <div style={{fontSize: '12px', marginTop: '5px', color: '#64748b'}}>Tối thiểu {pkg.minDays} ngày</div>
                   </div>
                   
                   <p className="pkg-desc">{pkg.description}</p>

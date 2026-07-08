@@ -14,20 +14,26 @@ import java.time.LocalDateTime;
 public class MembershipResponse {
     private Integer id;
     private String packageName;
-    private BigDecimal packagePrice;
-    private Integer durationDays;
+    private BigDecimal dailyPrice; // snapshot
+    private Integer durationDays; // snapshot
     private LocalDate startDate;
     private LocalDate endDate;
     private String status;
     private String ptName;
     private LocalDateTime createdAt;
+    
+    // Hold info
+    private Integer holdCount;
+    private LocalDate pausedAt;
+    private Integer totalHoldDays;
 
-    // Thông tin giao dịch
+    // Transaction info
     private Integer transactionId;
     private BigDecimal originalAmount;
     private BigDecimal finalAmount;
     private String paymentMethod;
     private String transactionStatus;
+    private String transactionType;
     private String promotionCode;
     private Integer discountPercent;
 }

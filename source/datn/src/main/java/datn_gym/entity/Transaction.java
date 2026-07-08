@@ -39,6 +39,11 @@ public class Transaction {
     @Builder.Default
     private String status = "PENDING"; 
 
+    // NEW | RENEW | UPGRADE
+    @Column(name = "type", length = 20)
+    @Builder.Default
+    private String type = "NEW"; 
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "confirmed_by")
     private User confirmedBy;
