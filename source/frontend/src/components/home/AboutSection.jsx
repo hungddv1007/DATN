@@ -37,7 +37,7 @@ const AboutSection = () => {
           <div className="stat-card">
             <ClipboardList size={48} className="stat-icon" strokeWidth={1.5} />
             <h3 className="stat-number">{stats.totalPlans}+</h3>
-            <p className="stat-text">Lộ trình</p>
+            <p className="stat-text">Gói tập</p>
           </div>
         </div>
         

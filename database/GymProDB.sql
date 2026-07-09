@@ -1,9 +1,3 @@
--- ============================================================
--- GYMPRO DATABASE - SQL Server 2025
--- Website Quan Ly Phong Tap Gym
--- 19 bang (Đã chuẩn hóa Data mẫu theo file Chi tiết dự án)
--- ============================================================
-
 IF DB_ID('GymProDB') IS NOT NULL
 BEGIN
     ALTER DATABASE GymProDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -170,55 +164,7 @@ CREATE TABLE exercises (
 );
 
 -- ============================================================
--- 10. TRAINING_PLANS
--- ============================================================
-CREATE TABLE training_plans (
-    id              INT IDENTITY(1,1) PRIMARY KEY,
-    pt_id           INT NOT NULL,
-    title           NVARCHAR(200) NOT NULL,
-    description     NVARCHAR(MAX),
-    duration_weeks  INT,
-    difficulty      NVARCHAR(20),
-    goal            NVARCHAR(20),
-    is_template     BIT DEFAULT 0,
-    created_at      DATETIME2 DEFAULT GETDATE(),
-    FOREIGN KEY (pt_id) REFERENCES users(id)
-);
-
--- ============================================================
--- 11. PLAN_EXERCISES
--- ============================================================
-CREATE TABLE plan_exercises (
-    id              INT IDENTITY(1,1) PRIMARY KEY,
-    plan_id         INT NOT NULL,
-    exercise_name   NVARCHAR(100) NOT NULL,
-    sets            INT,
-    reps            INT,
-    rest_seconds    INT,
-    day_of_week     INT,
-    week_number     INT DEFAULT 1,
-    FOREIGN KEY (plan_id) REFERENCES training_plans(id) ON DELETE CASCADE
-);
-
--- ============================================================
--- 12. PLAN_ASSIGNMENTS
--- ============================================================
-CREATE TABLE plan_assignments (
-    id              INT IDENTITY(1,1) PRIMARY KEY,
-    plan_id         INT NOT NULL,
-    member_id       INT NOT NULL,
-    pt_id           INT NOT NULL,
-    start_date      DATE,
-    status          NVARCHAR(20) DEFAULT ''ACTIVE'',
-    note            NVARCHAR(500),
-    created_at      DATETIME2 DEFAULT GETDATE(),
-    FOREIGN KEY (plan_id) REFERENCES training_plans(id) ON DELETE CASCADE,
-    FOREIGN KEY (member_id) REFERENCES users(id),
-    FOREIGN KEY (pt_id) REFERENCES users(id)
-);
-
--- ============================================================
--- 13. ATTENDANCES
+-- 10. ATTENDANCES
 -- ============================================================
 CREATE TABLE attendances (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -226,11 +172,10 @@ CREATE TABLE attendances (
     check_in_time   DATETIME2 DEFAULT GETDATE(),
     status          BIT DEFAULT 1,         -- 1 = co mat, 0 = vang
     FOREIGN KEY (member_id) REFERENCES users(id)
-
 );
 
 -- ============================================================
--- 14. PT_NOTES
+-- 11. PT_NOTES
 -- ============================================================
 CREATE TABLE pt_notes (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -243,22 +188,20 @@ CREATE TABLE pt_notes (
 );
 
 -- ============================================================
--- 15. PT_COMMENTS
+-- 12. PT_COMMENTS  (da bo cot plan_id vi training_plans khong con)
 -- ============================================================
 CREATE TABLE pt_comments (
     id              INT IDENTITY(1,1) PRIMARY KEY,
     pt_id           INT NOT NULL,
     member_id       INT NOT NULL,
-    plan_id         INT,
     content         NVARCHAR(MAX) NOT NULL,
     created_at      DATETIME2 DEFAULT GETDATE(),
     FOREIGN KEY (pt_id) REFERENCES users(id),
-    FOREIGN KEY (member_id) REFERENCES users(id),
-    FOREIGN KEY (plan_id) REFERENCES training_plans(id)
+    FOREIGN KEY (member_id) REFERENCES users(id)
 );
 
 -- ============================================================
--- 16. DIETS
+-- 13. DIETS
 -- ============================================================
 CREATE TABLE diets (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -273,7 +216,7 @@ CREATE TABLE diets (
 );
 
 -- ============================================================
--- 17. REVIEWS
+-- 14. REVIEWS
 -- ============================================================
 CREATE TABLE reviews (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -287,7 +230,7 @@ CREATE TABLE reviews (
 );
 
 -- ============================================================
--- 18. BLOGS
+-- 15. BLOGS
 -- ============================================================
 CREATE TABLE blogs (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -302,24 +245,25 @@ CREATE TABLE blogs (
 );
 
 -- ============================================================
--- 18.5. PT_SCHEDULES
+-- 16. PT_SCHEDULES  (day_of_week: 0=Thu2 ... 5=Thu7 (theo Frontend/Backend, KHONG co Chu Nhat),
+--                     time_slot: 0..7 -- ten cot phai khop voi @Column(name = "time_slot") trong PtSchedule.java)
 -- ============================================================
 CREATE TABLE pt_schedules (
     id              INT IDENTITY(1,1) PRIMARY KEY,
     pt_id           INT NOT NULL,
     member_id       INT NOT NULL,
     day_of_week     INT NOT NULL,
-    slot_index      INT NOT NULL,
+    time_slot       INT NOT NULL,
     exercise_note   NVARCHAR(200),
     status          NVARCHAR(20) DEFAULT 'ACTIVE',
     created_at      DATETIME2 DEFAULT GETDATE(),
     FOREIGN KEY (pt_id) REFERENCES users(id),
     FOREIGN KEY (member_id) REFERENCES users(id),
-    CONSTRAINT UQ_pt_schedules UNIQUE (pt_id, day_of_week, slot_index)
+    CONSTRAINT UQ_pt_schedules UNIQUE (pt_id, day_of_week, time_slot)
 );
 
 -- ============================================================
--- 19. NOTIFICATIONS
+-- 17. NOTIFICATIONS
 -- ============================================================
 CREATE TABLE notifications (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -341,14 +285,14 @@ CREATE INDEX IX_users_email ON users(email);
 CREATE INDEX IX_memberships_user ON memberships(user_id);
 CREATE INDEX IX_memberships_status ON memberships(status);
 CREATE INDEX IX_transactions_status ON transactions(status);
-CREATE INDEX IX_training_plans_pt ON training_plans(pt_id);
-CREATE INDEX IX_plan_assignments_member ON plan_assignments(member_id);
-CREATE INDEX IX_plan_assignments_plan ON plan_assignments(plan_id);
 CREATE INDEX IX_notifications_user ON notifications(user_id);
 CREATE INDEX IX_notifications_read ON notifications(is_read);
 CREATE INDEX IX_blogs_status ON blogs(status);
 CREATE INDEX IX_diets_member ON diets(member_id);
 CREATE INDEX IX_diets_date ON diets(date);
+CREATE INDEX IX_pt_schedules_pt ON pt_schedules(pt_id);
+CREATE INDEX IX_pt_schedules_member ON pt_schedules(member_id);
+CREATE INDEX IX_attendances_member ON attendances(member_id);
 
 GO
 
@@ -356,35 +300,1243 @@ GO
 -- ============================================================
 -- SEED DATA
 -- ============================================================
-
 -- 1. Insert Roles
-INSERT INTO roles (name, description) VALUES ('ADMIN', 'Quản trị viên hệ thống');
-INSERT INTO roles (name, description) VALUES ('PT', 'Huấn luyện viên cá nhân');
-INSERT INTO roles (name, description) VALUES ('MEMBER', 'Hội viên phòng gym');
+INSERT INTO roles (name) VALUES ('ADMIN');
+INSERT INTO roles (name) VALUES ('PT');
+INSERT INTO roles (name) VALUES ('MEMBER');
 
--- 2. Insert Users (password '123456' encoded with BCrypt)
--- Hash: $2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.
-INSERT INTO users (role_id, email, password, full_name, phone, status) VALUES 
-(1, 'admin@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Nguyễn Quản Trị', '0912345678', 1),
-(2, 'pt1@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Trần Huấn Luyện 1', '0923456789', 1),
-(2, 'pt2@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Lê Huấn Luyện 2', '0934567890', 1),
-(3, 'member1@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Phạm Hội Viên 1', '0945678901', 1),
-(3, 'member2@gympro.com', '$2a$10$y5lU4B6LwJ1p.8Xk6eG2pOl3bN3Jb0vK7z07g7N06lGz7J96J1J1.', N'Vũ Hội Viên 2', '0956789012', 1);
+-- 2. Insert Users (100 users: 1 ADMIN, 15 PT, 84 MEMBER)
+-- Mat khau cho tat ca la '123456' (da ma hoa BCrypt)
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (1, 'admin@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Nguyễn Quản Trị', '0910433218', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt1@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Trần Đức Việt', '0900133890', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt2@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Võ Minh Kiệt', '0963794026', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt3@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Huỳnh Ngọc Khánh', '0935116155', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt4@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Đặng Ngọc Cường', '0978161849', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt5@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Thanh Long', '0910341316', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt6@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hoàng Xuân Tuấn', '0925534192', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt7@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Võ Kim Nga', '0927648350', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt8@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Văn Thảo', '0964139537', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt9@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phan Gia Hạnh', '0924238849', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt10@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phan Đức Trung', '0953287101', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt11@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Lê Gia Lan', '0969166978', 1, 'GOOGLE');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt12@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hoàng Thu Anh', '0918451462', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt13@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Vũ Văn Phong', '0982814893', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt14@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Lê Thanh Lan', '0988095701', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt15@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Thanh Sơn', '0930391171', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member1@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hồ Thu Hương', '0927824896', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member2@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Thu Long', '0946578713', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member3@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Thị Thắng', '0909839301', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member4@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Đỗ Gia Dũng', '0931051834', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member5@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Bùi Xuân Mai', '0982997376', 1, 'GOOGLE');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member6@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Thị Hải', '0965667010', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member7@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phan Kim Thắng', '0913338726', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member8@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Lê Ngọc Hạnh', '0931781080', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member9@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Trần Minh Lan', '0967736026', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member10@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Nguyễn Quang Phong', '0974687234', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member11@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Văn Kiệt', '0905009788', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member12@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Lê Văn My', '0912191361', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member13@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Đức Nga', '0999091699', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member14@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Võ Thanh Phong', '0935346247', 1, 'GOOGLE');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member15@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Huỳnh Thị Anh', '0979911838', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member16@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hoàng Hữu Thúy', '0913542784', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member17@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Đặng Gia Vy', '0908412411', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member18@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Đỗ Thu Khánh', '0944935348', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member19@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Vũ Ngọc Dũng', '0916400524', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member20@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Lê Kim Yến', '0986801128', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member21@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Nguyễn Thanh Như', '0926204505', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member22@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Gia Nga', '0915869232', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member23@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hồ Hữu Tú', '0902563421', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member24@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phan Văn Đạt', '0933754330', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member25@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Bùi Minh Trung', '0954145868', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member26@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Huỳnh Văn Hùng', '0942940196', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member27@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Huỳnh Kim Thảo', '0969816934', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member28@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Nguyễn Kim Việt', '0908835615', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member29@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Đặng Thanh Hùng', '0948465648', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member30@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Lê Minh Tú', '0962994680', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member31@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hoàng Ngọc Mai', '0969957773', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member32@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Võ Xuân Lan', '0914895134', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member33@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Minh Khánh', '0900379176', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member34@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Gia Long', '0967632016', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member35@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Hữu Vy', '0970831727', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member36@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Bùi Thu Như', '0995798687', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member37@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Hữu Đạt', '0974348734', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member38@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Vũ Thị Quân', '0934558122', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member39@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Quang Khánh', '0931665876', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member40@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Nguyễn Minh Tú', '0969096705', 1, 'GOOGLE');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member41@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hoàng Quang Tú', '0988937346', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member42@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Vũ Văn Trang', '0956272980', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member43@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Quang Bình', '0916272046', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member44@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Huỳnh Minh Hạnh', '0955646417', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member45@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Nguyễn Kim Kiệt', '0905310033', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member46@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Ngô Văn Khánh', '0932719374', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member47@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hồ Thanh Lan', '0999124190', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member48@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Ngọc Trang', '0963193149', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member49@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hồ Thị Cường', '0958651850', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member50@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Ngô Quang Khoa', '0916572628', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member51@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Bùi Ngọc Kiệt', '0977694531', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member52@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hoàng Xuân Nga', '0979965075', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member53@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Lê Xuân Mai', '0954549480', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member54@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Võ Minh Giang', '0936783777', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member55@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hồ Văn Giang', '0943634957', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member56@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Võ Thu Thúy', '0968557444', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member57@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Phạm Thị Long', '0951823374', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member58@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Đỗ Đức Vy', '0994134352', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member59@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hoàng Văn Kiệt', '0924008427', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member60@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Trần Văn Quân', '0977752047', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member61@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Trần Thị Trung', '0971902294', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member62@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Trần Minh Hùng', '0986999386', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member63@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Vũ Xuân Sơn', '0996499091', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member64@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hồ Minh Mai', '0941232812', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member65@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Nguyễn Quang Yến', '0997403447', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member66@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Trần Gia Nam', '0949361832', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member67@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Ngọc Khánh', '0910249947', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member68@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Trần Xuân Sơn', '0964887719', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member69@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Nguyễn Quang Thảo', '0994013990', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member70@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hồ Gia Phương', '0990278742', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member71@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Đặng Quang Khoa', '0917565512', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member72@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Huỳnh Quang Khoa', '0946807154', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member73@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Huỳnh Thị Trung', '0980876038', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member74@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Huỳnh Đức Khoa', '0970348247', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member75@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Kim Khoa', '0910932480', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member76@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Võ Quang Giang', '0931712748', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member77@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Đỗ Ngọc Tú', '0977378263', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member78@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Dương Đức My', '0921465840', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member79@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Hoàng Kim Sơn', '0999727875', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member80@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Huỳnh Thu Kiệt', '0967533963', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member81@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Ngô Quang Cường', '0957662702', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member82@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Võ Đức Thắng', '0917187026', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member83@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Ngô Gia Khánh', '0917459615', 1, 'LOCAL');
+INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member84@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi.', N'Ngô Gia Kiệt', '0965780913', 1, 'LOCAL');
 
 -- 3. Insert PT Profiles
-INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES 
-(2, N'Thể hình & Giảm cân', N'Kinh nghiệm 5 năm huấn luyện cá nhân', N'Chứng chỉ PT Quốc tế NASM', 4.8, 5),
-(3, N'Yoga & Stretch', N'Kinh nghiệm 3 năm huấn luyện Yoga', N'Bằng Yoga Alliance 200h', 4.5, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (2, N'Tăng cơ (Bulking)', N'Huấn luyện viên với 6 năm kinh nghiệm, chuyên sâu về tăng cơ (bulking).', N'Chứng chỉ PT Quốc tế NASM', 4.7, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (3, N'Thể hình & Giảm cân', N'Huấn luyện viên với 5 năm kinh nghiệm, chuyên sâu về thể hình & giảm cân.', N'Chứng chỉ CrossFit Level 1', 3.9, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (4, N'Boxing & Kickfit', N'Huấn luyện viên với 5 năm kinh nghiệm, chuyên sâu về boxing & kickfit.', N'Chứng chỉ CrossFit Level 1', 4.3, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (5, N'Boxing & Kickfit', N'Huấn luyện viên với 2 năm kinh nghiệm, chuyên sâu về boxing & kickfit.', N'Bằng HLV Boxing cấp Quốc gia', 4.1, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (6, N'Thể hình & Giảm cân', N'Huấn luyện viên với 10 năm kinh nghiệm, chuyên sâu về thể hình & giảm cân.', N'Chứng chỉ CrossFit Level 1', 4.2, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (7, N'Gym cho người mới bắt đầu', N'Huấn luyện viên với 4 năm kinh nghiệm, chuyên sâu về gym cho người mới bắt đầu.', N'Bằng HLV Boxing cấp Quốc gia', 3.9, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (8, N'Calisthenics', N'Huấn luyện viên với 5 năm kinh nghiệm, chuyên sâu về calisthenics.', N'Bằng HLV Boxing cấp Quốc gia', 4.3, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (9, N'Cardio & Sức bền', N'Huấn luyện viên với 1 năm kinh nghiệm, chuyên sâu về cardio & sức bền.', N'Chứng chỉ PT Quốc tế NASM', 4.2, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (10, N'Calisthenics', N'Huấn luyện viên với 2 năm kinh nghiệm, chuyên sâu về calisthenics.', N'Chứng chỉ PT Quốc tế NASM', 4.1, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (11, N'Tăng cơ (Bulking)', N'Huấn luyện viên với 3 năm kinh nghiệm, chuyên sâu về tăng cơ (bulking).', N'Chứng chỉ Dinh dưỡng thể thao ISSA', 4.3, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (12, N'Tăng cơ (Bulking)', N'Huấn luyện viên với 7 năm kinh nghiệm, chuyên sâu về tăng cơ (bulking).', N'Chứng chỉ CrossFit Level 1', 4.7, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (13, N'Cardio & Sức bền', N'Huấn luyện viên với 7 năm kinh nghiệm, chuyên sâu về cardio & sức bền.', N'Bằng HLV Boxing cấp Quốc gia', 3.9, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (14, N'Calisthenics', N'Huấn luyện viên với 10 năm kinh nghiệm, chuyên sâu về calisthenics.', N'Chứng chỉ Dinh dưỡng thể thao ISSA', 4.9, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (15, N'Dinh dưỡng thể thao', N'Huấn luyện viên với 1 năm kinh nghiệm, chuyên sâu về dinh dưỡng thể thao.', N'Bằng HLV Boxing cấp Quốc gia', 4.2, 5);
+INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (16, N'Calisthenics', N'Huấn luyện viên với 8 năm kinh nghiệm, chuyên sâu về calisthenics.', N'Bằng Yoga Alliance 200h', 4.8, 5);
 
--- 4. Insert Packages
+-- 4. Insert Member Profiles
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (17, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (18, N'Có vấn đề về khớp gối, hạn chế squat sâu.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (19, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (20, N'Có vấn đề về khớp gối, hạn chế squat sâu.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (21, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (22, N'Huyết áp hơi cao, cần theo dõi cường độ cardio.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (23, N'Mới bắt đầu tập, cần làm quen kỹ thuật cơ bản.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (24, N'Thể lực tốt, mục tiêu tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (25, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (26, N'Thể trạng gầy, mục tiêu tăng cân và tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (27, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (28, N'Thể lực tốt, mục tiêu tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (29, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (30, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (31, N'Có vấn đề về khớp gối, hạn chế squat sâu.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (32, N'Thể lực tốt, mục tiêu tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (33, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (34, N'Thể lực tốt, mục tiêu tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (35, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (36, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (37, N'Thể lực tốt, mục tiêu tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (38, N'Thể lực tốt, mục tiêu tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (39, N'Thể lực tốt, mục tiêu tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (40, N'Có vấn đề về khớp gối, hạn chế squat sâu.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (41, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (42, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (43, N'Mới bắt đầu tập, cần làm quen kỹ thuật cơ bản.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (44, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (45, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (46, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (47, N'Mới bắt đầu tập, cần làm quen kỹ thuật cơ bản.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (48, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (49, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (50, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (51, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (52, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (53, N'Có vấn đề về khớp gối, hạn chế squat sâu.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (54, N'Thể lực tốt, mục tiêu tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (55, N'Có vấn đề về khớp gối, hạn chế squat sâu.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (56, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (57, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (58, N'Mới bắt đầu tập, cần làm quen kỹ thuật cơ bản.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (59, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (60, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (61, N'Huyết áp hơi cao, cần theo dõi cường độ cardio.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (62, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (63, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (64, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (65, N'Thể trạng gầy, mục tiêu tăng cân và tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (66, N'Thể trạng gầy, mục tiêu tăng cân và tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (67, N'Có vấn đề về khớp gối, hạn chế squat sâu.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (68, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (69, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (70, N'Thể trạng gầy, mục tiêu tăng cân và tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (71, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (72, N'Thể lực tốt, mục tiêu tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (73, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (74, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (75, N'Mới bắt đầu tập, cần làm quen kỹ thuật cơ bản.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (76, N'Thể trạng gầy, mục tiêu tăng cân và tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (77, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (78, N'Thể trạng bình thường, không có bệnh nền.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (79, N'Thể trạng gầy, mục tiêu tăng cân và tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (80, N'Huyết áp hơi cao, cần theo dõi cường độ cardio.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (81, N'Huyết áp hơi cao, cần theo dõi cường độ cardio.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (82, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (83, N'Thể trạng gầy, mục tiêu tăng cân và tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (84, N'Thể trạng gầy, mục tiêu tăng cân và tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (85, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (86, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (87, N'Có vấn đề về khớp gối, hạn chế squat sâu.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (88, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (89, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (90, N'Thừa cân nhẹ, mục tiêu giảm mỡ toàn thân.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (91, N'Mới bắt đầu tập, cần làm quen kỹ thuật cơ bản.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (92, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (93, N'Có vấn đề về khớp gối, hạn chế squat sâu.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (94, N'Huyết áp hơi cao, cần theo dõi cường độ cardio.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (95, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (96, N'Mới bắt đầu tập, cần làm quen kỹ thuật cơ bản.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (97, N'Thể trạng gầy, mục tiêu tăng cân và tăng cơ.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (98, NULL);
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (99, N'Huyết áp hơi cao, cần theo dõi cường độ cardio.');
+INSERT INTO member_profiles (user_id, physical_condition) VALUES (100, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
+
+-- 5. Insert Packages
 INSERT INTO packages (name, daily_price, description, has_pt, can_choose_pt, has_meal_plan, min_days, max_hold_times, hold_return_percent, is_active) VALUES 
 ('BASIC', 16000, N'Gói tập cơ bản sử dụng thiết bị phòng gym tự do', 0, 0, 0, 30, 0, 0, 1),
 ('PREMIUM', 50000, N'Gói tập nâng cao có PT hướng dẫn', 1, 1, 0, 30, 1, 50, 1),
 ('VIP', 83000, N'Gói tập cao cấp nhất được chọn PT + Meal Plan dinh dưỡng', 1, 1, 1, 30, 3, 90, 1);
 
--- 5. Insert Package Discounts
+-- 5.5 Insert Package Discounts (ap dung chung cho tat ca goi)
 INSERT INTO package_discounts (package_id, min_days, discount_percent) VALUES 
 (NULL, 90, 5),
 (NULL, 180, 10),
 (NULL, 365, 15);
+
+-- 6. Insert Promotions
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('WELCOME10', 10, NULL, '2026-01-01', '2026-12-31', 500, 29, 1);
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('TET2026', 15, NULL, '2026-01-15', '2026-02-20', 200, 27, 1);
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('SUMMER20', 20, 2, '2026-05-01', '2026-08-31', 150, 27, 1);
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('VIPONLY15', 15, 3, '2026-01-01', '2026-12-31', 100, 28, 1);
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('BASICSALE5', 5, 1, '2026-01-01', '2026-12-31', 300, 29, 1);
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('STUDENT10', 10, NULL, '2026-03-01', '2026-09-30', 250, 52, 1);
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('FLASHSALE25', 25, NULL, '2026-07-01', '2026-07-31', 50, 10, 1);
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('NEWMEMBER8', 8, NULL, '2026-01-01', '2026-12-31', 400, 116, 1);
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('REFER5', 5, NULL, '2026-01-01', '2026-12-31', 1000, 204, 1);
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('ANNIVERSARY30', 30, NULL, '2026-11-01', '2026-11-30', 100, 26, 1);
+
+-- 7. Insert Memberships
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (17, 2, 4, '2025-12-31', '2026-03-31', 'EXPIRED', NULL, 90, 50000, 0, NULL, 0, '2025-12-31 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (18, 2, 8, '2026-07-07', '2026-08-06', 'PAUSED', N'Lý do sức khỏe', 30, 50000, 1, '2026-07-09', 15, '2026-07-07 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (19, 2, 3, '2025-01-14', '2026-01-14', 'EXPIRED', NULL, 365, 50000, 0, NULL, 0, '2025-01-14 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (20, 3, 6, '2026-06-13', '2026-12-10', 'CANCELLED', NULL, 180, 83000, 0, NULL, 0, '2026-06-13 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (21, 2, 12, '2026-06-30', '2027-06-30', 'ACTIVE', NULL, 365, 50000, 0, NULL, 0, '2026-06-30 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (22, 3, 3, '2026-06-16', '2026-09-14', 'PAUSED', N'Đi du lịch', 90, 83000, 2, '2026-07-05', 6, '2026-06-16 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (23, 3, 10, '2025-01-21', '2026-01-21', 'EXPIRED', NULL, 365, 83000, 0, NULL, 0, '2025-01-21 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (24, 3, 13, '2026-01-26', '2026-04-26', 'EXPIRED', NULL, 90, 83000, 0, NULL, 0, '2026-01-26 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (24, 3, 15, '2026-06-28', '2026-09-26', 'ACTIVE', NULL, 90, 83000, 0, NULL, 0, '2026-06-28 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (25, 2, 2, '2025-12-24', '2026-01-23', 'EXPIRED', NULL, 30, 50000, 0, NULL, 0, '2025-12-24 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (25, 1, NULL, '2026-06-13', '2027-06-13', 'ACTIVE', NULL, 365, 16000, 0, NULL, 0, '2026-06-13 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (26, 1, NULL, '2025-11-11', '2026-02-09', 'EXPIRED', NULL, 90, 16000, 0, NULL, 0, '2025-11-11 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (27, 3, 2, '2026-05-31', '2026-07-30', 'ACTIVE', NULL, 60, 83000, 0, NULL, 0, '2026-05-31 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (28, 1, NULL, '2026-06-11', '2026-12-08', 'ACTIVE', NULL, 180, 16000, 0, NULL, 0, '2026-06-11 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (29, 1, NULL, '2026-06-12', '2027-06-12', 'ACTIVE', NULL, 365, 16000, 0, NULL, 0, '2026-06-12 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (30, 2, 6, '2025-01-15', '2026-01-15', 'EXPIRED', NULL, 365, 50000, 0, NULL, 0, '2025-01-15 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (30, 1, NULL, '2026-06-11', '2026-12-08', 'CANCELLED', NULL, 180, 16000, 0, NULL, 0, '2026-06-11 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (31, 2, 6, '2025-10-22', '2025-12-21', 'EXPIRED', NULL, 60, 50000, 0, NULL, 0, '2025-10-22 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (31, 1, NULL, '2026-06-16', '2026-07-16', 'ACTIVE', NULL, 30, 16000, 0, NULL, 0, '2026-06-16 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (32, 1, NULL, '2025-02-26', '2026-02-26', 'EXPIRED', NULL, 365, 16000, 0, NULL, 0, '2025-02-26 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (33, 2, 13, '2026-05-15', '2026-08-13', 'ACTIVE', NULL, 90, 50000, 0, NULL, 0, '2026-05-15 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (34, 1, NULL, '2025-09-18', '2025-10-18', 'CANCELLED', NULL, 30, 16000, 0, NULL, 0, '2025-09-18 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (34, 2, 6, '2025-09-21', '2026-03-20', 'EXPIRED', NULL, 180, 50000, 0, NULL, 0, '2025-09-21 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (35, 1, NULL, '2025-10-29', '2026-01-27', 'EXPIRED', NULL, 90, 16000, 0, NULL, 0, '2025-10-29 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (35, 2, 3, '2026-05-16', '2026-08-14', 'ACTIVE', NULL, 90, 50000, 0, NULL, 0, '2026-05-16 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (36, 2, 13, '2025-04-16', '2026-04-16', 'EXPIRED', NULL, 365, 50000, 0, NULL, 0, '2025-04-16 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (36, 2, 10, '2026-07-05', '2026-10-03', 'PAUSED', N'Bận việc cá nhân', 90, 50000, 1, '2026-07-07', 15, '2026-07-05 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (37, 3, 6, '2026-06-30', '2026-08-29', 'ACTIVE', NULL, 60, 83000, 0, NULL, 0, '2026-06-30 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (38, 2, 9, '2025-12-26', '2026-01-25', 'EXPIRED', NULL, 30, 50000, 0, NULL, 0, '2025-12-26 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (38, 2, 12, '2026-06-11', '2027-06-11', 'PAUSED', N'Bận việc cá nhân', 365, 50000, 2, '2026-07-09', 13, '2026-06-11 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (39, 1, NULL, '2025-10-27', '2026-04-25', 'EXPIRED', NULL, 180, 16000, 0, NULL, 0, '2025-10-27 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (39, 2, 9, '2026-06-20', '2026-09-18', 'ACTIVE', NULL, 90, 50000, 0, NULL, 0, '2026-06-20 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (40, 1, NULL, '2026-05-15', '2026-08-13', 'ACTIVE', NULL, 90, 16000, 0, NULL, 0, '2026-05-15 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (41, 1, NULL, '2026-06-10', '2027-06-10', 'ACTIVE', NULL, 365, 16000, 0, NULL, 0, '2026-06-10 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (42, 3, 11, '2026-06-14', '2026-07-14', 'ACTIVE', NULL, 30, 83000, 0, NULL, 0, '2026-06-14 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (43, 2, 9, '2026-07-06', '2027-01-02', 'ACTIVE', NULL, 180, 50000, 0, NULL, 0, '2026-07-06 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (44, 3, 10, '2026-05-27', '2026-08-25', 'CANCELLED', NULL, 90, 83000, 0, NULL, 0, '2026-05-27 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (44, 2, 9, '2026-06-25', '2026-07-25', 'ACTIVE', NULL, 30, 50000, 0, NULL, 0, '2026-06-25 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (45, 2, 8, '2026-06-21', '2026-09-19', 'ACTIVE', NULL, 90, 50000, 0, NULL, 0, '2026-06-21 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (46, 2, 12, '2026-05-30', '2027-05-30', 'ACTIVE', NULL, 365, 50000, 0, NULL, 0, '2026-05-30 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (47, 2, 6, '2025-04-23', '2026-04-23', 'EXPIRED', NULL, 365, 50000, 0, NULL, 0, '2025-04-23 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (47, 2, 3, '2026-01-20', '2027-01-20', 'CANCELLED', NULL, 365, 50000, 0, NULL, 0, '2026-01-20 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (48, 1, NULL, '2026-05-29', '2026-08-27', 'ACTIVE', NULL, 90, 16000, 0, NULL, 0, '2026-05-29 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (49, 2, 6, '2025-06-13', '2026-06-13', 'EXPIRED', NULL, 365, 50000, 0, NULL, 0, '2025-06-13 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (50, 2, 13, '2026-05-28', '2026-08-26', 'PAUSED', N'Đi du lịch', 90, 50000, 1, '2026-07-09', 13, '2026-05-28 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (51, 1, NULL, '2026-06-26', '2026-09-24', 'ACTIVE', NULL, 90, 16000, 0, NULL, 0, '2026-06-26 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (52, 3, 4, '2026-03-31', '2026-05-30', 'EXPIRED', NULL, 60, 83000, 0, NULL, 0, '2026-03-31 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (52, 1, NULL, '2026-06-22', '2026-07-22', 'ACTIVE', NULL, 30, 16000, 0, NULL, 0, '2026-06-22 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (53, 3, 4, '2025-12-28', '2026-01-27', 'EXPIRED', NULL, 30, 83000, 0, NULL, 0, '2025-12-28 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (54, 1, NULL, '2026-05-21', '2026-07-20', 'PAUSED', N'Đi công tác dài ngày', 60, 16000, 1, '2026-07-07', 10, '2026-05-21 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (55, 2, 14, '2026-02-14', '2026-04-15', 'CANCELLED', NULL, 60, 50000, 0, NULL, 0, '2026-02-14 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (56, 2, 14, '2026-05-19', '2027-05-19', 'ACTIVE', NULL, 365, 50000, 0, NULL, 0, '2026-05-19 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (57, 3, 9, '2025-11-10', '2026-02-08', 'EXPIRED', NULL, 90, 83000, 0, NULL, 0, '2025-11-10 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (58, 1, NULL, '2026-06-13', '2026-12-10', 'ACTIVE', NULL, 180, 16000, 0, NULL, 0, '2026-06-13 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (59, 3, 2, '2026-06-23', '2027-06-23', 'ACTIVE', NULL, 365, 83000, 0, NULL, 0, '2026-06-23 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (60, 3, 15, '2025-10-18', '2026-10-18', 'CANCELLED', NULL, 365, 83000, 0, NULL, 0, '2025-10-18 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (61, 1, NULL, '2025-12-25', '2026-02-23', 'EXPIRED', NULL, 60, 16000, 0, NULL, 0, '2025-12-25 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (61, 1, NULL, '2026-05-12', '2026-11-08', 'ACTIVE', NULL, 180, 16000, 0, NULL, 0, '2026-05-12 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (62, 2, 2, '2025-12-09', '2026-03-09', 'CANCELLED', NULL, 90, 50000, 0, NULL, 0, '2025-12-09 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (62, 2, 7, '2026-07-04', '2026-10-02', 'ACTIVE', NULL, 90, 50000, 0, NULL, 0, '2026-07-04 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (63, 2, 14, '2026-01-19', '2026-02-18', 'CANCELLED', NULL, 30, 50000, 0, NULL, 0, '2026-01-19 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (63, 1, NULL, '2026-06-13', '2026-07-13', 'ACTIVE', NULL, 30, 16000, 0, NULL, 0, '2026-06-13 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (64, 3, 16, '2026-07-09', '2027-01-05', 'ACTIVE', NULL, 180, 83000, 0, NULL, 0, '2026-07-09 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (65, 1, NULL, '2025-10-31', '2025-12-30', 'EXPIRED', NULL, 60, 16000, 0, NULL, 0, '2025-10-31 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (65, 2, 5, '2026-06-21', '2026-12-18', 'ACTIVE', NULL, 180, 50000, 0, NULL, 0, '2026-06-21 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (66, 1, NULL, '2025-07-30', '2026-01-26', 'EXPIRED', NULL, 180, 16000, 0, NULL, 0, '2025-07-30 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (66, 2, 11, '2026-06-24', '2026-07-24', 'PAUSED', N'Lý do sức khỏe', 30, 50000, 1, '2026-07-05', 11, '2026-06-24 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (67, 1, NULL, '2026-04-04', '2026-05-04', 'EXPIRED', NULL, 30, 16000, 0, NULL, 0, '2026-04-04 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (68, 1, NULL, '2026-06-28', '2026-07-28', 'ACTIVE', NULL, 30, 16000, 0, NULL, 0, '2026-06-28 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (69, 2, 10, '2025-02-25', '2026-02-25', 'EXPIRED', NULL, 365, 50000, 0, NULL, 0, '2025-02-25 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (69, 1, NULL, '2026-06-15', '2026-12-12', 'ACTIVE', NULL, 180, 16000, 0, NULL, 0, '2026-06-15 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (70, 1, NULL, '2026-07-07', '2026-08-06', 'ACTIVE', NULL, 30, 16000, 0, NULL, 0, '2026-07-07 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (71, 2, 14, '2025-11-28', '2025-12-28', 'EXPIRED', NULL, 30, 50000, 0, NULL, 0, '2025-11-28 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (71, 2, 15, '2026-06-29', '2026-07-29', 'ACTIVE', NULL, 30, 50000, 0, NULL, 0, '2026-06-29 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (72, 3, 12, '2025-11-06', '2026-05-05', 'CANCELLED', NULL, 180, 83000, 0, NULL, 0, '2025-11-06 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (73, 1, NULL, '2025-11-15', '2026-05-14', 'EXPIRED', NULL, 180, 16000, 0, NULL, 0, '2025-11-15 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (73, 1, NULL, '2026-01-29', '2026-03-30', 'CANCELLED', NULL, 60, 16000, 0, NULL, 0, '2026-01-29 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (74, 2, 14, '2026-07-07', '2027-07-07', 'ACTIVE', NULL, 365, 50000, 0, NULL, 0, '2026-07-07 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (75, 1, NULL, '2026-01-21', '2026-02-20', 'CANCELLED', NULL, 30, 16000, 0, NULL, 0, '2026-01-21 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (76, 3, 16, '2025-11-26', '2026-05-25', 'CANCELLED', NULL, 180, 83000, 0, NULL, 0, '2025-11-26 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (76, 3, 13, '2025-10-28', '2026-01-26', 'CANCELLED', NULL, 90, 83000, 0, NULL, 0, '2025-10-28 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (77, 3, 13, '2026-07-04', '2027-07-04', 'ACTIVE', NULL, 365, 83000, 0, NULL, 0, '2026-07-04 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (78, 2, 3, '2026-06-19', '2026-08-18', 'ACTIVE', NULL, 60, 50000, 0, NULL, 0, '2026-06-19 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (79, 2, 8, '2025-10-04', '2026-01-02', 'EXPIRED', NULL, 90, 50000, 0, NULL, 0, '2025-10-04 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (79, 1, NULL, '2026-07-07', '2027-01-03', 'ACTIVE', NULL, 180, 16000, 0, NULL, 0, '2026-07-07 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (80, 3, 12, '2026-02-19', '2027-02-19', 'CANCELLED', NULL, 365, 83000, 0, NULL, 0, '2026-02-19 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (81, 3, 7, '2026-02-21', '2026-03-23', 'EXPIRED', NULL, 30, 83000, 0, NULL, 0, '2026-02-21 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (82, 2, 15, '2026-04-27', '2026-06-26', 'CANCELLED', NULL, 60, 50000, 0, NULL, 0, '2026-04-27 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (83, 3, 14, '2026-07-02', '2026-08-01', 'ACTIVE', NULL, 30, 83000, 0, NULL, 0, '2026-07-02 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (84, 2, 12, '2026-06-30', '2027-06-30', 'ACTIVE', NULL, 365, 50000, 0, NULL, 0, '2026-06-30 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (85, 2, 4, '2026-06-03', '2026-11-30', 'PAUSED', N'Bận việc cá nhân', 180, 50000, 2, '2026-06-29', 8, '2026-06-03 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (86, 1, NULL, '2026-01-26', '2026-03-27', 'EXPIRED', NULL, 60, 16000, 0, NULL, 0, '2026-01-26 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (86, 3, 13, '2026-07-01', '2026-07-31', 'ACTIVE', NULL, 30, 83000, 0, NULL, 0, '2026-07-01 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (87, 3, 5, '2025-12-01', '2026-03-01', 'EXPIRED', NULL, 90, 83000, 0, NULL, 0, '2025-12-01 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (88, 3, 9, '2025-07-07', '2026-01-03', 'EXPIRED', NULL, 180, 83000, 0, NULL, 0, '2025-07-07 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (88, 3, 3, '2025-10-06', '2026-01-04', 'EXPIRED', NULL, 90, 83000, 0, NULL, 0, '2025-10-06 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (89, 1, NULL, '2026-04-11', '2026-07-10', 'CANCELLED', NULL, 90, 16000, 0, NULL, 0, '2026-04-11 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (90, 2, 5, '2026-04-29', '2026-05-29', 'CANCELLED', NULL, 30, 50000, 0, NULL, 0, '2026-04-29 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (91, 1, NULL, '2025-03-07', '2026-03-07', 'EXPIRED', NULL, 365, 16000, 0, NULL, 0, '2025-03-07 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (92, 2, 6, '2026-06-06', '2027-06-06', 'CANCELLED', NULL, 365, 50000, 0, NULL, 0, '2026-06-06 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (93, 2, 8, '2026-05-21', '2026-11-17', 'ACTIVE', NULL, 180, 50000, 0, NULL, 0, '2026-05-21 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (94, 1, NULL, '2025-12-11', '2026-03-11', 'EXPIRED', NULL, 90, 16000, 0, NULL, 0, '2025-12-11 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (95, 2, 12, '2025-09-30', '2025-11-29', 'CANCELLED', NULL, 60, 50000, 0, NULL, 0, '2025-09-30 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (96, 3, 15, '2026-05-12', '2026-07-11', 'ACTIVE', NULL, 60, 83000, 0, NULL, 0, '2026-05-12 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (97, 1, NULL, '2026-03-25', '2026-05-24', 'EXPIRED', NULL, 60, 16000, 0, NULL, 0, '2026-03-25 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (97, 2, 16, '2026-06-06', '2026-08-05', 'ACTIVE', NULL, 60, 50000, 0, NULL, 0, '2026-06-06 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (98, 1, NULL, '2025-12-15', '2026-02-13', 'EXPIRED', NULL, 60, 16000, 0, NULL, 0, '2025-12-15 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (98, 1, NULL, '2026-03-13', '2026-06-11', 'EXPIRED', NULL, 90, 16000, 0, NULL, 0, '2026-03-13 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (99, 1, NULL, '2026-05-28', '2027-05-28', 'ACTIVE', NULL, 365, 16000, 0, NULL, 0, '2026-05-28 00:00:00');
+INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (100, 3, 2, '2026-06-03', '2026-09-01', 'PAUSED', N'Bận việc cá nhân', 90, 83000, 1, '2026-06-09', 3, '2026-06-03 00:00:00');
+
+-- 8. Insert Transactions (khop voi memberships)
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (1, NULL, 4500000, 4500000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (2, NULL, 1500000, 1500000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (3, NULL, 18250000, 18250000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (4, NULL, 14940000, 14940000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (5, NULL, 18250000, 18250000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (6, NULL, 7470000, 7470000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (7, 6, 27265500, 30295000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (8, 7, 5602500, 7470000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (9, 8, 6872400, 7470000, 'CASH', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (10, 2, 1275000, 1500000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (11, NULL, 5840000, 5840000, 'BANK', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (12, NULL, 1440000, 1440000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (13, NULL, 4980000, 4980000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (14, NULL, 2880000, 2880000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (15, NULL, 5840000, 5840000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (16, 7, 13687500, 18250000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (17, 6, 2592000, 2880000, 'CASH', 'CANCELLED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (18, NULL, 3000000, 3000000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (19, NULL, 480000, 480000, 'BANK', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (20, 6, 5256000, 5840000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (21, NULL, 4500000, 4500000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (22, 5, 456000, 480000, 'BANK', 'CANCELLED', 'NEW', NULL);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (23, NULL, 9000000, 9000000, 'ONLINE', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (24, 2, 1224000, 1440000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (25, NULL, 4500000, 4500000, 'BANK', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (26, 9, 17337500, 18250000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (27, 6, 4050000, 4500000, 'BANK', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (28, 9, 4731000, 4980000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (29, NULL, 1500000, 1500000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (30, NULL, 18250000, 18250000, 'ONLINE', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (31, NULL, 2880000, 2880000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (32, NULL, 4500000, 4500000, 'BANK', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (33, 7, 1080000, 1440000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (34, NULL, 5840000, 5840000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (35, NULL, 2490000, 2490000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (36, NULL, 9000000, 9000000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (37, NULL, 7470000, 7470000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (38, 4, 1275000, 1500000, 'CASH', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (39, NULL, 4500000, 4500000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (39, NULL, 4191161, 4500000, 'CASH', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (40, NULL, 18250000, 18250000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (41, NULL, 18250000, 18250000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (42, NULL, 18250000, 18250000, 'ONLINE', 'CANCELLED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (43, NULL, 1440000, 1440000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (44, NULL, 18250000, 18250000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (45, 5, 4275000, 4500000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (46, NULL, 1440000, 1440000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (47, 5, 4731000, 4980000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (48, 6, 432000, 480000, 'ONLINE', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (49, NULL, 2490000, 2490000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (50, NULL, 960000, 960000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (51, NULL, 3000000, 3000000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (52, 2, 15512500, 18250000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (53, NULL, 7470000, 7470000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (54, 9, 2736000, 2880000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (55, NULL, 30295000, 30295000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (56, NULL, 30295000, 30295000, 'CASH', 'CANCELLED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (57, 4, 816000, 960000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (58, NULL, 2880000, 2880000, 'CASH', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (59, 9, 4275000, 4500000, 'BANK', 'CANCELLED', 'NEW', NULL);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (60, NULL, 4500000, 4500000, 'CASH', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (61, 5, 1425000, 1500000, 'CASH', 'CANCELLED', 'NEW', NULL);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (62, NULL, 480000, 480000, 'CASH', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (63, NULL, 14940000, 14940000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (64, 8, 883200, 960000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (65, NULL, 9000000, 9000000, 'CASH', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (66, NULL, 2880000, 2880000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (67, NULL, 1500000, 1500000, 'CASH', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (68, NULL, 480000, 480000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (69, 8, 441600, 480000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (70, 6, 16425000, 18250000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (71, 7, 2160000, 2880000, 'BANK', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (72, 2, 408000, 480000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (73, NULL, 1500000, 1500000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (73, NULL, 1407536, 1500000, 'BANK', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (74, NULL, 1500000, 1500000, 'BANK', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (75, NULL, 14940000, 14940000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (76, 2, 2448000, 2880000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (77, NULL, 960000, 960000, 'ONLINE', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (78, NULL, 18250000, 18250000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (79, 3, 384000, 480000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (80, NULL, 14940000, 14940000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (81, NULL, 7470000, 7470000, 'CASH', 'CANCELLED', 'UPGRADE', NULL);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (82, NULL, 30295000, 30295000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (83, NULL, 3000000, 3000000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (84, 9, 4275000, 4500000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (85, 9, 2736000, 2880000, 'BANK', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (86, 10, 21206500, 30295000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (87, NULL, 2490000, 2490000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (88, NULL, 3000000, 3000000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (88, NULL, 2838713, 3000000, 'BANK', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (89, NULL, 2490000, 2490000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (90, 4, 15512500, 18250000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (90, NULL, 17198247, 18250000, 'ONLINE', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (91, 1, 8100000, 9000000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (92, NULL, 960000, 960000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (93, NULL, 2490000, 2490000, 'ONLINE', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (94, NULL, 7470000, 7470000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (95, NULL, 14940000, 14940000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (96, NULL, 7470000, 7470000, 'BANK', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (97, NULL, 1440000, 1440000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (98, NULL, 1500000, 1500000, 'CASH', 'CANCELLED', 'NEW', NULL);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (99, NULL, 5840000, 5840000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (100, NULL, 18250000, 18250000, 'BANK', 'CANCELLED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (101, NULL, 9000000, 9000000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (102, 7, 1080000, 1440000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (103, NULL, 3000000, 3000000, 'CASH', 'CANCELLED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (104, 10, 3486000, 4980000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (105, 1, 864000, 960000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (106, NULL, 3000000, 3000000, 'CASH', 'CONFIRMED', 'RENEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (107, NULL, 960000, 960000, 'CASH', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (108, NULL, 1440000, 1440000, 'ONLINE', 'CONFIRMED', 'UPGRADE', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (109, 3, 4672000, 5840000, 'ONLINE', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (110, NULL, 7470000, 7470000, 'BANK', 'CONFIRMED', 'NEW', 1);
+INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (110, NULL, 7431544, 7470000, 'ONLINE', 'CONFIRMED', 'RENEW', 1);
+
+-- 9. Insert Exercises
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Bench Press', N'Ngực', N'Bài tập bench press tập trung nhóm cơ ngực, thực hiện đúng kỹ thuật để tránh chấn thương.', 16, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Incline Dumbbell Press', N'Ngực', N'Bài tập incline dumbbell press tập trung nhóm cơ ngực, thực hiện đúng kỹ thuật để tránh chấn thương.', 4, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Push Up', N'Ngực', N'Bài tập push up tập trung nhóm cơ ngực, thực hiện đúng kỹ thuật để tránh chấn thương.', 12, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Pull Up', N'Lưng', N'Bài tập pull up tập trung nhóm cơ lưng, thực hiện đúng kỹ thuật để tránh chấn thương.', 12, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Lat Pulldown', N'Lưng', N'Bài tập lat pulldown tập trung nhóm cơ lưng, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Deadlift', N'Lưng', N'Bài tập deadlift tập trung nhóm cơ lưng, thực hiện đúng kỹ thuật để tránh chấn thương.', 10, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Barbell Row', N'Lưng', N'Bài tập barbell row tập trung nhóm cơ lưng, thực hiện đúng kỹ thuật để tránh chấn thương.', 9, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Squat', N'Chân', N'Bài tập squat tập trung nhóm cơ chân, thực hiện đúng kỹ thuật để tránh chấn thương.', 2, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Leg Press', N'Chân', N'Bài tập leg press tập trung nhóm cơ chân, thực hiện đúng kỹ thuật để tránh chấn thương.', 7, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Lunges', N'Chân', N'Bài tập lunges tập trung nhóm cơ chân, thực hiện đúng kỹ thuật để tránh chấn thương.', 12, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Leg Curl', N'Chân', N'Bài tập leg curl tập trung nhóm cơ chân, thực hiện đúng kỹ thuật để tránh chấn thương.', 12, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Overhead Press', N'Vai', N'Bài tập overhead press tập trung nhóm cơ vai, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Lateral Raise', N'Vai', N'Bài tập lateral raise tập trung nhóm cơ vai, thực hiện đúng kỹ thuật để tránh chấn thương.', 14, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Face Pull', N'Vai', N'Bài tập face pull tập trung nhóm cơ vai, thực hiện đúng kỹ thuật để tránh chấn thương.', 10, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Bicep Curl', N'Tay', N'Bài tập bicep curl tập trung nhóm cơ tay, thực hiện đúng kỹ thuật để tránh chấn thương.', 7, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Tricep Pushdown', N'Tay', N'Bài tập tricep pushdown tập trung nhóm cơ tay, thực hiện đúng kỹ thuật để tránh chấn thương.', 13, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Hammer Curl', N'Tay', N'Bài tập hammer curl tập trung nhóm cơ tay, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Plank', N'Bụng', N'Bài tập plank tập trung nhóm cơ bụng, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Crunch', N'Bụng', N'Bài tập crunch tập trung nhóm cơ bụng, thực hiện đúng kỹ thuật để tránh chấn thương.', 4, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Hanging Leg Raise', N'Bụng', N'Bài tập hanging leg raise tập trung nhóm cơ bụng, thực hiện đúng kỹ thuật để tránh chấn thương.', 6, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Running (Treadmill)', N'Cardio', N'Bài tập running (treadmill) tập trung nhóm cơ cardio, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Cycling', N'Cardio', N'Bài tập cycling tập trung nhóm cơ cardio, thực hiện đúng kỹ thuật để tránh chấn thương.', 4, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Jump Rope', N'Cardio', N'Bài tập jump rope tập trung nhóm cơ cardio, thực hiện đúng kỹ thuật để tránh chấn thương.', 14, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Burpee', N'Toàn thân', N'Bài tập burpee tập trung nhóm cơ toàn thân, thực hiện đúng kỹ thuật để tránh chấn thương.', 10, 1);
+INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Kettlebell Swing', N'Toàn thân', N'Bài tập kettlebell swing tập trung nhóm cơ toàn thân, thực hiện đúng kỹ thuật để tránh chấn thương.', 9, 1);
+
+-- 10. Insert Attendances
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (41, '2026-03-23 12:19:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (33, '2026-03-28 19:58:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (63, '2026-05-17 21:08:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (43, '2026-06-13 15:41:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (66, '2026-03-23 16:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (37, '2026-07-03 13:24:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (87, '2026-07-04 07:12:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (86, '2026-04-08 11:30:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-06-01 05:13:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (31, '2026-04-05 20:58:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (87, '2026-04-10 11:25:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (79, '2026-05-29 14:24:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (96, '2026-05-25 14:16:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (71, '2026-05-11 08:51:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (69, '2026-04-03 15:58:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (51, '2026-05-18 06:36:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (33, '2026-07-07 13:35:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (85, '2026-04-08 18:18:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-06-10 17:36:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (71, '2026-04-30 15:16:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (70, '2026-04-08 20:29:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (56, '2026-06-18 09:46:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (36, '2026-03-14 06:33:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (25, '2026-03-11 06:48:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (32, '2026-03-24 12:04:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (18, '2026-06-12 21:29:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (88, '2026-04-19 20:42:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (17, '2026-05-02 18:00:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (46, '2026-05-02 14:01:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (100, '2026-04-14 18:51:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (36, '2026-06-26 08:33:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (37, '2026-04-21 21:16:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (45, '2026-03-30 17:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (62, '2026-05-12 12:44:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (98, '2026-03-26 07:41:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (96, '2026-04-03 06:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (59, '2026-04-30 20:03:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (100, '2026-06-18 07:31:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (94, '2026-03-31 15:36:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (28, '2026-03-17 21:58:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (39, '2026-03-16 20:17:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (25, '2026-04-13 13:57:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (97, '2026-07-05 10:59:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (19, '2026-06-13 09:48:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-03-13 07:19:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (41, '2026-04-28 17:43:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-05-21 09:50:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (26, '2026-05-06 16:03:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (40, '2026-03-24 07:21:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (88, '2026-04-24 17:49:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (93, '2026-06-05 19:31:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (79, '2026-03-11 17:27:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (85, '2026-04-16 17:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (48, '2026-03-29 12:45:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (45, '2026-06-20 17:45:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (34, '2026-04-06 17:20:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (27, '2026-07-09 14:28:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (45, '2026-06-26 09:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (66, '2026-04-29 21:26:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (27, '2026-05-25 07:38:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-03-21 17:00:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-04-01 07:46:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (42, '2026-04-27 21:10:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (35, '2026-06-22 13:19:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (33, '2026-07-01 10:27:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (49, '2026-05-09 07:23:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (42, '2026-04-08 20:38:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (67, '2026-06-26 09:19:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-05-28 17:51:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (66, '2026-05-28 18:52:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (96, '2026-04-24 09:19:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (99, '2026-06-14 20:20:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-05-30 14:47:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (70, '2026-04-27 12:20:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-05-24 08:59:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (86, '2026-05-01 10:43:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (21, '2026-04-07 19:45:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (48, '2026-03-25 07:52:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (63, '2026-04-14 20:08:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (41, '2026-06-07 09:45:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (59, '2026-06-30 19:38:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (62, '2026-05-02 21:59:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (99, '2026-05-17 06:50:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (100, '2026-03-17 07:06:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (97, '2026-04-15 16:10:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (23, '2026-04-28 17:48:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (65, '2026-06-26 05:06:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (73, '2026-04-05 21:35:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (84, '2026-06-11 19:23:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (98, '2026-04-25 21:09:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (21, '2026-05-09 08:18:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (26, '2026-06-25 09:22:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (67, '2026-03-31 11:33:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (69, '2026-06-27 19:46:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (51, '2026-07-01 14:02:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (30, '2026-07-07 15:41:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (35, '2026-03-12 12:33:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (35, '2026-05-28 18:29:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (62, '2026-04-20 10:11:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (65, '2026-05-20 05:47:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (38, '2026-05-13 18:24:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (39, '2026-06-13 13:48:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (25, '2026-04-27 08:51:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (36, '2026-05-24 15:12:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (44, '2026-04-15 20:33:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (51, '2026-04-24 17:39:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (30, '2026-05-26 16:54:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (36, '2026-03-27 14:58:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (26, '2026-04-14 09:20:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (50, '2026-06-25 10:23:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (73, '2026-05-21 18:38:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-05-16 10:31:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (99, '2026-03-14 10:35:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (47, '2026-06-22 10:20:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (88, '2026-07-03 16:00:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (37, '2026-03-27 17:35:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (71, '2026-05-18 20:26:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (66, '2026-05-08 10:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (39, '2026-06-02 06:17:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (47, '2026-06-18 19:36:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (71, '2026-04-30 21:07:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (45, '2026-04-01 16:34:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (23, '2026-04-03 19:34:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (65, '2026-06-26 12:19:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (22, '2026-05-13 13:22:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (27, '2026-05-14 08:49:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (38, '2026-03-28 16:55:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (91, '2026-05-16 10:39:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (38, '2026-03-27 11:51:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (54, '2026-05-02 13:38:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-04-10 14:18:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (73, '2026-03-16 08:08:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (63, '2026-03-14 06:17:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (31, '2026-04-11 09:15:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-03-25 12:48:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-05-08 09:36:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (91, '2026-05-17 17:28:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (27, '2026-05-19 21:47:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (58, '2026-05-12 20:20:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (27, '2026-04-07 19:40:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (56, '2026-03-23 07:50:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (39, '2026-05-16 11:31:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (47, '2026-05-27 09:36:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (53, '2026-03-17 06:02:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (67, '2026-07-07 08:59:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (66, '2026-05-12 05:27:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (99, '2026-03-15 09:56:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (35, '2026-03-20 13:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (43, '2026-06-29 16:42:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (35, '2026-07-03 17:40:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (100, '2026-04-04 12:27:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (28, '2026-07-09 11:30:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (86, '2026-06-11 21:43:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (18, '2026-04-11 15:52:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (65, '2026-04-12 09:30:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-06-28 08:06:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (49, '2026-06-22 17:49:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (32, '2026-04-18 09:04:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (18, '2026-04-22 10:28:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (39, '2026-04-20 09:58:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (98, '2026-05-14 11:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (32, '2026-04-04 08:37:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (54, '2026-05-16 15:50:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (46, '2026-04-18 07:15:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (86, '2026-04-08 14:49:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (21, '2026-03-23 14:13:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (73, '2026-06-15 17:18:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (41, '2026-05-07 17:07:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (93, '2026-04-24 07:33:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (18, '2026-05-24 15:08:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (83, '2026-05-17 16:34:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (69, '2026-04-02 07:01:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (18, '2026-06-06 11:02:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-05-06 14:40:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (64, '2026-05-16 17:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (78, '2026-04-22 09:17:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (26, '2026-05-05 11:51:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-05-20 07:19:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (41, '2026-07-02 12:05:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (30, '2026-05-12 06:19:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (97, '2026-04-06 10:07:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (32, '2026-04-11 05:10:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (54, '2026-05-04 21:50:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (44, '2026-06-18 16:08:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (45, '2026-04-07 08:49:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-03-28 18:17:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (44, '2026-04-09 07:31:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (57, '2026-07-02 20:54:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (58, '2026-06-19 13:49:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (84, '2026-04-14 08:14:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (17, '2026-07-04 05:15:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (57, '2026-05-21 09:11:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (22, '2026-04-30 18:14:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (64, '2026-03-14 15:17:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (84, '2026-05-23 08:32:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (24, '2026-06-17 12:51:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (23, '2026-05-19 07:56:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (47, '2026-04-01 14:20:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (67, '2026-07-08 16:12:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (49, '2026-04-06 12:29:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (71, '2026-04-02 11:46:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (42, '2026-06-20 05:59:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (40, '2026-05-01 16:40:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (18, '2026-05-28 05:48:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (50, '2026-06-26 11:33:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (64, '2026-05-08 06:09:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (27, '2026-07-04 12:57:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (63, '2026-04-11 16:29:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (26, '2026-04-26 08:32:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-06-30 06:27:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (31, '2026-06-09 14:16:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-04-11 15:20:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (40, '2026-06-30 11:08:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (85, '2026-06-26 09:06:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (68, '2026-05-30 18:07:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (38, '2026-05-13 14:29:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (31, '2026-06-28 10:51:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (100, '2026-04-23 06:13:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-06-21 07:45:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (56, '2026-05-20 21:03:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (44, '2026-03-27 10:01:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (66, '2026-04-29 12:06:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (32, '2026-06-24 05:03:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (39, '2026-06-23 11:52:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (98, '2026-04-20 07:37:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (25, '2026-07-07 07:12:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (66, '2026-03-28 09:05:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-06-24 06:29:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (84, '2026-05-15 17:31:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (98, '2026-05-16 10:22:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (36, '2026-06-04 13:28:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (22, '2026-04-22 12:41:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (63, '2026-03-19 20:03:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-06-22 18:12:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (77, '2026-06-08 05:24:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (56, '2026-05-09 20:22:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (71, '2026-05-29 17:17:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (51, '2026-04-24 12:01:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (46, '2026-07-02 20:33:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (85, '2026-06-10 10:06:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (41, '2026-06-05 06:48:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (39, '2026-04-27 17:22:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (36, '2026-06-17 12:37:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (100, '2026-05-25 05:45:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (83, '2026-04-28 09:36:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (71, '2026-05-01 14:11:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (27, '2026-07-02 12:38:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (77, '2026-05-09 05:21:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (38, '2026-03-28 09:21:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-07-02 05:09:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (33, '2026-04-01 08:54:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (57, '2026-06-30 16:45:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-04-25 08:21:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (32, '2026-06-19 18:50:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (70, '2026-04-17 15:11:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (81, '2026-04-12 16:14:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (36, '2026-05-22 14:46:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (31, '2026-06-17 05:44:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-03-23 06:11:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (88, '2026-06-11 08:59:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-04-05 07:15:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (51, '2026-06-18 07:52:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (93, '2026-04-07 15:28:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (38, '2026-06-08 07:22:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (29, '2026-04-08 05:03:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (64, '2026-06-18 18:31:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (54, '2026-05-01 17:06:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (84, '2026-04-17 12:10:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (22, '2026-06-02 05:20:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (29, '2026-06-30 15:10:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (35, '2026-04-07 07:35:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (27, '2026-05-27 20:45:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (96, '2026-06-18 18:10:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-06-13 11:26:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (79, '2026-06-06 14:19:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (24, '2026-05-20 20:09:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (17, '2026-05-16 07:18:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (91, '2026-04-24 20:12:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (38, '2026-06-18 14:05:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (30, '2026-05-31 17:30:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (97, '2026-06-06 07:41:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (36, '2026-05-23 17:23:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (23, '2026-06-06 19:29:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (45, '2026-04-28 06:09:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (97, '2026-06-27 07:42:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (79, '2026-05-18 12:35:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-03-27 21:26:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (98, '2026-03-21 20:36:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (69, '2026-06-01 07:25:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (22, '2026-05-06 21:51:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (88, '2026-06-21 08:48:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (35, '2026-06-12 11:08:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (26, '2026-04-13 18:12:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (91, '2026-06-21 13:20:00', 0);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (25, '2026-06-28 17:35:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-03-22 13:33:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (18, '2026-03-31 21:50:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (64, '2026-06-20 09:36:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (28, '2026-03-13 08:36:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (47, '2026-03-20 16:56:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (61, '2026-04-17 20:36:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (22, '2026-06-17 13:25:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (87, '2026-04-13 17:02:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (52, '2026-04-12 12:03:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (45, '2026-03-17 16:01:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (49, '2026-05-31 13:53:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (100, '2026-04-13 08:55:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (49, '2026-04-05 19:49:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (45, '2026-04-07 18:38:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (37, '2026-05-14 11:58:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (70, '2026-04-03 21:55:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (24, '2026-05-05 10:04:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (71, '2026-05-19 09:49:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (83, '2026-07-06 10:12:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (38, '2026-03-24 06:15:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (24, '2026-03-14 16:45:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (58, '2026-03-26 19:32:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (31, '2026-04-13 05:15:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (86, '2026-05-13 10:55:00', 1);
+INSERT INTO attendances (member_id, check_in_time, status) VALUES (79, '2026-05-26 16:10:00', 1);
+
+-- 11. Insert PT Notes
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (4, 53, N'Buổi tập hôm nay hội viên thực hiện tốt các bài tập được giao, cần tăng dần khối lượng tạ.', '2026-01-20 19:44:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (9, 57, N'Hội viên còn yếu phần core, bổ sung thêm bài tập plank và crunch trong tuần tới.', '2025-11-13 12:03:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (12, 46, N'Cần theo dõi thêm nhịp tim khi tập cardio cường độ cao.', '2026-06-13 16:14:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (8, 45, N'Đề nghị hội viên bổ sung thêm protein sau buổi tập để hỗ trợ phục hồi cơ.', '2026-06-29 16:26:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (3, 19, N'Hội viên còn yếu phần core, bổ sung thêm bài tập plank và crunch trong tuần tới.', '2025-12-29 06:30:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (11, 42, N'Hội viên còn yếu phần core, bổ sung thêm bài tập plank và crunch trong tuần tới.', '2026-07-03 18:00:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (4, 52, N'Cần theo dõi thêm nhịp tim khi tập cardio cường độ cao.', '2026-05-08 18:19:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (14, 56, N'Hội viên đạt mục tiêu giảm 1kg trong tháng này, tiếp tục duy trì chế độ hiện tại.', '2026-06-15 20:24:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (11, 66, N'Hội viên báo mệt mỏi, giảm cường độ buổi tập và tăng thời gian nghỉ giữa hiệp.', '2026-07-08 10:13:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (15, 60, N'Buổi tập hôm nay hội viên thực hiện tốt các bài tập được giao, cần tăng dần khối lượng tạ.', '2026-05-09 15:06:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (5, 90, N'Kỹ thuật squat đã cải thiện rõ rệt so với tuần trước.', '2026-05-20 19:53:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (2, 100, N'Buổi tập hôm nay hội viên thực hiện tốt các bài tập được giao, cần tăng dần khối lượng tạ.', '2026-06-21 10:43:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (13, 86, N'Cần theo dõi thêm nhịp tim khi tập cardio cường độ cao.', '2026-07-02 11:17:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (14, 63, N'Cần theo dõi thêm nhịp tim khi tập cardio cường độ cao.', '2026-02-15 10:16:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (15, 60, N'Hội viên đạt mục tiêu giảm 1kg trong tháng này, tiếp tục duy trì chế độ hiện tại.', '2026-01-22 08:33:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (6, 49, N'Hội viên đạt mục tiêu giảm 1kg trong tháng này, tiếp tục duy trì chế độ hiện tại.', '2025-07-12 18:54:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (13, 76, N'Hội viên còn yếu phần core, bổ sung thêm bài tập plank và crunch trong tuần tới.', '2026-01-20 11:43:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (6, 20, N'Kỹ thuật squat đã cải thiện rõ rệt so với tuần trước.', '2026-07-03 13:18:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (3, 78, N'Buổi tập hôm nay hội viên thực hiện tốt các bài tập được giao, cần tăng dần khối lượng tạ.', '2026-07-01 12:47:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (10, 44, N'Hội viên còn yếu phần core, bổ sung thêm bài tập plank và crunch trong tuần tới.', '2026-06-17 17:45:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (12, 95, N'Cần theo dõi thêm nhịp tim khi tập cardio cường độ cao.', '2025-11-09 18:30:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (10, 69, N'Hội viên còn yếu phần core, bổ sung thêm bài tập plank và crunch trong tuần tới.', '2025-11-11 10:54:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (2, 100, N'Hội viên báo mệt mỏi, giảm cường độ buổi tập và tăng thời gian nghỉ giữa hiệp.', '2026-06-14 10:06:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (13, 36, N'Đề nghị hội viên bổ sung thêm protein sau buổi tập để hỗ trợ phục hồi cơ.', '2025-08-26 17:51:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (9, 43, N'Hội viên còn yếu phần core, bổ sung thêm bài tập plank và crunch trong tuần tới.', '2026-07-08 16:05:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (10, 69, N'Kỹ thuật squat đã cải thiện rõ rệt so với tuần trước.', '2025-06-19 17:55:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (3, 78, N'Đề nghị hội viên bổ sung thêm protein sau buổi tập để hỗ trợ phục hồi cơ.', '2026-06-29 11:16:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (2, 59, N'Hội viên báo mệt mỏi, giảm cường độ buổi tập và tăng thời gian nghỉ giữa hiệp.', '2026-07-07 19:07:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (10, 23, N'Đề nghị hội viên bổ sung thêm protein sau buổi tập để hỗ trợ phục hồi cơ.', '2025-12-11 15:37:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (2, 25, N'Đề nghị hội viên bổ sung thêm protein sau buổi tập để hỗ trợ phục hồi cơ.', '2026-01-08 20:12:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (3, 35, N'Kỹ thuật squat đã cải thiện rõ rệt so với tuần trước.', '2026-06-28 12:33:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (13, 77, N'Hội viên còn yếu phần core, bổ sung thêm bài tập plank và crunch trong tuần tới.', '2026-07-04 19:54:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (10, 36, N'Đề nghị hội viên bổ sung thêm protein sau buổi tập để hỗ trợ phục hồi cơ.', '2026-07-06 11:26:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (14, 83, N'Cần theo dõi thêm nhịp tim khi tập cardio cường độ cao.', '2026-07-04 11:55:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (9, 43, N'Cần theo dõi thêm nhịp tim khi tập cardio cường độ cao.', '2026-07-06 13:21:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (11, 42, N'Buổi tập hôm nay hội viên thực hiện tốt các bài tập được giao, cần tăng dần khối lượng tạ.', '2026-06-24 16:03:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (15, 82, N'Hội viên đạt mục tiêu giảm 1kg trong tháng này, tiếp tục duy trì chế độ hiện tại.', '2026-05-14 09:48:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (9, 39, N'Hội viên báo mệt mỏi, giảm cường độ buổi tập và tăng thời gian nghỉ giữa hiệp.', '2026-07-08 18:10:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (6, 30, N'Cần theo dõi thêm nhịp tim khi tập cardio cường độ cao.', '2025-03-22 15:27:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (8, 79, N'Hội viên báo mệt mỏi, giảm cường độ buổi tập và tăng thời gian nghỉ giữa hiệp.', '2025-11-24 12:30:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (4, 17, N'Cần theo dõi thêm nhịp tim khi tập cardio cường độ cao.', '2026-01-04 14:12:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (15, 71, N'Hội viên đạt mục tiêu giảm 1kg trong tháng này, tiếp tục duy trì chế độ hiện tại.', '2026-06-29 20:20:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (8, 93, N'Buổi tập hôm nay hội viên thực hiện tốt các bài tập được giao, cần tăng dần khối lượng tạ.', '2026-06-02 06:43:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (13, 50, N'Kỹ thuật squat đã cải thiện rõ rệt so với tuần trước.', '2026-06-11 17:56:00');
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (2, 62, N'Đề nghị hội viên bổ sung thêm protein sau buổi tập để hỗ trợ phục hồi cơ.', '2025-12-25 07:24:00');
+
+-- 12. PT Comments: de trong theo yeu cau cua nguoi dung (khong insert du lieu)
+
+-- 13. Insert Diets (chi ap dung cho hoi vien goi VIP co has_meal_plan)
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-05-31', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-02', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-06-14', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-05', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-06', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-03', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-03', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-07-04', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-05-15', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-01', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (77, 13, '2026-07-07', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-08', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-07-02', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-05', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-06', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-05-19', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-05', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-04', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-06-28', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-07-06', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-06-28', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-06-23', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-02', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-06-30', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-02', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-04', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-06', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-05', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-06-25', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-25', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (77, 13, '2026-07-09', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-01', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-06-30', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-09', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (64, 16, '2026-07-09', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-07', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-02', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (64, 16, '2026-07-09', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-04', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-02', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-06-29', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (77, 13, '2026-07-05', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-07-08', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-04', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-06-24', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-07-01', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-06-16', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-03', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-07-01', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-25', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-01', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-09', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-07', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-07', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-07', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-14', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-09', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-06-30', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (77, 13, '2026-07-04', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-06-17', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Súp rau củ + trứng luộc');
+
+-- 14. Insert Reviews
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (44, 10, 4, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-06-22 07:59:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (35, 3, 3, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-06-14 17:37:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (88, 3, 5, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2025-10-06 15:47:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (23, 10, 4, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2025-11-16 14:59:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (90, 5, 3, N'Giáo án phù hợp với thể trạng, cảm thấy tiến bộ rõ rệt.', '2026-05-21 16:11:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (36, 13, 5, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-02-17 16:56:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (63, 14, 4, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-02-01 16:58:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (50, 13, 5, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-06-15 14:51:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (36, 10, 5, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-07-09 11:53:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (97, 16, 3, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-06-19 10:13:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (59, 2, 4, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-06-27 18:41:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (42, 11, 4, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-07-04 12:45:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (34, 6, 3, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-01-21 16:36:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (78, 3, 4, NULL, '2026-07-06 11:56:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (79, 8, 3, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2025-10-17 07:24:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (37, 6, 5, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-07-03 11:48:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (38, 12, 1, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-06-19 09:53:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (24, 13, 4, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-02-21 19:34:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (21, 12, 5, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-07-01 16:55:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (100, 2, 3, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-07-08 13:15:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (90, 5, 3, NULL, '2026-05-21 11:44:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (23, 10, 2, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2025-08-22 19:43:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (62, 7, 2, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-07-04 18:16:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (44, 9, 4, NULL, '2026-07-08 20:28:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (47, 6, 2, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-04-21 17:23:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (96, 15, 4, N'Giáo án phù hợp với thể trạng, cảm thấy tiến bộ rõ rệt.', '2026-06-30 18:12:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (59, 2, 5, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-06-25 09:11:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (90, 5, 5, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-05-12 11:35:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (53, 4, 5, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-01-24 11:00:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (64, 16, 4, N'Giáo án phù hợp với thể trạng, cảm thấy tiến bộ rõ rệt.', '2026-07-09 07:09:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (63, 14, 4, NULL, '2026-02-17 17:39:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (60, 15, 4, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-04-19 08:50:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (62, 7, 4, N'Giáo án phù hợp với thể trạng, cảm thấy tiến bộ rõ rệt.', '2026-07-08 08:50:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (88, 3, 5, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2025-12-13 13:05:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (66, 11, 5, N'Giáo án phù hợp với thể trạng, cảm thấy tiến bộ rõ rệt.', '2026-07-04 12:23:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (59, 2, 5, NULL, '2026-07-09 14:35:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (18, 8, 5, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-07-08 10:57:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (50, 13, 2, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-06-17 13:58:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (34, 6, 5, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2025-12-02 07:58:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (92, 6, 3, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-07-08 19:32:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (82, 15, 4, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-06-23 17:12:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (63, 14, 4, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-01-24 19:34:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (95, 12, 5, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2025-10-13 17:40:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (46, 12, 3, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-06-05 10:34:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (80, 12, 4, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-03-30 07:29:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (64, 16, 5, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-07-09 07:11:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (52, 4, 4, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-05-22 10:58:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (53, 4, 5, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-01-17 13:27:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (62, 7, 5, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-07-04 15:00:00');
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (24, 15, 3, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-06-28 18:54:00');
+
+-- 15. Insert Blogs
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (4, N'5 bài tập ngực hiệu quả nhất cho người mới', N'Bài viết chia sẻ kiến thức về chủ đề: 5 bài tập ngực hiệu quả nhất cho người mới. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-03-03 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (5, N'Chế độ dinh dưỡng tăng cơ giảm mỡ khoa học', N'Bài viết chia sẻ kiến thức về chủ đề: chế độ dinh dưỡng tăng cơ giảm mỡ khoa học. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-15 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (11, N'Hướng dẫn tập Squat đúng kỹ thuật, tránh chấn thương', N'Bài viết chia sẻ kiến thức về chủ đề: hướng dẫn tập squat đúng kỹ thuật, tránh chấn thương. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-04-28 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (16, N'Lợi ích của Yoga đối với sức khỏe tinh thần', N'Bài viết chia sẻ kiến thức về chủ đề: lợi ích của yoga đối với sức khỏe tinh thần. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-21 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (2, N'Cách xây dựng lịch tập gym cho người bận rộn', N'Bài viết chia sẻ kiến thức về chủ đề: cách xây dựng lịch tập gym cho người bận rộn. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-02-23 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (9, N'Top 10 thực phẩm giàu protein cho dân gym', N'Bài viết chia sẻ kiến thức về chủ đề: top 10 thực phẩm giàu protein cho dân gym. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-03-31 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (11, N'Vì sao bạn nên khởi động trước khi tập nặng?', N'Bài viết chia sẻ kiến thức về chủ đề: vì sao bạn nên khởi động trước khi tập nặng?. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'DRAFT', '2026-06-03 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (11, N'Cardio vào buổi sáng hay buổi tối tốt hơn?', N'Bài viết chia sẻ kiến thức về chủ đề: cardio vào buổi sáng hay buổi tối tốt hơn?. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-04 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (13, N'Cách phục hồi cơ bắp nhanh sau buổi tập nặng', N'Bài viết chia sẻ kiến thức về chủ đề: cách phục hồi cơ bắp nhanh sau buổi tập nặng. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'DRAFT', '2026-07-07 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (6, N'Những sai lầm phổ biến khi tập Gym mới bắt đầu', N'Bài viết chia sẻ kiến thức về chủ đề: những sai lầm phổ biến khi tập gym mới bắt đầu. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-07-08 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (14, N'Bí quyết duy trì động lực tập luyện lâu dài', N'Bài viết chia sẻ kiến thức về chủ đề: bí quyết duy trì động lực tập luyện lâu dài. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-06-18 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (11, N'So sánh Gym truyền thống và Calisthenics', N'Bài viết chia sẻ kiến thức về chủ đề: so sánh gym truyền thống và calisthenics. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-01 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (13, N'Hướng dẫn uống nước đúng cách khi tập luyện', N'Bài viết chia sẻ kiến thức về chủ đề: hướng dẫn uống nước đúng cách khi tập luyện. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-25 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (6, N'Vai trò của giấc ngủ trong quá trình tăng cơ', N'Bài viết chia sẻ kiến thức về chủ đề: vai trò của giấc ngủ trong quá trình tăng cơ. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-05-14 00:00:00');
+INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (10, N'Tổng quan các gói tập tại GymPro và quyền lợi', N'Bài viết chia sẻ kiến thức về chủ đề: tổng quan các gói tập tại gympro và quyền lợi. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-05-24 00:00:00');
+
+-- 16. Insert PT Schedules (day_of_week: 0=Thu2..5=Thu7 (KHONG co Chu Nhat), time_slot: 0..7)
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 83, 4, 0, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-03 10:42:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 33, 1, 7, N'Toàn thân', 'ACTIVE', '2026-06-06 08:42:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 33, 2, 1, N'Tập chân', 'ACTIVE', '2026-06-04 13:28:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 83, 2, 2, N'Toàn thân', 'ACTIVE', '2026-07-07 12:10:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (11, 42, 1, 6, N'Bụng & Core', 'ACTIVE', '2026-06-25 08:43:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 64, 3, 7, N'Toàn thân', 'ACTIVE', '2026-07-09 18:19:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 33, 1, 1, N'Bụng & Core', 'ACTIVE', '2026-07-08 19:08:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 2, 1, N'Tập ngực - tay', 'ACTIVE', '2026-06-20 19:32:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 97, 4, 6, N'Tập chân', 'ACTIVE', '2026-06-08 14:16:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 71, 3, 2, N'Toàn thân', 'ACTIVE', '2026-07-05 09:57:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 86, 2, 2, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-09 14:05:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (5, 65, 0, 3, N'Tập lưng - vai', 'ACTIVE', '2026-07-07 08:28:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 74, 4, 2, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-08 06:14:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (11, 42, 0, 4, N'Toàn thân', 'ACTIVE', '2026-06-21 06:42:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 96, 2, 6, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-09 13:56:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (3, 78, 2, 1, N'Bụng & Core', 'ACTIVE', '2026-06-27 15:34:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 56, 5, 6, N'Toàn thân', 'ACTIVE', '2026-06-25 16:57:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (5, 65, 2, 6, N'Tập chân', 'ACTIVE', '2026-07-07 12:22:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 46, 3, 7, N'Cardio/Thể lực', 'ACTIVE', '2026-07-01 20:08:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 1, 2, N'Tập lưng - vai', 'ACTIVE', '2026-07-01 15:45:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 83, 1, 6, N'Toàn thân', 'ACTIVE', '2026-07-03 13:43:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 4, 2, N'Yoga/Giãn cơ', 'ACTIVE', '2026-06-20 09:02:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 74, 1, 2, N'Cardio/Thể lực', 'ACTIVE', '2026-07-09 08:03:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (6, 37, 4, 6, N'Cardio/Thể lực', 'ACTIVE', '2026-07-04 07:13:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 64, 3, 2, N'Tập chân', 'ACTIVE', '2026-07-09 19:26:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 96, 4, 2, N'Bụng & Core', 'ACTIVE', '2026-05-22 17:43:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (7, 62, 4, 1, N'Tập chân', 'ACTIVE', '2026-07-07 12:08:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 4, 6, N'Tập lưng - vai', 'ACTIVE', '2026-07-09 07:11:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 77, 4, 0, N'Tập ngực - tay', 'ACTIVE', '2026-07-04 13:42:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 93, 5, 6, N'Yoga/Giãn cơ', 'ACTIVE', '2026-06-13 19:02:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 59, 1, 7, N'Yoga/Giãn cơ', 'ACTIVE', '2026-07-04 15:51:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 93, 5, 1, N'Yoga/Giãn cơ', 'ACTIVE', '2026-05-29 10:30:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 27, 2, 6, N'Bụng & Core', 'ACTIVE', '2026-06-12 06:45:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 21, 4, 1, N'Cardio/Thể lực', 'ACTIVE', '2026-07-06 16:13:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 45, 3, 5, N'Tập ngực - tay', 'ACTIVE', '2026-06-25 12:41:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 74, 2, 4, N'Yoga/Giãn cơ', 'ACTIVE', '2026-07-07 12:35:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 64, 1, 5, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-09 10:19:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 96, 5, 2, N'Tập ngực - tay', 'ACTIVE', '2026-05-25 14:25:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 96, 4, 0, N'Tập lưng - vai', 'ACTIVE', '2026-06-05 16:00:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 97, 1, 7, N'Yoga/Giãn cơ', 'ACTIVE', '2026-06-11 07:16:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 27, 4, 0, N'Yoga/Giãn cơ', 'ACTIVE', '2026-06-25 15:41:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 84, 4, 0, N'Tập lưng - vai', 'ACTIVE', '2026-07-07 13:00:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 83, 4, 4, N'Tập chân', 'ACTIVE', '2026-07-02 18:38:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 84, 1, 2, N'Cardio/Thể lực', 'ACTIVE', '2026-07-05 09:41:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (6, 37, 0, 4, N'Yoga/Giãn cơ', 'ACTIVE', '2026-07-05 16:25:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 4, 0, N'Tập ngực - tay', 'ACTIVE', '2026-06-22 14:18:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 71, 4, 5, N'Toàn thân', 'CANCELLED', '2026-07-03 09:38:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (7, 62, 3, 0, N'Bụng & Core', 'ACTIVE', '2026-07-05 12:32:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 27, 4, 4, N'Toàn thân', 'CANCELLED', '2026-06-07 18:32:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 71, 4, 4, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-05 15:30:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 93, 2, 7, N'Phục hồi nhẹ', 'ACTIVE', '2026-06-27 19:01:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 43, 0, 6, N'Tập chân', 'ACTIVE', '2026-07-07 18:20:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 84, 2, 3, N'Bụng & Core', 'ACTIVE', '2026-07-01 12:43:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 45, 0, 2, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-01 11:13:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 43, 1, 3, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-07 09:47:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 1, 5, N'Tập lưng - vai', 'ACTIVE', '2026-06-23 07:58:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 83, 3, 0, N'Cardio/Thể lực', 'ACTIVE', '2026-07-09 11:39:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 74, 2, 7, N'Tập lưng - vai', 'ACTIVE', '2026-07-09 10:25:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 74, 1, 0, N'Yoga/Giãn cơ', 'ACTIVE', '2026-07-08 14:02:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 56, 5, 2, N'Phục hồi nhẹ', 'ACTIVE', '2026-05-26 17:33:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 84, 0, 0, N'Tập chân', 'ACTIVE', '2026-07-06 15:06:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 71, 2, 3, N'Bụng & Core', 'ACTIVE', '2026-07-06 15:21:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 64, 3, 3, N'Yoga/Giãn cơ', 'ACTIVE', '2026-07-09 17:48:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (6, 37, 4, 2, N'Tập chân', 'ACTIVE', '2026-07-01 17:17:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 71, 3, 6, N'Tập chân', 'ACTIVE', '2026-07-01 18:47:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 96, 0, 2, N'Yoga/Giãn cơ', 'ACTIVE', '2026-06-12 08:57:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (5, 65, 4, 5, N'Phục hồi nhẹ', 'ACTIVE', '2026-06-30 10:35:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 24, 3, 1, N'Tập lưng - vai', 'ACTIVE', '2026-06-28 09:52:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 97, 5, 1, N'Phục hồi nhẹ', 'ACTIVE', '2026-06-27 10:23:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 71, 2, 5, N'Cardio/Thể lực', 'ACTIVE', '2026-07-05 07:22:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 77, 1, 2, N'Bụng & Core', 'ACTIVE', '2026-07-06 11:43:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 93, 5, 7, N'Tập ngực - tay', 'ACTIVE', '2026-06-14 15:18:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (3, 35, 1, 5, N'Yoga/Giãn cơ', 'ACTIVE', '2026-06-25 15:36:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 27, 0, 2, N'Toàn thân', 'ACTIVE', '2026-06-14 11:20:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 84, 2, 6, N'Bụng & Core', 'CANCELLED', '2026-07-07 18:55:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 86, 4, 7, N'Yoga/Giãn cơ', 'ACTIVE', '2026-07-03 08:54:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 86, 1, 4, N'Tập ngực - tay', 'ACTIVE', '2026-07-04 08:25:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 27, 3, 0, N'Cardio/Thể lực', 'CANCELLED', '2026-06-25 14:48:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 27, 5, 6, N'Bụng & Core', 'ACTIVE', '2026-06-14 09:47:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (3, 78, 1, 2, N'Tập lưng - vai', 'ACTIVE', '2026-06-19 06:42:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 45, 3, 7, N'Bụng & Core', 'CANCELLED', '2026-07-08 13:08:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 84, 4, 2, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-09 12:33:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 64, 4, 3, N'Tập ngực - tay', 'ACTIVE', '2026-07-09 13:19:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 43, 1, 4, N'Cardio/Thể lực', 'ACTIVE', '2026-07-06 14:52:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (3, 35, 2, 4, N'Phục hồi nhẹ', 'CANCELLED', '2026-06-19 06:44:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 93, 3, 4, N'Cardio/Thể lực', 'ACTIVE', '2026-07-09 12:51:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (11, 42, 0, 5, N'Tập chân', 'ACTIVE', '2026-06-27 20:35:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (3, 78, 1, 4, N'Bụng & Core', 'ACTIVE', '2026-07-09 17:34:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 59, 1, 1, N'Tập lưng - vai', 'ACTIVE', '2026-06-27 10:07:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 77, 3, 4, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-05 11:01:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 33, 2, 4, N'Tập lưng - vai', 'ACTIVE', '2026-06-29 13:46:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 27, 1, 0, N'Phục hồi nhẹ', 'ACTIVE', '2026-06-13 11:26:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 96, 3, 5, N'Phục hồi nhẹ', 'ACTIVE', '2026-06-25 18:02:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 97, 1, 0, N'Bụng & Core', 'ACTIVE', '2026-07-01 07:34:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 2, 6, N'Cardio/Thể lực', 'ACTIVE', '2026-06-23 18:45:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 93, 3, 3, N'Cardio/Thể lực', 'ACTIVE', '2026-06-02 13:47:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (5, 65, 5, 3, N'Phục hồi nhẹ', 'CANCELLED', '2026-07-03 16:19:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (6, 37, 5, 0, N'Tập ngực - tay', 'ACTIVE', '2026-07-04 13:40:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 46, 0, 3, N'Tập ngực - tay', 'ACTIVE', '2026-06-14 16:27:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (6, 37, 2, 1, N'Yoga/Giãn cơ', 'ACTIVE', '2026-07-03 06:02:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 84, 3, 2, N'Toàn thân', 'ACTIVE', '2026-07-01 09:10:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 83, 4, 5, N'Cardio/Thể lực', 'ACTIVE', '2026-07-02 11:41:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 71, 5, 5, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-02 06:44:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 24, 3, 7, N'Bụng & Core', 'ACTIVE', '2026-07-06 17:31:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (6, 37, 4, 5, N'Toàn thân', 'ACTIVE', '2026-07-07 10:55:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 71, 1, 1, N'Tập lưng - vai', 'ACTIVE', '2026-07-06 10:52:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 46, 3, 0, N'Yoga/Giãn cơ', 'ACTIVE', '2026-06-10 20:01:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 46, 4, 3, N'Toàn thân', 'ACTIVE', '2026-06-03 16:34:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 4, 7, N'Tập lưng - vai', 'ACTIVE', '2026-07-09 10:20:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 45, 0, 1, N'Tập ngực - tay', 'ACTIVE', '2026-06-22 19:08:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 64, 1, 1, N'Cardio/Thể lực', 'ACTIVE', '2026-07-09 15:41:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 83, 3, 4, N'Cardio/Thể lực', 'ACTIVE', '2026-07-07 09:38:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 21, 1, 7, N'Tập ngực - tay', 'ACTIVE', '2026-07-07 18:40:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 71, 5, 6, N'Toàn thân', 'ACTIVE', '2026-06-29 19:39:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 24, 5, 1, N'Bụng & Core', 'ACTIVE', '2026-06-29 09:33:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 86, 1, 6, N'Tập chân', 'ACTIVE', '2026-07-04 14:42:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (3, 78, 1, 6, N'Tập ngực - tay', 'ACTIVE', '2026-07-09 15:22:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (12, 84, 5, 6, N'Tập ngực - tay', 'ACTIVE', '2026-07-02 18:11:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (5, 65, 2, 2, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-02 20:20:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 45, 2, 6, N'Yoga/Giãn cơ', 'ACTIVE', '2026-07-01 15:15:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 3, 4, N'Toàn thân', 'ACTIVE', '2026-07-04 13:25:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (15, 24, 2, 0, N'Tập lưng - vai', 'CANCELLED', '2026-07-02 06:19:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 39, 2, 0, N'Bụng & Core', 'ACTIVE', '2026-07-07 14:35:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 74, 1, 1, N'Cardio/Thể lực', 'ACTIVE', '2026-07-08 11:09:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (11, 42, 2, 4, N'Tập ngực - tay', 'CANCELLED', '2026-07-02 12:36:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 86, 0, 5, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-03 13:52:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 77, 5, 4, N'Cardio/Thể lực', 'ACTIVE', '2026-07-09 18:36:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 93, 0, 5, N'Toàn thân', 'ACTIVE', '2026-06-17 12:59:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 93, 1, 0, N'Yoga/Giãn cơ', 'ACTIVE', '2026-05-24 10:33:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 45, 4, 3, N'Tập lưng - vai', 'CANCELLED', '2026-06-22 16:46:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (11, 42, 3, 4, N'Yoga/Giãn cơ', 'ACTIVE', '2026-06-18 08:21:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (14, 74, 5, 0, N'Yoga/Giãn cơ', 'ACTIVE', '2026-07-08 07:25:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 93, 5, 2, N'Tập lưng - vai', 'ACTIVE', '2026-06-20 14:12:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (3, 78, 4, 3, N'Tập chân', 'ACTIVE', '2026-06-26 07:17:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 33, 5, 6, N'Yoga/Giãn cơ', 'ACTIVE', '2026-06-07 11:12:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 77, 5, 0, N'Bụng & Core', 'ACTIVE', '2026-07-05 11:39:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (7, 62, 0, 3, N'Tập chân', 'ACTIVE', '2026-07-09 11:09:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (2, 27, 0, 0, N'Tập chân', 'ACTIVE', '2026-07-09 20:09:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 97, 2, 0, N'Toàn thân', 'ACTIVE', '2026-06-13 10:28:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 45, 1, 3, N'Tập chân', 'ACTIVE', '2026-07-08 14:48:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 64, 4, 2, N'Cardio/Thể lực', 'CANCELLED', '2026-07-09 12:37:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (5, 65, 0, 4, N'Tập lưng - vai', 'ACTIVE', '2026-06-22 10:12:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (13, 77, 2, 0, N'Phục hồi nhẹ', 'ACTIVE', '2026-07-09 06:04:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (9, 43, 5, 5, N'Tập ngực - tay', 'ACTIVE', '2026-07-06 10:55:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (5, 65, 5, 1, N'Toàn thân', 'ACTIVE', '2026-07-06 19:38:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (6, 37, 1, 7, N'Cardio/Thể lực', 'ACTIVE', '2026-06-30 09:59:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (8, 45, 3, 6, N'Tập lưng - vai', 'ACTIVE', '2026-06-21 11:43:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (3, 78, 2, 3, N'Bụng & Core', 'ACTIVE', '2026-06-20 16:16:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (16, 97, 0, 4, N'Tập chân', 'ACTIVE', '2026-06-15 11:57:00');
+INSERT INTO pt_schedules (pt_id, member_id, day_of_week, time_slot, exercise_note, status, created_at) VALUES (3, 35, 0, 6, N'Tập chân', 'ACTIVE', '2026-06-11 09:36:00');
+
+-- 17. Insert Notifications
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (56, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 1, '2026-07-01 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (43, NULL, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 0, '2026-05-27 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (42, 1, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 0, '2026-05-13 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (84, 1, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 0, '2026-05-21 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (35, NULL, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-06-19 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (25, NULL, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-07-02 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (40, NULL, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 0, '2026-05-24 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (20, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 0, '2026-06-20 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (73, NULL, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 0, '2026-05-11 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (12, NULL, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 0, '2026-07-03 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (33, 1, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 0, '2026-05-31 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (95, NULL, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-06-25 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (93, 1, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 0, '2026-06-17 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (27, NULL, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 1, '2026-06-07 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (94, NULL, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 0, '2026-06-28 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (66, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 1, '2026-06-27 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (45, 1, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 0, '2026-07-09 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (51, NULL, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 0, '2026-06-27 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (14, 1, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 1, '2026-06-11 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (95, NULL, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 1, '2026-06-10 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (48, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 0, '2026-06-01 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (12, NULL, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 1, '2026-05-31 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (13, NULL, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-05-29 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (8, 1, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 1, '2026-06-10 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (22, 1, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-05-23 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (22, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 0, '2026-05-30 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (23, 1, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 1, '2026-05-14 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (55, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 1, '2026-06-21 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (95, 1, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 0, '2026-06-30 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (76, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 1, '2026-06-07 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (31, 1, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 0, '2026-05-13 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (7, NULL, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 1, '2026-06-19 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (74, 1, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 1, '2026-05-13 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (9, 1, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 1, '2026-06-19 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (6, NULL, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 0, '2026-05-25 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (11, 1, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 1, '2026-06-11 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (98, NULL, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 0, '2026-06-15 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (11, NULL, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-06-15 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (87, NULL, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 0, '2026-05-12 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (59, NULL, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 0, '2026-06-30 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (37, 1, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 0, '2026-07-06 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (70, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 0, '2026-06-11 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (53, NULL, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 1, '2026-07-01 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (42, 1, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-07-09 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (75, NULL, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 1, '2026-05-19 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (17, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 1, '2026-06-02 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (2, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 1, '2026-07-04 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (93, NULL, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 1, '2026-06-04 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (52, NULL, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 0, '2026-05-18 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (43, 1, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 1, '2026-05-29 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (61, 1, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 0, '2026-05-28 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (90, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 1, '2026-07-04 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (23, 1, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 0, '2026-06-29 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (4, NULL, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-05-26 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (93, NULL, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 0, '2026-06-10 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (13, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 0, '2026-07-04 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (16, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 1, '2026-06-15 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (25, NULL, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 0, '2026-06-21 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (77, 1, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 0, '2026-06-22 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (59, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 0, '2026-05-26 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (43, NULL, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 1, '2026-05-24 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (97, NULL, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 1, '2026-05-26 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (94, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 1, '2026-05-16 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (57, NULL, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-05-31 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (62, 1, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-06-06 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (11, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 1, '2026-06-28 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (95, 1, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 1, '2026-06-27 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (17, 1, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 1, '2026-05-20 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (32, NULL, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 1, '2026-05-31 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (70, NULL, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 1, '2026-06-04 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (98, 1, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 0, '2026-05-26 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (53, NULL, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 1, '2026-06-20 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (81, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 0, '2026-07-02 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (5, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 1, '2026-06-03 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (95, 1, N'Đánh giá buổi tập', N'Vui lòng để lại đánh giá cho PT sau buổi tập vừa qua.', 1, '2026-06-18 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (60, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 0, '2026-05-19 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (21, NULL, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 1, '2026-05-30 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (75, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 1, '2026-05-18 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (69, NULL, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 0, '2026-06-20 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (89, NULL, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 1, '2026-06-05 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (19, 1, N'Bài viết blog mới', N'Một bài viết mới về dinh dưỡng vừa được đăng tải, mời bạn tham khảo.', 0, '2026-05-19 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (62, 1, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 1, '2026-07-08 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (60, NULL, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 0, '2026-06-29 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (90, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 1, '2026-07-02 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (14, NULL, N'Nhắc nhở tập luyện', N'Đã lâu bạn chưa đến phòng tập, hãy quay lại để duy trì phong độ nhé!', 0, '2026-05-25 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (21, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 1, '2026-05-14 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (47, NULL, N'Khuyến mãi mới', N'GymPro vừa ra mắt chương trình khuyến mãi mới, xem chi tiết ngay trong ứng dụng.', 0, '2026-06-20 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (44, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 1, '2026-06-16 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (21, 1, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 1, '2026-07-08 00:00:00');
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (78, NULL, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 1, '2026-05-11 00:00:00');
+
+-- ============================================================
+-- HET FILE
 -- ============================================================
