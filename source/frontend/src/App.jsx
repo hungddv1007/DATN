@@ -19,7 +19,6 @@ import RegisterPage from './pages/auth/RegisterPage';
 import MemberDashboard from './pages/member/MemberDashboard';
 import BuyPackagePage from './pages/member/BuyPackagePage';
 import MemberTransactions from './pages/member/MemberTransactions';
-import MemberPlanDetail from './pages/member/MemberPlanDetail';
 import MembershipManagePage from './pages/member/MembershipManagePage';
 import MemberSchedulePage from './pages/member/MemberSchedulePage';
 
@@ -29,9 +28,6 @@ import PtMembersList from './pages/pt/PtMembersList';
 import PtMemberDetail from './pages/pt/PtMemberDetail';
 import PtProfilePage from './pages/pt/PtProfilePage';
 import PtReviewsPage from './pages/pt/PtReviewsPage';
-import PtPlansPage from './pages/pt/PtPlansPage';
-import PtPlanDetail from './pages/pt/PtPlanDetail';
-import PtAssignmentsPage from './pages/pt/PtAssignmentsPage';
 import PtSchedulePage from './pages/pt/PtSchedulePage';
 
 // Admin Pages
@@ -90,11 +86,6 @@ function App() {
               <MemberTransactions />
             </ProtectedRoute>
           } />
-          <Route path="/member/plan" element={
-            <ProtectedRoute allowedRoles={['MEMBER']}>
-              <MemberPlanDetail />
-            </ProtectedRoute>
-          } />
           <Route path="/member/membership" element={
             <ProtectedRoute allowedRoles={['MEMBER']}>
               <MembershipManagePage />
@@ -115,21 +106,6 @@ function App() {
           <Route path="/pt/schedule" element={
             <ProtectedRoute allowedRoles={['PT']}>
               <PtSchedulePage />
-            </ProtectedRoute>
-          } />
-          <Route path="/pt/plans" element={
-            <ProtectedRoute allowedRoles={['PT']}>
-              <PtPlansPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/pt/plans/:id" element={
-            <ProtectedRoute allowedRoles={['PT']}>
-              <PtPlanDetail />
-            </ProtectedRoute>
-          } />
-          <Route path="/pt/assignments" element={
-            <ProtectedRoute allowedRoles={['PT']}>
-              <PtAssignmentsPage />
             </ProtectedRoute>
           } />
           <Route path="/pt/members" element={

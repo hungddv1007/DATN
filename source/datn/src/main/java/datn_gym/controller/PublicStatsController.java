@@ -1,7 +1,7 @@
 package datn_gym.controller;
 
 import datn_gym.repository.UserRepository;
-import datn_gym.repository.TrainingPlanRepository;
+import datn_gym.repository.GymPackageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,7 +16,7 @@ import java.util.Map;
 public class PublicStatsController {
 
     private final UserRepository userRepository;
-    private final TrainingPlanRepository trainingPlanRepository;
+    private final GymPackageRepository gymPackageRepository;
 
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Long>> getPublicStats() {
@@ -26,12 +26,12 @@ public class PublicStatsController {
         long totalPTs = userRepository.findAll().stream()
                 .filter(u -> "PT".equals(u.getRole().getName()) && Boolean.TRUE.equals(u.getStatus()))
                 .count();
-        long totalPlans = trainingPlanRepository.count();
+        long totalPackages = gymPackageRepository.count();
 
         return ResponseEntity.ok(Map.of(
                 "totalMembers", totalMembers,
                 "totalPTs", totalPTs,
-                "totalPlans", totalPlans
+                "totalPlans", totalPackages
         ));
     }
 }
