@@ -57,6 +57,10 @@ public class TransactionService {
 
         tx.setStatus("CONFIRMED");
         tx.setConfirmedBy(admin);
+
+        // QUAN TRỌNG: kích hoạt chính thức gói tập khi admin duyệt
+        tx.getMembership().setStatus("ACTIVE");
+
         transactionRepository.save(tx);
 
         return toResponse(tx);

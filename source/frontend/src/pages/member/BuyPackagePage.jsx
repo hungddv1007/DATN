@@ -109,35 +109,51 @@ const BuyPackagePage = () => {
 
   // Màn hình thành công
   if (successData) {
-    return (
-      <MainLayout>
-        <div className="buy-package-page">
-          <div className="buy-package-container success-container">
-            <CheckCircle size={80} color="#22c55e" style={{ margin: '0 auto 20px' }} />
-            <h2>Đăng ký thành công!</h2>
-            <p>
-              Bạn đã đăng ký gói <strong>{successData.packageName}</strong>.<br/>
-              Mã giao dịch của bạn là: <strong>#{successData.transactionId}</strong><br/>
-              Tổng tiền: <strong>{formatCurrency(successData.finalAmount)}</strong>
+  const bankCode = '970436'; // Vietcombank
+  const accountNo = '9794612606';
+  const accountName = 'GYMPRO VN';
+  const transferContent = `GYMPRO ${successData.transactionId}`;
+  const qrUrl = `https://img.vietqr.io/image/${bankCode}-${accountNo}-compact2.png?amount=${successData.finalAmount}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(accountName)}`;
+
+  return (
+    <MainLayout>
+      <div className="buy-package-page">
+        <div className="buy-package-container success-container">
+          <CheckCircle size={80} color="#22c55e" style={{ margin: '0 auto 20px' }} />
+          <h2>Đăng ký thành công!</h2>
+          <p>
+            Bạn đã đăng ký gói <strong>{successData.packageName}</strong>.<br/>
+            Mã giao dịch của bạn là: <strong>#{successData.transactionId}</strong><br/>
+            Tổng tiền: <strong>{formatCurrency(successData.finalAmount)}</strong>
+          </p>
+
+          <div style={{ background: 'rgba(255,255,255,0.05)', padding: '24px', borderRadius: '12px', marginBottom: '30px', textAlign: 'center' }}>
+            <p style={{ color: '#f1f5f9', marginBottom: '16px', fontWeight: 600 }}>
+              Quét mã QR bằng app ngân hàng bất kỳ để chuyển khoản tự động
             </p>
-            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '8px', marginBottom: '30px', textAlign: 'left' }}>
-              <p style={{ margin: 0, color: '#f1f5f9' }}>
-                Vui lòng thanh toán tại quầy lễ tân hoặc chuyển khoản theo thông tin sau:<br/><br/>
-                Ngân hàng: <strong>Vietcombank</strong><br/>
-                STK: <strong>1234567890</strong><br/>
-                Chủ TK: <strong>GYMPRO VN</strong><br/>
-                Nội dung: <strong>GYMPRO {successData.transactionId}</strong>
-              </p>
+            <img
+              src={qrUrl}
+              alt="QR chuyển khoản"
+              style={{ width: '260px', height: '260px', borderRadius: '8px', background: '#fff', padding: '8px' }}
+            />
+            <div style={{ textAlign: 'left', marginTop: '20px', color: '#f1f5f9', fontSize: '0.95rem', lineHeight: '1.8' }}>
+              <p style={{ margin: 0 }}>Ngân hàng: <strong>Vietcombank</strong></p>
+              <p style={{ margin: 0 }}>Số tài khoản: <strong>{accountNo}</strong></p>
+              <p style={{ margin: 0 }}>Chủ tài khoản: <strong>{accountName}</strong></p>
+              <p style={{ margin: 0 }}>Số tiền: <strong>{formatCurrency(successData.finalAmount)}</strong></p>
+              <p style={{ margin: 0 }}>Nội dung: <strong>{transferContent}</strong></p>
             </div>
-            <p style={{ color: '#f97316', fontSize: '0.9rem' }}>
-              Gói tập của bạn sẽ được kích hoạt ngay sau khi Admin xác nhận thanh toán.
-            </p>
-            <Link to="/member/dashboard" className="btn-dashboard">Về Dashboard</Link>
           </div>
+
+          <p style={{ color: '#f97316', fontSize: '0.9rem' }}>
+            Gói tập của bạn sẽ được kích hoạt ngay sau khi Admin xác nhận thanh toán.
+          </p>
+          <Link to="/member/dashboard" className="btn-dashboard">Về Dashboard</Link>
         </div>
-      </MainLayout>
-    );
-  }
+      </div>
+    </MainLayout>
+  );
+}
 
   return (
     <MainLayout>

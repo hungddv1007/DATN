@@ -42,4 +42,14 @@ public class MembershipController {
         String email = authentication.getName();
         return ResponseEntity.ok(membershipService.getMyMembershipHistory(email));
     }
+
+    // PUT /api/member/memberships/{id}/cancel — Hủy đăng ký đang chờ xác nhận
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<Void> cancelMembership(
+            Authentication authentication,
+            @PathVariable Integer id) {
+        String email = authentication.getName();
+        membershipService.cancelMembership(email, id);
+        return ResponseEntity.noContent().build();
+    }
 }
