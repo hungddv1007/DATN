@@ -17,6 +17,8 @@ import datn_gym.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,6 +44,13 @@ public class AuthService {
 
     // Đăng nhập
     public JwtResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Email hoặc mật khẩu không chính xác!"));
+
+        if (Boolean.FALSE.equals(user.getStatus())) {
+            throw new DisabledException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin!");
+        }
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -50,9 +59,6 @@ public class AuthService {
         );
 
         String token = tokenProvider.generateToken(authentication);
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
 
         return JwtResponse.builder()
                 .token(token)

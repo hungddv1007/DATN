@@ -19,6 +19,15 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @org.springframework.beans.factory.annotation.Value("${app.google.client-id}")
+    private String googleClientId;
+
+    // GET /api/auth/google/client-id
+    @GetMapping("/google/client-id")
+    public ResponseEntity<java.util.Map<String, String>> getGoogleClientId() {
+        return ResponseEntity.ok(java.util.Map.of("clientId", googleClientId));
+    }
+
     // POST /api/auth/login
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest request) {

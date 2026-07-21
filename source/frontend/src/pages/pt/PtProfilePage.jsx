@@ -49,6 +49,23 @@ const PtProfilePage = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // 1. Validate họ tên (chỉ được chứa chữ cái và khoảng trắng)
+    const nameRegex = /^[\p{L}\s'-]+$/u;
+    if (!nameRegex.test(formData.fullName)) {
+      setError('Họ và tên chỉ được chứa chữ cái và khoảng trắng!');
+      return;
+    }
+
+    // 2. Validate số điện thoại (phải đúng định dạng số điện thoại Việt Nam hoặc bỏ trống)
+    if (formData.phone) {
+      const phoneRegex = /^(0|84)(2(0[3-9]|1[0-6|8|9]|2[0-2|5-9]|3[2-9]|4[0-9]|5[1|2|4-9]|6[9]|7[0-7|9]|8[0-9]|9[0-4|6|7|9])|3[2-9]|5[5|6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])([0-9]{7})$/;
+      if (!phoneRegex.test(formData.phone)) {
+        setError('Số điện thoại không hợp lệ hoặc không đúng định dạng Việt Nam!');
+        return;
+      }
+    }
+
     try {
       const res = await api.put('/pt/profile', formData);
       setProfile(res.data);

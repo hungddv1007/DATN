@@ -1,10 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import authService from '../../services/authService';
 import MainLayout from '../../components/layout/MainLayout';
 import './AuthPages.css';
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -17,6 +16,20 @@ const LoginPage = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState('');
+
+  // Lấy Google Client ID từ backend
+  useEffect(() => {
+    const fetchClientId = async () => {
+      try {
+        const id = await authService.getGoogleClientId();
+        setGoogleClientId(id);
+      } catch (err) {
+        console.error('Không thể lấy Google Client ID từ backend', err);
+      }
+    };
+    fetchClientId();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -80,9 +93,9 @@ const LoginPage = () => {
 
   // Khởi tạo Google Sign-In và render nút chuẩn của Google
   useEffect(() => {
-    if (window.google && GOOGLE_CLIENT_ID && googleButtonRef.current) {
+    if (window.google && googleClientId && googleButtonRef.current) {
       window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: googleClientId,
         callback: handleGoogleResponse,
       });
 
@@ -93,7 +106,7 @@ const LoginPage = () => {
         text: 'signin_with',
       });
     }
-  }, [handleGoogleResponse]);
+  }, [handleGoogleResponse, googleClientId]);
 
   return (
     <MainLayout>

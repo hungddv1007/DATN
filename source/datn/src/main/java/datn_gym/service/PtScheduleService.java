@@ -53,10 +53,8 @@ public class PtScheduleService {
 
         // Xóa các slot cũ của member này
         List<PtSchedule> existingSlots = ptScheduleRepository.findByPtIdAndMemberIdAndStatusOrderByDayOfWeekAscSlotIndexAsc(pt.getId(), member.getId(), "ACTIVE");
-        for (PtSchedule slot : existingSlots) {
-            slot.setStatus("CANCELLED");
-        }
-        ptScheduleRepository.saveAll(existingSlots);
+        ptScheduleRepository.deleteAll(existingSlots);
+        ptScheduleRepository.flush();
 
         // Thêm các slot mới
         if (request.getSlots() != null) {

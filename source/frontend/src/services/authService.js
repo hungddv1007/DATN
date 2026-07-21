@@ -33,6 +33,12 @@ const authService = {
     return response.data;
   },
 
+  // Lấy Google Client ID từ backend
+  getGoogleClientId: async () => {
+    const response = await api.get('/auth/google/client-id');
+    return response.data.clientId;
+  },
+
   // Đăng xuất
   logout: () => {
     localStorage.removeItem('token');

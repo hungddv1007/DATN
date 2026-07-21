@@ -10,6 +10,8 @@ public class UpdateProfileRequest {
 
     @NotBlank(message = "Họ tên không được để trống")
     @Size(min = 2, max = 100, message = "Họ tên phải từ 2 đến 100 ký tự")
+    @Pattern(regexp = "^[\\p{L}\\s'-]+$", 
+             message = "Họ tên chỉ được chứa chữ cái và khoảng trắng")
     private String fullName;
 
     @Pattern(regexp = "^$|^(0|84)(2(0[3-9]|1[0-6|8|9]|2[0-2|5-9]|3[2-9]|4[0-9]|5[1|2|4-9]|6[9]|7[0-7|9]|8[0-9]|9[0-4|6|7|9])|3[2-9]|5[5|6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])([0-9]{7})$",
