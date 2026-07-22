@@ -5,7 +5,7 @@ import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
 import ptScheduleService from '../../services/ptScheduleService';
 import notificationService from '../../services/notificationService';
-import { Package, CreditCard, Bell, User, Calendar, Star, X, CheckCheck, Trash2 } from 'lucide-react';
+import { Package, CreditCard, Bell, User, Calendar, Star, Utensils, X, CheckCheck, Trash2 } from 'lucide-react';
 import './DashboardPage.css';
 
 const MemberDashboard = () => {
@@ -160,6 +160,13 @@ const MemberDashboard = () => {
               <p className="dash-value">Chưa được gán</p>
             )}
             <span className="dash-link">Xem hồ sơ PT →</span>
+          </div>
+
+          <div className="dash-card">
+            <Utensils size={32} className="dash-icon" />
+            <h3>Khẩu phần ăn</h3>
+            <p className="dash-value" style={{ color: '#10b981' }}>Thực đơn từ PT</p>
+            <Link to="/member/diet" className="dash-link">Xem thực đơn →</Link>
           </div>
 
           <div className="dash-card">

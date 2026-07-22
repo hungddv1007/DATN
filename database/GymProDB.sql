@@ -201,18 +201,29 @@ CREATE TABLE pt_comments (
 );
 
 -- ============================================================
--- 13. DIETS
+-- 13. DIETS  (Khau phan an: mau Ngay Tap / Ngay Nghi / Ngay cu the)
 -- ============================================================
 CREATE TABLE diets (
-    id              INT IDENTITY(1,1) PRIMARY KEY,
-    member_id       INT NOT NULL,
-    pt_id           INT NOT NULL,
-    date            DATE NOT NULL,
-    breakfast       NVARCHAR(MAX),
-    lunch           NVARCHAR(MAX),
-    dinner          NVARCHAR(MAX),
-    FOREIGN KEY (member_id) REFERENCES users(id),
-    FOREIGN KEY (pt_id) REFERENCES users(id)
+    id                  INT IDENTITY(1,1) PRIMARY KEY,
+    pt_id               INT NOT NULL,
+    member_id           INT NOT NULL,
+    day_type            NVARCHAR(20) NOT NULL DEFAULT 'REST_DAY'
+                        CHECK (day_type IN ('TRAINING_DAY', 'REST_DAY', 'SPECIFIC_DATE')),
+    diet_date           DATE,                        -- NULL neu la mau TRAINING_DAY / REST_DAY
+    title               NVARCHAR(100),               -- VD: Thuc don tang co ngay tap
+    breakfast           NVARCHAR(MAX),
+    snack_morning       NVARCHAR(MAX),               -- Bua phu sang / Pre-workout
+    lunch               NVARCHAR(MAX),
+    snack_afternoon     NVARCHAR(MAX),               -- Bua phu chieu / Post-workout
+    dinner              NVARCHAR(MAX),
+    calories            INT DEFAULT 0,               -- Tong Calo (kcal)
+    protein_g           INT DEFAULT 0,
+    carbs_g             INT DEFAULT 0,
+    fat_g               INT DEFAULT 0,
+    note                NVARCHAR(MAX),
+    created_at          DATETIME2 DEFAULT GETDATE(),
+    FOREIGN KEY (pt_id) REFERENCES users(id),
+    FOREIGN KEY (member_id) REFERENCES users(id)
 );
 
 -- ============================================================

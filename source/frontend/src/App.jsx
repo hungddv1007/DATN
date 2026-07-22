@@ -21,6 +21,7 @@ import BuyPackagePage from './pages/member/BuyPackagePage';
 import MemberTransactions from './pages/member/MemberTransactions';
 import MembershipManagePage from './pages/member/MembershipManagePage';
 import MemberSchedulePage from './pages/member/MemberSchedulePage';
+import MemberDietPage from './pages/member/MemberDietPage';
 
 // PT Pages
 import PtDashboard from './pages/pt/PtDashboard';
@@ -94,6 +95,11 @@ function App() {
           <Route path="/member/schedule" element={
             <ProtectedRoute allowedRoles={['MEMBER']}>
               <MemberSchedulePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/member/diet" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MemberDietPage />
             </ProtectedRoute>
           } />
 

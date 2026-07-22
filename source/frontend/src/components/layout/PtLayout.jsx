@@ -49,11 +49,6 @@ const PtLayout = ({ children }) => {
             </Link>
           </li>
           <li>
-            <Link to="#" className="disabled-nav-item" style={{ pointerEvents: 'none', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', color: '#64748b' }}>
-              <Utensils size={18} /> Khẩu phần ăn
-            </Link>
-          </li>
-          <li>
             <Link to="/pt/profile" className={isActive('/pt/profile')}>
               <UserCircle size={18} /> Hồ sơ của tôi
             </Link>

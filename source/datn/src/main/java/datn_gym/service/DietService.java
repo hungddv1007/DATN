@@ -7,6 +7,7 @@ import datn_gym.entity.Diet;
 import datn_gym.entity.User;
 import datn_gym.repository.DietRepository;
 import datn_gym.repository.MembershipRepository;
+import datn_gym.repository.PtScheduleRepository;
 import datn_gym.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,62 +26,98 @@ public class DietService {
         private final DietRepository dietRepository;
         private final UserRepository userRepository;
         private final MembershipRepository membershipRepository;
+        private final PtScheduleRepository ptScheduleRepository;
+
+        // Các giá trị dayType hợp lệ
+        private static final String TRAINING_DAY = "TRAINING_DAY";
+        private static final String REST_DAY = "REST_DAY";
+        private static final String SPECIFIC_DATE = "SPECIFIC_DATE";
+        private static final Set<String> VALID_DAY_TYPES = Set.of(TRAINING_DAY, REST_DAY, SPECIFIC_DATE);
 
         // ================================================================
         // PT: QUẢN LÝ THỰC ĐƠN
         // ================================================================
 
+        /** PT xem tất cả diet đã tạo cho 1 member */
         public List<DietResponse> getDietsByMember(String ptEmail, Integer memberId) {
                 User pt = getUserByEmail(ptEmail);
                 validatePtCanManageDiet(pt.getId(), memberId);
-                return dietRepository.findByPt_IdAndMember_IdOrderByDateDesc(pt.getId(), memberId)
+                return dietRepository.findByPt_IdAndMember_IdOrderByCreatedAtDesc(pt.getId(), memberId)
                                 .stream().map(this::toResponse).collect(Collectors.toList());
         }
 
-        public DietResponse getDietByMemberAndDate(String ptEmail, Integer memberId,
-                        LocalDate date) {
+        /** PT xem mẫu TRAINING_DAY hoặc REST_DAY của 1 member */
+        public DietResponse getDietTemplate(String ptEmail, Integer memberId, String dayType) {
                 User pt = getUserByEmail(ptEmail);
                 validatePtCanManageDiet(pt.getId(), memberId);
+                validateDayType(dayType);
 
-                return dietRepository.findByPt_IdAndMember_IdAndDate(pt.getId(), memberId, date)
+                return dietRepository.findByPt_IdAndMember_IdAndDayType(pt.getId(), memberId, dayType)
                                 .map(this::toResponse)
                                 .orElseThrow(() -> new ResponseStatusException(
                                                 HttpStatus.NOT_FOUND,
-                                                "Không tìm thấy thực đơn ngày " + date));
+                                                "Chưa có mẫu thực đơn " + dayType + " cho hội viên này"));
         }
 
+        /** PT tạo mẫu thực đơn mới (TRAINING_DAY / REST_DAY / SPECIFIC_DATE) */
         @Transactional
         public DietResponse createDiet(String ptEmail, DietCreateRequest request) {
                 User pt = getUserByEmail(ptEmail);
-
                 validatePtCanManageDiet(pt.getId(), request.getMemberId());
-                validateAtLeastOneMeal(request.getBreakfast(), request.getLunch(), request.getDinner());
+                validateDayType(request.getDayType());
+                validateAtLeastOneMeal(request.getBreakfast(), request.getSnackMorning(),
+                                request.getLunch(), request.getSnackAfternoon(), request.getDinner());
 
-                if (dietRepository.existsByMember_IdAndDate(request.getMemberId(), request.getDate())) {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT,
-                                        "Đã có thực đơn cho ngày " + request.getDate()
-                                                        + ". Vui lòng sửa thực đơn cũ.");
+                // Validate nghiệp vụ
+                if (SPECIFIC_DATE.equals(request.getDayType())) {
+                        if (request.getDietDate() == null) {
+                                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                                "Loại SPECIFIC_DATE phải có ngày cụ thể");
+                        }
+                        // Kiểm tra trùng ngày
+                        if (dietRepository.existsByMember_IdAndDayTypeAndDietDate(
+                                        request.getMemberId(), SPECIFIC_DATE, request.getDietDate())) {
+                                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                                "Đã có thực đơn cho ngày " + request.getDietDate());
+                        }
+                } else {
+                        // TRAINING_DAY / REST_DAY: Chỉ cho phép 1 mẫu mỗi loại
+                        if (dietRepository.existsByPt_IdAndMember_IdAndDayType(
+                                        pt.getId(), request.getMemberId(), request.getDayType())) {
+                                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                                "Đã có mẫu " + request.getDayType()
+                                                                + ". Hãy sửa mẫu cũ thay vì tạo mới.");
+                        }
                 }
 
                 User member = getUserById(request.getMemberId());
 
                 Diet diet = Diet.builder()
-                                .pt(pt).member(member)
-                                .date(request.getDate())
+                                .pt(pt)
+                                .member(member)
+                                .dayType(request.getDayType())
+                                .dietDate(request.getDietDate())
+                                .title(request.getTitle())
                                 .breakfast(request.getBreakfast())
+                                .snackMorning(request.getSnackMorning())
                                 .lunch(request.getLunch())
+                                .snackAfternoon(request.getSnackAfternoon())
                                 .dinner(request.getDinner())
+                                .calories(request.getCalories() != null ? request.getCalories() : 0)
+                                .proteinG(request.getProteinG() != null ? request.getProteinG() : 0)
+                                .carbsG(request.getCarbsG() != null ? request.getCarbsG() : 0)
+                                .fatG(request.getFatG() != null ? request.getFatG() : 0)
+                                .note(request.getNote())
                                 .build();
 
                 return toResponse(dietRepository.save(diet));
         }
 
+        /** PT sửa thực đơn (cả mẫu lẫn SPECIFIC_DATE) */
         @Transactional
         public DietResponse updateDiet(String ptEmail, Integer dietId, DietUpdateRequest request) {
                 User pt = getUserByEmail(ptEmail);
 
-                // TỐI ƯU HIỆU SUẤT: Chỉ gọi DB 1 lần (findBy ID) rồi dùng Java (RAM) check
-                // quyền PT
                 Diet diet = dietRepository.findById(dietId)
                                 .orElseThrow(() -> new ResponseStatusException(
                                                 HttpStatus.NOT_FOUND, "Không tìm thấy thực đơn"));
@@ -90,21 +127,29 @@ public class DietService {
                                         HttpStatus.FORBIDDEN, "Bạn không có quyền sửa thực đơn này");
                 }
 
-                validateAtLeastOneMeal(request.getBreakfast(), request.getLunch(), request.getDinner());
+                validateAtLeastOneMeal(request.getBreakfast(), request.getSnackMorning(),
+                                request.getLunch(), request.getSnackAfternoon(), request.getDinner());
 
+                diet.setTitle(request.getTitle());
                 diet.setBreakfast(request.getBreakfast());
+                diet.setSnackMorning(request.getSnackMorning());
                 diet.setLunch(request.getLunch());
+                diet.setSnackAfternoon(request.getSnackAfternoon());
                 diet.setDinner(request.getDinner());
+                diet.setCalories(request.getCalories() != null ? request.getCalories() : 0);
+                diet.setProteinG(request.getProteinG() != null ? request.getProteinG() : 0);
+                diet.setCarbsG(request.getCarbsG() != null ? request.getCarbsG() : 0);
+                diet.setFatG(request.getFatG() != null ? request.getFatG() : 0);
+                diet.setNote(request.getNote());
 
                 return toResponse(dietRepository.save(diet));
         }
 
+        /** PT xóa thực đơn */
         @Transactional
         public void deleteDiet(String ptEmail, Integer dietId) {
                 User pt = getUserByEmail(ptEmail);
 
-                // TỐI ƯU HIỆU SUẤT: Chỉ gọi DB 1 lần (findBy ID) rồi dùng Java (RAM) check
-                // quyền PT
                 Diet diet = dietRepository.findById(dietId)
                                 .orElseThrow(() -> new ResponseStatusException(
                                                 HttpStatus.NOT_FOUND, "Không tìm thấy thực đơn"));
@@ -118,37 +163,60 @@ public class DietService {
         }
 
         // ================================================================
-        // MEMBER: XEM THỰC ĐƠN
+        // MEMBER: XEM THỰC ĐƠN + AUTO-MAPPING
         // ================================================================
 
+        /** Member xem toàn bộ thực đơn (mẫu + specific) */
         public List<DietResponse> getMyDiets(String memberEmail) {
                 User member = getUserByEmail(memberEmail);
-
-                // FIX NGHIỆP VỤ: Đã xóa validateMemberIsVip()
-                // Cho phép hội viên (dù đã hết hạn gói VIP) vẫn được xem lại lịch sử các thực
-                // đơn cũ
-
-                return dietRepository.findByMember_IdOrderByDateDesc(member.getId())
+                return dietRepository.findByMember_IdOrderByCreatedAtDesc(member.getId())
                                 .stream().map(this::toResponse).collect(Collectors.toList());
         }
 
-        public DietResponse getMyDietByDate(String memberEmail, LocalDate date) {
+        /**
+         * Member xem thực đơn của 1 ngày cụ thể
+         * AUTO-MAPPING LOGIC:
+         *   1. Kiểm tra SPECIFIC_DATE trước (ưu tiên cao nhất)
+         *   2. Nếu không có → Check pt_schedules ngày đó
+         *      - Có lịch tập → Load mẫu TRAINING_DAY
+         *      - Không có → Load mẫu REST_DAY
+         */
+        public DietResponse getMyDietForDate(String memberEmail, LocalDate date) {
                 User member = getUserByEmail(memberEmail);
 
-                // FIX NGHIỆP VỤ: Đã xóa validateMemberIsVip()
+                // Bước 1: Ưu tiên SPECIFIC_DATE
+                Optional<Diet> specificDiet = dietRepository
+                                .findByMember_IdAndDayTypeAndDietDate(member.getId(), SPECIFIC_DATE, date);
+                if (specificDiet.isPresent()) {
+                        DietResponse resp = toResponse(specificDiet.get());
+                        resp.setIsTrainingDay(isTrainingDay(member.getId(), date));
+                        return resp;
+                }
 
-                return dietRepository.findByMember_IdAndDate(member.getId(), date)
-                                .map(this::toResponse)
-                                .orElseThrow(() -> new ResponseStatusException(
-                                                HttpStatus.NOT_FOUND,
-                                                "Không có thực đơn cho ngày " + date));
+                // Bước 2: Auto-mapping theo lịch tập
+                boolean hasTraining = isTrainingDay(member.getId(), date);
+                String targetDayType = hasTraining ? TRAINING_DAY : REST_DAY;
+
+                Optional<Diet> templateDiet = dietRepository
+                                .findByMember_IdAndDayType(member.getId(), targetDayType);
+                if (templateDiet.isPresent()) {
+                        DietResponse resp = toResponse(templateDiet.get());
+                        resp.setDietDate(date); // Gán ngày hiện tại để frontend hiển thị đúng
+                        resp.setIsTrainingDay(hasTraining);
+                        return resp;
+                }
+
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Chưa có thực đơn cho ngày " + date
+                                                + ". PT chưa tạo mẫu " + targetDayType + ".");
         }
 
-        public List<DietResponse> getMyDietsByWeek(String memberEmail,
+        /**
+         * Member xem thực đơn tuần — trả về list 7 ngày, mỗi ngày kèm badge TRAINING/REST
+         */
+        public List<DietResponse> getMyDietWeekView(String memberEmail,
                         LocalDate fromDate, LocalDate toDate) {
                 User member = getUserByEmail(memberEmail);
-
-                // FIX NGHIỆP VỤ: Đã xóa validateMemberIsVip()
 
                 if (fromDate.isAfter(toDate)) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -159,14 +227,64 @@ public class DietService {
                                         "Khoảng thời gian xem tối đa là 31 ngày");
                 }
 
-                return dietRepository.findByMember_IdAndDateBetweenOrderByDateAsc(
-                                member.getId(), fromDate, toDate)
-                                .stream().map(this::toResponse).collect(Collectors.toList());
+                // Load mẫu 1 lần
+                Optional<Diet> trainingTemplate = dietRepository
+                                .findByMember_IdAndDayType(member.getId(), TRAINING_DAY);
+                Optional<Diet> restTemplate = dietRepository
+                                .findByMember_IdAndDayType(member.getId(), REST_DAY);
+
+                List<DietResponse> weekView = new ArrayList<>();
+                LocalDate current = fromDate;
+
+                while (!current.isAfter(toDate)) {
+                        final LocalDate checkDate = current;
+
+                        // Ưu tiên SPECIFIC_DATE
+                        Optional<Diet> specificDiet = dietRepository
+                                        .findByMember_IdAndDayTypeAndDietDate(
+                                                        member.getId(), SPECIFIC_DATE, checkDate);
+
+                        boolean hasTraining = isTrainingDay(member.getId(), checkDate);
+
+                        if (specificDiet.isPresent()) {
+                                DietResponse resp = toResponse(specificDiet.get());
+                                resp.setIsTrainingDay(hasTraining);
+                                weekView.add(resp);
+                        } else {
+                                // Auto-mapping
+                                Optional<Diet> template = hasTraining ? trainingTemplate : restTemplate;
+                                if (template.isPresent()) {
+                                        DietResponse resp = toResponse(template.get());
+                                        resp.setDietDate(checkDate);
+                                        resp.setIsTrainingDay(hasTraining);
+                                        weekView.add(resp);
+                                } else {
+                                        // Ngày không có thực đơn → trả placeholder
+                                        weekView.add(DietResponse.builder()
+                                                        .dietDate(checkDate)
+                                                        .isTrainingDay(hasTraining)
+                                                        .dayType(hasTraining ? TRAINING_DAY : REST_DAY)
+                                                        .build());
+                                }
+                        }
+
+                        current = current.plusDays(1);
+                }
+
+                return weekView;
         }
 
         // ================================================================
         // HELPER METHODS
         // ================================================================
+
+        /** Kiểm tra ngày có lịch tập không — dùng pt_schedules */
+        private boolean isTrainingDay(Integer memberId, LocalDate date) {
+                var schedules = ptScheduleRepository
+                                .findByMemberIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
+                                                memberId, date, date, "ACTIVE");
+                return schedules != null && !schedules.isEmpty();
+        }
 
         private void validatePtCanManageDiet(Integer ptId, Integer memberId) {
                 if (!membershipRepository.existsVipMembershipByPtAndMember(ptId, memberId)) {
@@ -176,17 +294,26 @@ public class DietService {
                 }
         }
 
-        // Hàm validateMemberIsVip() đã được loại bỏ do không còn sử dụng
+        private void validateDayType(String dayType) {
+                if (dayType == null || !VALID_DAY_TYPES.contains(dayType)) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                        "dayType phải là TRAINING_DAY, REST_DAY hoặc SPECIFIC_DATE");
+                }
+        }
 
-        private void validateAtLeastOneMeal(String breakfast,
-                        String lunch, String dinner) {
-                boolean allEmpty = (breakfast == null || breakfast.isBlank())
-                                && (lunch == null || lunch.isBlank())
-                                && (dinner == null || dinner.isBlank());
+        private void validateAtLeastOneMeal(String breakfast, String snackMorning,
+                        String lunch, String snackAfternoon, String dinner) {
+                boolean allEmpty = isBlank(breakfast) && isBlank(snackMorning)
+                                && isBlank(lunch) && isBlank(snackAfternoon)
+                                && isBlank(dinner);
                 if (allEmpty) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                         "Thực đơn phải có ít nhất 1 bữa ăn");
                 }
+        }
+
+        private boolean isBlank(String s) {
+                return s == null || s.isBlank();
         }
 
         private User getUserByEmail(String email) {
@@ -204,14 +331,23 @@ public class DietService {
         private DietResponse toResponse(Diet diet) {
                 return DietResponse.builder()
                                 .id(diet.getId())
-                                .date(diet.getDate())
+                                .dayType(diet.getDayType())
+                                .dietDate(diet.getDietDate())
+                                .title(diet.getTitle())
                                 .memberId(diet.getMember().getId())
                                 .memberName(diet.getMember().getFullName())
                                 .ptId(diet.getPt().getId())
                                 .ptName(diet.getPt().getFullName())
                                 .breakfast(diet.getBreakfast())
+                                .snackMorning(diet.getSnackMorning())
                                 .lunch(diet.getLunch())
+                                .snackAfternoon(diet.getSnackAfternoon())
                                 .dinner(diet.getDinner())
+                                .calories(diet.getCalories())
+                                .proteinG(diet.getProteinG())
+                                .carbsG(diet.getCarbsG())
+                                .fatG(diet.getFatG())
+                                .note(diet.getNote())
                                 .build();
         }
 }

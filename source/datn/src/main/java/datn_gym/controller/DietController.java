@@ -29,7 +29,7 @@ public class DietController {
     // ================================================================
 
     // GET /api/pt/diets/member/{memberId}
-    // PT xem thực đơn đã lên cho một HV
+    // PT xem tất cả diet đã tạo cho 1 HV (mẫu + ngày cụ thể)
     @GetMapping("/api/pt/diets/member/{memberId}")
     @PreAuthorize("hasRole('PT')")
     public ResponseEntity<List<DietResponse>> getDietsByMember(
@@ -39,22 +39,21 @@ public class DietController {
                 dietService.getDietsByMember(userDetails.getUsername(), memberId));
     }
 
-    // GET /api/pt/diets/member/{memberId}/date/{date}
-    // PT xem thực đơn của HV theo ngày cụ thể
-    // @DateTimeFormat đảm bảo date được parse đúng format yyyy-MM-dd
-    @GetMapping("/api/pt/diets/member/{memberId}/date/{date}")
+    // GET /api/pt/diets/member/{memberId}/template/{dayType}
+    // PT xem mẫu TRAINING_DAY hoặc REST_DAY
+    @GetMapping("/api/pt/diets/member/{memberId}/template/{dayType}")
     @PreAuthorize("hasRole('PT')")
-    public ResponseEntity<DietResponse> getDietByMemberAndDate(
+    public ResponseEntity<DietResponse> getDietTemplate(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Integer memberId,
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @PathVariable String dayType) {
         return ResponseEntity.ok(
-                dietService.getDietByMemberAndDate(
-                        userDetails.getUsername(), memberId, date));
+                dietService.getDietTemplate(
+                        userDetails.getUsername(), memberId, dayType));
     }
 
     // POST /api/pt/diets
-    // PT tạo thực đơn mới
+    // PT tạo thực đơn (mẫu TRAINING_DAY/REST_DAY hoặc SPECIFIC_DATE)
     @PostMapping("/api/pt/diets")
     @PreAuthorize("hasRole('PT')")
     public ResponseEntity<DietResponse> createDiet(
@@ -65,7 +64,7 @@ public class DietController {
     }
 
     // PUT /api/pt/diets/{dietId}
-    // PT sửa thực đơn — chỉ cần breakfast/lunch/dinner
+    // PT sửa thực đơn
     @PutMapping("/api/pt/diets/{dietId}")
     @PreAuthorize("hasRole('PT')")
     public ResponseEntity<DietResponse> updateDiet(
@@ -77,7 +76,7 @@ public class DietController {
     }
 
     // DELETE /api/pt/diets/{dietId}
-    // PT xóa thực đơn — trả message rõ ràng
+    // PT xóa thực đơn
     @DeleteMapping("/api/pt/diets/{dietId}")
     @PreAuthorize("hasRole('PT')")
     public ResponseEntity<MessageResponse> deleteDiet(
@@ -88,11 +87,11 @@ public class DietController {
     }
 
     // ================================================================
-    // MEMBER APIs — Chỉ VIP
+    // MEMBER APIs
     // ================================================================
 
     // GET /api/member/diets
-    // Member xem toàn bộ lịch sử thực đơn
+    // Member xem toàn bộ diet (mẫu + ngày cụ thể)
     @GetMapping("/api/member/diets")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<List<DietResponse>> getMyDiets(
@@ -102,25 +101,25 @@ public class DietController {
     }
 
     // GET /api/member/diets/date/{date}
-    // Member xem thực đơn ngày cụ thể
+    // Member xem thực đơn ngày cụ thể — AUTO-MAPPING
     @GetMapping("/api/member/diets/date/{date}")
     @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<DietResponse> getMyDietByDate(
+    public ResponseEntity<DietResponse> getMyDietForDate(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(
-                dietService.getMyDietByDate(userDetails.getUsername(), date));
+                dietService.getMyDietForDate(userDetails.getUsername(), date));
     }
 
-    // GET /api/member/diets/week?from=2025-06-01&to=2025-06-07
-    // Member xem thực đơn theo tuần
+    // GET /api/member/diets/week?from=2025-07-01&to=2025-07-07
+    // Member xem thực đơn tuần — AUTO-MAPPING cho từng ngày
     @GetMapping("/api/member/diets/week")
     @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<List<DietResponse>> getMyDietsByWeek(
+    public ResponseEntity<List<DietResponse>> getMyDietWeekView(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ResponseEntity.ok(
-                dietService.getMyDietsByWeek(userDetails.getUsername(), from, to));
+                dietService.getMyDietWeekView(userDetails.getUsername(), from, to));
     }
 }
