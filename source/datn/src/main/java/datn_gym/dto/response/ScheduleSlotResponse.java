@@ -13,11 +13,10 @@ public class ScheduleSlotResponse {
     private String ptName;
     private Integer memberId;
     private String memberName;
-    private Integer dayOfWeek;        // 0-5
-    private Integer slotIndex;        // 0-7
-    private String startTime;         // "07:00"
-    private String endTime;           // "08:00"
-    private String sessionLabel;      // "Sáng", "Chiều", "Tối"
-    private String exerciseNote;      // "Ngực", "Chân + Core"
+    private String scheduleDate;      // "2026-07-21"
+    private String startTime;         // "14:15"
+    private String endTime;           // "18:30"
+    private String exerciseNote;
     private String status;
+    private String recurringGroupId;  // UUID nhóm lặp lại
 }

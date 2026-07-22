@@ -1,27 +1,35 @@
 import api from './api';
 
 const ptScheduleService = {
-  // PT lấy toàn bộ lịch huấn luyện của mình
-  getPtSchedules: async () => {
-    const response = await api.get('/pt/schedules');
+  // PT lấy lịch theo tuần
+  getPtSchedules: async (weekStart) => {
+    const response = await api.get('/pt/schedules', { params: { weekStart } });
     return response.data;
   },
 
-  // PT lấy lịch tập của 1 member cụ thể
-  getPtMemberSchedule: async (memberId) => {
-    const response = await api.get(`/pt/schedules/member/${memberId}`);
-    return response.data;
-  },
-
-  // PT lưu/cập nhật thời khóa biểu cho học viên
-  saveMemberSchedule: async (data) => {
+  // PT tạo buổi tập mới (hỗ trợ recurring)
+  createSchedule: async (data) => {
     const response = await api.post('/pt/schedules', data);
     return response.data;
   },
 
-  // Học viên xem lịch biểu kèm PT của mình
-  getMemberSchedule: async () => {
-    const response = await api.get('/member/schedule');
+  // PT sửa 1 buổi tập
+  updateSchedule: async (id, data) => {
+    const response = await api.put(`/pt/schedules/${id}`, data);
+    return response.data;
+  },
+
+  // PT xóa 1 hoặc cả nhóm buổi tập
+  deleteSchedule: async (id, deleteAll = false, notify = false) => {
+    const response = await api.delete(`/pt/schedules/${id}`, {
+      params: { deleteAll, notify }
+    });
+    return response.data;
+  },
+
+  // Học viên xem lịch theo tuần
+  getMemberSchedule: async (weekStart) => {
+    const response = await api.get('/member/schedule', { params: { weekStart } });
     return response.data;
   }
 };

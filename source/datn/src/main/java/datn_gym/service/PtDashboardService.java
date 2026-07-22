@@ -46,8 +46,7 @@ public class PtDashboardService {
         List<Membership> memberships = membershipRepository.findByPtIdAndStatusWithDetails(pt.getId(), "ACTIVE");
 
         return memberships.stream().map(m -> {
-            boolean isScheduled = !ptScheduleRepository.findByPtIdAndMemberIdAndStatusOrderByDayOfWeekAscSlotIndexAsc(
-                    pt.getId(), m.getUser().getId(), "ACTIVE").isEmpty();
+            boolean isScheduled = ptScheduleRepository.existsActiveMemberSchedule(m.getUser().getId());
             return PtMemberResponse.builder()
                     .memberId(m.getUser().getId())
                     .memberName(m.getUser().getFullName())
