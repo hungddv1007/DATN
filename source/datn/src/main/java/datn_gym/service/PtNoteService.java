@@ -22,6 +22,7 @@ public class PtNoteService {
 
     private final PtNoteRepository ptNoteRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     // FIX KIẾN TRÚC: Inject đúng MembershipRepository
     // (Bản trước gọi sai qua ptNoteRepository.existsActiveMembershipByPtAndMember
@@ -32,7 +33,7 @@ public class PtNoteService {
     // PT: Lấy tất cả ghi chú của mình (toàn bộ hội viên)
     // ----------------------------------------------------------------
     public List<PtNoteResponse> getAllMyNotes(String ptEmail) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
         return ptNoteRepository
                 .findByPt_IdOrderByCreatedAtDesc(pt.getId())
                 .stream()
@@ -44,7 +45,7 @@ public class PtNoteService {
     // PT: Lấy ghi chú về một hội viên cụ thể
     // ----------------------------------------------------------------
     public List<PtNoteResponse> getNotesByMember(String ptEmail, Integer memberId) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
 
         // FIX IDOR: Check tại DB qua MembershipRepository — member có thuộc PT này không
         validatePtOwnsMember(pt.getId(), memberId);
@@ -61,7 +62,7 @@ public class PtNoteService {
     // ----------------------------------------------------------------
     @Transactional
     public PtNoteResponse createNote(String ptEmail, PtNoteRequest request) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
 
         // FIX IDOR: Validate TRƯỚC khi load member — tránh query thừa nếu fail
         // Ngăn PT ghi chú cho Admin hoặc hội viên của PT khác
@@ -83,7 +84,7 @@ public class PtNoteService {
     // ----------------------------------------------------------------
     @Transactional
     public PtNoteResponse updateNote(String ptEmail, Integer noteId, PtNoteRequest request) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
 
         // FIX Lỗi 404 vs 403: Tách 2 bước để phân biệt rõ
         if (!ptNoteRepository.existsById(noteId)) {
@@ -107,7 +108,7 @@ public class PtNoteService {
     // ----------------------------------------------------------------
     @Transactional
     public void deleteNote(String ptEmail, Integer noteId) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
 
         // FIX Lỗi 404 vs 403: Tách 2 bước để phân biệt rõ
         if (!ptNoteRepository.existsById(noteId)) {
@@ -138,14 +139,7 @@ public class PtNoteService {
         }
     }
 
-    // ----------------------------------------------------------------
-    // HELPER: Lấy User theo email
-    // ----------------------------------------------------------------
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
+
 
     // ----------------------------------------------------------------
     // HELPER: Lấy User theo ID

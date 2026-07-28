@@ -19,13 +19,14 @@ public class MemberProfileService {
 
     private final MemberProfileRepository memberProfileRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
     private final MembershipRepository membershipRepository;
 
     // ================================================================
     // MEMBER: Xem hồ sơ thể chất của chính mình
     // ================================================================
     public MemberProfileResponse getMyProfile(String memberEmail) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
 
         MemberProfile profile = memberProfileRepository.findByUser_Id(member.getId())
                 .orElseThrow(() -> new ResponseStatusException(
@@ -38,7 +39,7 @@ public class MemberProfileService {
     // PT: Xem hồ sơ thể chất của một hội viên thuộc quyền mình
     // ================================================================
     public MemberProfileResponse getMemberProfile(String ptEmail, Integer memberId) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
 
         // FIX IDOR: Check tại DB — member có thuộc PT này không
         validatePtOwnsMember(pt.getId(), memberId);
@@ -59,7 +60,7 @@ public class MemberProfileService {
     @Transactional
     public MemberProfileResponse updateMemberProfile(String ptEmail, Integer memberId,
                                                        MemberProfileUpdateRequest request) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
 
         // FIX IDOR: Validate TRƯỚC khi load/tạo profile — tránh query thừa nếu fail
         validatePtOwnsMember(pt.getId(), memberId);
@@ -93,11 +94,7 @@ public class MemberProfileService {
         }
     }
 
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
+
 
     // FIX N+1: @EntityGraph đã load user sẵn trong Repository (khi profile đã tồn tại)
     private MemberProfileResponse toResponse(MemberProfile profile) {

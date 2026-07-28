@@ -24,6 +24,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     // ================================================================
     // USER: Xem thông báo của chính mình (mọi role: Admin/PT/Member)
@@ -31,7 +32,7 @@ public class NotificationService {
 
     // Xem danh sách thông báo có phân trang
     public Page<NotificationResponse> getMyNotifications(String email, Pageable pageable) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
         return notificationRepository
                 .findByUser_IdOrderByCreatedAtDesc(user.getId(), pageable)
                 .map(this::toResponse);
@@ -39,7 +40,7 @@ public class NotificationService {
 
     // Xem danh sách thông báo chưa đọc
     public List<NotificationResponse> getUnreadNotifications(String email) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
         return notificationRepository
                 .findByUser_IdAndIsReadFalseOrderByCreatedAtDesc(user.getId())
                 .stream().map(this::toResponse).collect(Collectors.toList());
@@ -47,7 +48,7 @@ public class NotificationService {
 
     // Đếm số thông báo chưa đọc — dùng cho badge
     public UnreadCountResponse getUnreadCount(String email) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
         long count = notificationRepository.countByUser_IdAndIsReadFalse(user.getId());
         return UnreadCountResponse.builder().unreadCount(count).build();
     }
@@ -55,7 +56,7 @@ public class NotificationService {
     // Đánh dấu 1 thông báo đã đọc
     @Transactional
     public void markAsRead(String email, Integer notificationId) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
 
         // FIX: Phân biệt 404 vs không thuộc quyền
         // markAsRead() trả về số dòng update — 0 nghĩa là không tồn tại
@@ -75,14 +76,14 @@ public class NotificationService {
     // Đánh dấu tất cả thông báo đã đọc
     @Transactional
     public void markAllAsRead(String email) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
         notificationRepository.markAllAsRead(user.getId());
     }
 
     // Xóa 1 thông báo của chính mình
     @Transactional
     public void deleteNotification(String email, Integer notificationId) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
 
         // FIX: Phân biệt 404 vs 403
         if (!notificationRepository.existsById(notificationId)) {
@@ -107,7 +108,7 @@ public class NotificationService {
     @Transactional
     public NotificationResponse sendNotification(String senderEmail,
                                                   NotificationCreateRequest request) {
-        User sender = getUserByEmail(senderEmail);
+        User sender = userService.getUserByEmail(senderEmail);
         User receiver = getUserById(request.getUserId());
 
         Notification notification = Notification.builder()
@@ -146,11 +147,7 @@ public class NotificationService {
     // HELPER METHODS
     // ================================================================
 
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
+
 
     private User getUserById(Integer id) {
         return userRepository.findById(id)

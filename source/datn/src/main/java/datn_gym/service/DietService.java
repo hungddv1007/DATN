@@ -23,10 +23,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DietService {
 
-        private final DietRepository dietRepository;
-        private final UserRepository userRepository;
-        private final MembershipRepository membershipRepository;
-        private final PtScheduleRepository ptScheduleRepository;
+    private final DietRepository dietRepository;
+    private final UserRepository userRepository;
+    private final UserService userService;
+    private final MembershipRepository membershipRepository;
+    private final PtScheduleRepository ptScheduleRepository;
 
         // Các giá trị dayType hợp lệ
         private static final String TRAINING_DAY = "TRAINING_DAY";
@@ -40,7 +41,7 @@ public class DietService {
 
         /** PT xem tất cả diet đã tạo cho 1 member */
         public List<DietResponse> getDietsByMember(String ptEmail, Integer memberId) {
-                User pt = getUserByEmail(ptEmail);
+                User pt = userService.getUserByEmail(ptEmail);
                 validatePtCanManageDiet(pt.getId(), memberId);
                 return dietRepository.findByPt_IdAndMember_IdOrderByCreatedAtDesc(pt.getId(), memberId)
                                 .stream().map(this::toResponse).collect(Collectors.toList());
@@ -48,7 +49,7 @@ public class DietService {
 
         /** PT xem mẫu TRAINING_DAY hoặc REST_DAY của 1 member */
         public DietResponse getDietTemplate(String ptEmail, Integer memberId, String dayType) {
-                User pt = getUserByEmail(ptEmail);
+                User pt = userService.getUserByEmail(ptEmail);
                 validatePtCanManageDiet(pt.getId(), memberId);
                 validateDayType(dayType);
 
@@ -62,7 +63,7 @@ public class DietService {
         /** PT tạo mẫu thực đơn mới (TRAINING_DAY / REST_DAY / SPECIFIC_DATE) */
         @Transactional
         public DietResponse createDiet(String ptEmail, DietCreateRequest request) {
-                User pt = getUserByEmail(ptEmail);
+                User pt = userService.getUserByEmail(ptEmail);
                 validatePtCanManageDiet(pt.getId(), request.getMemberId());
                 validateDayType(request.getDayType());
                 validateAtLeastOneMeal(request.getBreakfast(), request.getSnackMorning(),
@@ -116,7 +117,7 @@ public class DietService {
         /** PT sửa thực đơn (cả mẫu lẫn SPECIFIC_DATE) */
         @Transactional
         public DietResponse updateDiet(String ptEmail, Integer dietId, DietUpdateRequest request) {
-                User pt = getUserByEmail(ptEmail);
+                User pt = userService.getUserByEmail(ptEmail);
 
                 Diet diet = dietRepository.findById(dietId)
                                 .orElseThrow(() -> new ResponseStatusException(
@@ -148,7 +149,7 @@ public class DietService {
         /** PT xóa thực đơn */
         @Transactional
         public void deleteDiet(String ptEmail, Integer dietId) {
-                User pt = getUserByEmail(ptEmail);
+                User pt = userService.getUserByEmail(ptEmail);
 
                 Diet diet = dietRepository.findById(dietId)
                                 .orElseThrow(() -> new ResponseStatusException(
@@ -168,7 +169,7 @@ public class DietService {
 
         /** Member xem toàn bộ thực đơn (mẫu + specific) */
         public List<DietResponse> getMyDiets(String memberEmail) {
-                User member = getUserByEmail(memberEmail);
+                User member = userService.getUserByEmail(memberEmail);
                 return dietRepository.findByMember_IdOrderByCreatedAtDesc(member.getId())
                                 .stream().map(this::toResponse).collect(Collectors.toList());
         }
@@ -182,7 +183,7 @@ public class DietService {
          *      - Không có → Load mẫu REST_DAY
          */
         public DietResponse getMyDietForDate(String memberEmail, LocalDate date) {
-                User member = getUserByEmail(memberEmail);
+                User member = userService.getUserByEmail(memberEmail);
 
                 // Bước 1: Ưu tiên SPECIFIC_DATE
                 Optional<Diet> specificDiet = dietRepository
@@ -216,7 +217,7 @@ public class DietService {
          */
         public List<DietResponse> getMyDietWeekView(String memberEmail,
                         LocalDate fromDate, LocalDate toDate) {
-                User member = getUserByEmail(memberEmail);
+                User member = userService.getUserByEmail(memberEmail);
 
                 if (fromDate.isAfter(toDate)) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -316,11 +317,7 @@ public class DietService {
                 return s == null || s.isBlank();
         }
 
-        private User getUserByEmail(String email) {
-                return userRepository.findByEmail(email)
-                                .orElseThrow(() -> new ResponseStatusException(
-                                                HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-        }
+
 
         private User getUserById(Integer id) {
                 return userRepository.findById(id)

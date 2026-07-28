@@ -23,6 +23,7 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
     private final MembershipRepository membershipRepository;
     private final PtProfileService ptProfileService; // Gọi recalculateRating sau mỗi thay đổi
 
@@ -45,7 +46,7 @@ public class ReviewService {
     // MEMBER: Xem đánh giá mình đã gửi
     // ----------------------------------------------------------------
     public List<ReviewResponse> getMyReviews(String memberEmail) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         return reviewRepository.findByMember_IdOrderByCreatedAtDesc(member.getId())
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
@@ -55,7 +56,7 @@ public class ReviewService {
     // ----------------------------------------------------------------
     @Transactional
     public ReviewResponse createReview(String memberEmail, ReviewRequest request) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         User pt = getPtById(request.getPtId());
 
         // Kiểm tra HV có membership ACTIVE với PT này không
@@ -90,13 +91,7 @@ public class ReviewService {
     @Transactional
     public ReviewResponse updateReview(String memberEmail, Integer reviewId,
                                        ReviewUpdateRequest request) {
-        User member = getUserByEmail(memberEmail);
-
-        // FIX Lỗi 2: Phân biệt 404 vs 403
-        if (!reviewRepository.existsById(reviewId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Không tìm thấy đánh giá");
-        }
+        User member = userService.getUserByEmail(memberEmail);
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -123,13 +118,7 @@ public class ReviewService {
     // ----------------------------------------------------------------
     @Transactional
     public void deleteReview(String memberEmail, Integer reviewId) {
-        User member = getUserByEmail(memberEmail);
-
-        // FIX Lỗi 2: Phân biệt 404 vs 403
-        if (!reviewRepository.existsById(reviewId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Không tìm thấy đánh giá");
-        }
+        User member = userService.getUserByEmail(memberEmail);
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -162,14 +151,7 @@ public class ReviewService {
         }
     }
 
-    // ----------------------------------------------------------------
-    // HELPER: Lấy User theo email
-    // ----------------------------------------------------------------
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
+
 
     // ----------------------------------------------------------------
     // HELPER: Lấy PT theo ID, kiểm tra đúng role PT

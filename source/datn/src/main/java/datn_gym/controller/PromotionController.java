@@ -42,6 +42,6 @@ public class PromotionController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePromotion(@PathVariable Integer id) {
         promotionService.deletePromotion(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

@@ -2,6 +2,7 @@ package datn_gym.controller;
 
 import datn_gym.dto.request.CreateScheduleRequest;
 import datn_gym.dto.request.UpdateScheduleRequest;
+import datn_gym.dto.response.MessageResponse;
 import datn_gym.dto.response.ScheduleSlotResponse;
 import datn_gym.service.PtScheduleService;
 import jakarta.validation.Valid;
@@ -57,13 +58,13 @@ public class PtScheduleController {
     // DELETE /api/pt/schedules/{id}?deleteAll=false&notify=false — Xóa buổi tập
     @DeleteMapping("/api/pt/schedules/{id}")
     @PreAuthorize("hasRole('PT')")
-    public ResponseEntity<Map<String, String>> deleteSchedule(
+    public ResponseEntity<MessageResponse> deleteSchedule(
             Authentication auth,
             @PathVariable Integer id,
             @RequestParam(defaultValue = "false") boolean deleteAll,
             @RequestParam(defaultValue = "false") boolean notify) {
         ptScheduleService.deleteSchedule(auth.getName(), id, deleteAll, notify);
-        return ResponseEntity.ok(Map.of("message", "Đã xóa lịch tập thành công"));
+        return ResponseEntity.ok(new MessageResponse("Đã xóa lịch tập thành công"));
     }
 
     // ================================================================

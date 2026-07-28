@@ -223,7 +223,8 @@ INSERT INTO packages (name, daily_price, description, has_pt, can_choose_pt, has
 INSERT INTO package_discounts (package_id, min_days, discount_percent) VALUES 
 (NULL, 90, 5),
 (NULL, 180, 10),
-(NULL, 365, 15);
+(NULL, 365, 15),
+(NULL, 730, 20);
 
 -- 6. Insert Promotions
 INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('WELCOME10', 10, NULL, '2026-01-01', '2026-12-31', 500, 29, 1);

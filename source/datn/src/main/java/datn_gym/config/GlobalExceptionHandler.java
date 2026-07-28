@@ -3,6 +3,7 @@ package datn_gym.config;
 import datn_gym.dto.response.MessageResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -10,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,15 +40,28 @@ public class GlobalExceptionHandler {
                 .body(new MessageResponse(ex.getMessage()));
     }
 
-    // 4. Lỗi Đăng ký: Trùng email, Mật khẩu không khớp (Từ IllegalArgumentException trong Service)
+    // 4. Lỗi nghiệp vụ: Trùng email, OTP sai, v.v.
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<MessageResponse> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new MessageResponse(ex.getMessage()));
     }
 
-    // 5. Lỗi Validation từ DTO (@NotBlank, @Email, @Pattern...)
-    // Trả về danh sách các lỗi để Frontend map vào từng ô input tương ứng
+    // 5. Lỗi từ ResponseStatusException (dùng trong Service layer)
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<MessageResponse> handleResponseStatus(ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(new MessageResponse(ex.getReason() != null ? ex.getReason() : ex.getMessage()));
+    }
+
+    // 6. Lỗi phân quyền: @PreAuthorize thất bại
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<MessageResponse> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new MessageResponse("Bạn không có quyền thực hiện thao tác này!"));
+    }
+
+    // 7. Lỗi Validation từ DTO (@NotBlank, @Email, @Pattern...)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
@@ -58,10 +73,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
     }
 
-    // 6. Các lỗi hệ thống không lường trước được (Internal Server Error)
+    // 8. Các lỗi hệ thống không lường trước được (Internal Server Error)
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<MessageResponse> handleRuntime(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new MessageResponse("Lỗi hệ thống: " + ex.getMessage()));
     }
-}
+}

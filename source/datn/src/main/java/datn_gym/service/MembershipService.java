@@ -27,6 +27,7 @@ public class MembershipService {
     private final MembershipRepository membershipRepository;
     private final GymPackageRepository gymPackageRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
     private final PromotionRepository promotionRepository;
     private final TransactionRepository transactionRepository;
     private final PackageDiscountRepository discountRepository;
@@ -37,7 +38,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse registerPackage(String memberEmail, MembershipRequest request) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
 
         // Kiểm tra đã có gói ACTIVE chưa
         membershipRepository.findByUser_IdAndStatus(member.getId(), "ACTIVE")
@@ -89,7 +90,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse renewMembership(String memberEmail, RenewRequest request) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         GymPackage gymPackage = membership.getGymPackage();
 
@@ -117,7 +118,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse upgradeMembership(String memberEmail, UpgradeRequest request) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         GymPackage oldPackage = membership.getGymPackage();
         GymPackage newPackage = getActivePackage(request.getNewPackageId());
@@ -175,7 +176,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse pauseMembership(String memberEmail) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         GymPackage gymPackage = membership.getGymPackage();
 
@@ -201,7 +202,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse resumeMembership(String memberEmail) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = membershipRepository.findByUser_IdAndStatus(member.getId(), "PAUSED")
                 .orElseThrow(() -> new IllegalArgumentException("Bạn không có gói đang bảo lưu!"));
 
@@ -227,7 +228,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse cancelMembership(String memberEmail) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = membershipRepository.findByUser_IdAndStatusIn(
                 member.getId(), List.of("ACTIVE", "PAUSED"))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói tập để hủy!"));
@@ -243,7 +244,7 @@ public class MembershipService {
     // PREVIEW ENDPOINTS (xem trước giá)
     // ================================================================
     public PricePreviewResponse previewRenew(String memberEmail, int days) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         GymPackage pkg = membership.getGymPackage();
 
@@ -269,7 +270,7 @@ public class MembershipService {
     }
 
     public PricePreviewResponse previewUpgrade(String memberEmail, int newPackageId, Integer extraDays) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         GymPackage oldPkg = membership.getGymPackage();
         GymPackage newPkg = getActivePackage(newPackageId);
@@ -305,7 +306,7 @@ public class MembershipService {
     // XEM GÓI HIỆN TẠI + LỊCH SỬ
     // ================================================================
     public MembershipResponse getMyCurrentMembership(String email) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
         Membership membership = membershipRepository.findByUser_IdAndStatusIn(
                 user.getId(), List.of("ACTIVE", "PAUSED"))
                 .orElseThrow(() -> new ResponseStatusException(
@@ -314,7 +315,7 @@ public class MembershipService {
     }
 
     public List<MembershipResponse> getMyMembershipHistory(String email) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
         return membershipRepository.findByUser_IdOrderByCreatedAtDesc(user.getId())
                 .stream()
                 .map(m -> toResponse(m, getLatestTransaction(m.getId())))
@@ -324,11 +325,7 @@ public class MembershipService {
     // ================================================================
     // HELPERS
     // ================================================================
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
+
 
     private GymPackage getActivePackage(Integer packageId) {
         GymPackage pkg = gymPackageRepository.findById(packageId)

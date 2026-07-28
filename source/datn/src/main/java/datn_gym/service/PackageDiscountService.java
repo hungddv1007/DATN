@@ -1,5 +1,6 @@
 package datn_gym.service;
 
+import datn_gym.dto.response.PackageDiscountResponse;
 import datn_gym.entity.GymPackage;
 import datn_gym.entity.PackageDiscount;
 import datn_gym.repository.GymPackageRepository;
@@ -10,9 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,13 +21,13 @@ public class PackageDiscountService {
     private final PackageDiscountRepository discountRepository;
     private final GymPackageRepository packageRepository;
 
-    public List<Map<String, Object>> getAll() {
+    public List<PackageDiscountResponse> getAll() {
         return discountRepository.findAllByOrderByMinDaysAsc()
-                .stream().map(this::toMap).collect(Collectors.toList());
+                .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Transactional
-    public Map<String, Object> create(Integer packageId, int minDays, int discountPercent) {
+    public PackageDiscountResponse create(Integer packageId, int minDays, int discountPercent) {
         validate(minDays, discountPercent);
 
         PackageDiscount discount = PackageDiscount.builder()
@@ -42,11 +41,11 @@ public class PackageDiscountService {
             discount.setGymPackage(pkg);
         }
 
-        return toMap(discountRepository.save(discount));
+        return toResponse(discountRepository.save(discount));
     }
 
     @Transactional
-    public Map<String, Object> update(Integer id, Integer packageId, int minDays, int discountPercent) {
+    public PackageDiscountResponse update(Integer id, Integer packageId, int minDays, int discountPercent) {
         validate(minDays, discountPercent);
 
         PackageDiscount discount = discountRepository.findById(id)
@@ -63,7 +62,7 @@ public class PackageDiscountService {
             discount.setGymPackage(null);
         }
 
-        return toMap(discountRepository.save(discount));
+        return toResponse(discountRepository.save(discount));
     }
 
     @Transactional
@@ -80,13 +79,13 @@ public class PackageDiscountService {
             throw new IllegalArgumentException("% giảm giá phải từ 1 đến 100");
     }
 
-    private Map<String, Object> toMap(PackageDiscount d) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("id", d.getId());
-        map.put("packageId", d.getGymPackage() != null ? d.getGymPackage().getId() : null);
-        map.put("packageName", d.getGymPackage() != null ? d.getGymPackage().getName() : "Tất cả gói");
-        map.put("minDays", d.getMinDays());
-        map.put("discountPercent", d.getDiscountPercent());
-        return map;
+    private PackageDiscountResponse toResponse(PackageDiscount d) {
+        return PackageDiscountResponse.builder()
+                .id(d.getId())
+                .packageId(d.getGymPackage() != null ? d.getGymPackage().getId() : null)
+                .packageName(d.getGymPackage() != null ? d.getGymPackage().getName() : "Tất cả gói")
+                .minDays(d.getMinDays())
+                .discountPercent(d.getDiscountPercent())
+                .build();
     }
 }

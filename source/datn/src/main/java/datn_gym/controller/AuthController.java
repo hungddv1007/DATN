@@ -1,16 +1,21 @@
 package datn_gym.controller;
 
+import datn_gym.dto.request.ForgotPasswordRequest;
 import datn_gym.dto.request.LoginRequest;
 import datn_gym.dto.request.RegisterRequest;
+import datn_gym.dto.request.ResetPasswordRequest;
 import datn_gym.dto.request.SendOtpRequest;
 import datn_gym.dto.response.JwtResponse;
 import datn_gym.dto.response.MessageResponse;
 import datn_gym.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -19,13 +24,13 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @org.springframework.beans.factory.annotation.Value("${app.google.client-id}")
+    @Value("${app.google.client-id}")
     private String googleClientId;
 
     // GET /api/auth/google/client-id
     @GetMapping("/google/client-id")
-    public ResponseEntity<java.util.Map<String, String>> getGoogleClientId() {
-        return ResponseEntity.ok(java.util.Map.of("clientId", googleClientId));
+    public ResponseEntity<Map<String, String>> getGoogleClientId() {
+        return ResponseEntity.ok(Map.of("clientId", googleClientId));
     }
 
     // POST /api/auth/login
@@ -51,7 +56,7 @@ public class AuthController {
 
     // POST /api/auth/google
     @PostMapping("/google")
-    public ResponseEntity<JwtResponse> loginWithGoogle(@RequestBody java.util.Map<String, String> body) {
+    public ResponseEntity<JwtResponse> loginWithGoogle(@RequestBody Map<String, String> body) {
         String idToken = body.get("idToken");
         if (idToken == null || idToken.isBlank()) {
             throw new IllegalArgumentException("Token Google không được để trống!");
@@ -65,4 +70,20 @@ public class AuthController {
     public ResponseEntity<MessageResponse> test() {
         return ResponseEntity.ok(new MessageResponse("GymPro API is running!"));
     }
-}
+
+    // POST /api/auth/forgot-password — Gửi OTP đặt lại mật khẩu
+    @PostMapping("/forgot-password")
+    public ResponseEntity<MessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        MessageResponse response = authService.forgotPassword(request.getEmail().trim());
+        return ResponseEntity.ok(response);
+    }
+
+    // POST /api/auth/reset-password — Xác thực OTP + Đổi mật khẩu
+    @PostMapping("/reset-password")
+    public ResponseEntity<MessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        MessageResponse response = authService.resetPassword(
+                request.getEmail(), request.getOtp(),
+                request.getNewPassword(), request.getConfirmPassword());
+        return ResponseEntity.ok(response);
+    }
+}

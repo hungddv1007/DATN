@@ -4,6 +4,7 @@ import PtLayout from '../../components/layout/PtLayout';
 import ptScheduleService from '../../services/ptScheduleService';
 import ptDashboardService from '../../services/ptDashboardService';
 import { ChevronLeft, ChevronRight, Plus, X, Repeat, Bell, Trash2, Edit3, Calendar } from 'lucide-react';
+import TimePickerWheel from '../../components/common/TimePickerWheel';
 import './PtSchedulePage.css';
 
 const DAY_LABELS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
@@ -438,23 +439,17 @@ const PtSchedulePage = () => {
                 {/* Giờ */}
                 <div className="pts-form-grid2">
                   <div className="pts-form-group">
-                    <label className="pts-form-label">Giờ bắt đầu</label>
-                    <input
-                      type="time"
-                      className="pts-form-control"
+                    <TimePickerWheel
+                      label="Giờ bắt đầu"
                       value={formStartTime}
-                      onChange={(e) => setFormStartTime(e.target.value)}
-                      required
+                      onChange={(val) => setFormStartTime(val)}
                     />
                   </div>
                   <div className="pts-form-group">
-                    <label className="pts-form-label">Giờ kết thúc</label>
-                    <input
-                      type="time"
-                      className="pts-form-control"
+                    <TimePickerWheel
+                      label="Giờ kết thúc"
                       value={formEndTime}
-                      onChange={(e) => setFormEndTime(e.target.value)}
-                      required
+                      onChange={(val) => setFormEndTime(val)}
                     />
                   </div>
                 </div>

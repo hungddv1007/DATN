@@ -30,6 +30,7 @@ public class PtScheduleService {
 
     private final PtScheduleRepository ptScheduleRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
     private final MembershipRepository membershipRepository;
     private final NotificationService notificationService;
 
@@ -40,7 +41,7 @@ public class PtScheduleService {
     // PT: Lấy lịch theo tuần
     // ================================================================
     public List<ScheduleSlotResponse> getWeekSchedules(String ptEmail, LocalDate weekStart) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
         LocalDate weekEnd = weekStart.plusDays(6);
         return ptScheduleRepository
                 .findByPtIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
@@ -53,7 +54,7 @@ public class PtScheduleService {
     // ================================================================
     @Transactional
     public List<ScheduleSlotResponse> createSchedule(String ptEmail, CreateScheduleRequest request) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
         User member = userRepository.findById(request.getMemberId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy học viên"));
 
@@ -118,7 +119,7 @@ public class PtScheduleService {
     // ================================================================
     @Transactional
     public ScheduleSlotResponse updateSchedule(String ptEmail, Integer scheduleId, UpdateScheduleRequest request) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
         PtSchedule schedule = ptScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy buổi tập"));
 
@@ -160,7 +161,7 @@ public class PtScheduleService {
     // ================================================================
     @Transactional
     public void deleteSchedule(String ptEmail, Integer scheduleId, boolean deleteAll, boolean notify) {
-        User pt = getUserByEmail(ptEmail);
+        User pt = userService.getUserByEmail(ptEmail);
         PtSchedule schedule = ptScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy buổi tập"));
 
@@ -195,7 +196,7 @@ public class PtScheduleService {
     // MEMBER: Xem lịch theo tuần
     // ================================================================
     public List<ScheduleSlotResponse> getMemberWeekSchedules(String memberEmail, LocalDate weekStart) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         LocalDate weekEnd = weekStart.plusDays(6);
         return ptScheduleRepository
                 .findByMemberIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
@@ -263,8 +264,4 @@ public class PtScheduleService {
                 .build();
     }
 
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
 }

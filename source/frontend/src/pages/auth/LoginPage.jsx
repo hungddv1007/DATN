@@ -146,6 +146,12 @@ const LoginPage = () => {
               />
             </div>
 
+            <div style={{ textAlign: 'right', marginTop: '-8px' }}>
+              <Link to="/forgot-password" style={{ color: '#f97316', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}>
+                Quên mật khẩu?
+              </Link>
+            </div>
+
             <button type="submit" className="btn-auth-submit" disabled={loading}>
               {loading ? 'Đang đăng nhập...' : 'ĐĂNG NHẬP'}
             </button>

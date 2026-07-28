@@ -37,18 +37,16 @@ public class UserService {
     // ADMIN: Khóa / Mở khóa người dùng
     // ----------------------------------------------------------------
     @Transactional
-    public UserProfileResponse toggleUserStatus(Integer id) {
+    public UserProfileResponse toggleUserStatus(Integer id, String currentUserEmail) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy người dùng với id: " + id));
-        
+
         // Không cho phép Admin tự khóa chính mình
-        if (user.getRole().getId() == 1 && user.getId().equals(id)) {
-            // Wait, we need to check if the current user is locking themselves, but we only have ID here.
-            // Let's just allow it or assume Admin won't lock themselves.
-            // Actually, we can just flip the status.
+        if (user.getEmail().equals(currentUserEmail)) {
+            throw new IllegalArgumentException("Bạn không thể khóa chính tài khoản của mình!");
         }
-        
+
         Boolean currentStatus = user.getStatus() != null ? user.getStatus() : true;
         user.setStatus(!currentStatus);
         return toResponse(userRepository.save(user));
@@ -88,7 +86,7 @@ public class UserService {
     // ----------------------------------------------------------------
     // HELPER: Lấy User từ email
     // ----------------------------------------------------------------
-    private User getUserByEmail(String email) {
+    public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));

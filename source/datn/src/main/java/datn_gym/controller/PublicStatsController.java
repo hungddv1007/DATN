@@ -20,12 +20,9 @@ public class PublicStatsController {
 
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Long>> getPublicStats() {
-        long totalMembers = userRepository.findAll().stream()
-                .filter(u -> "MEMBER".equals(u.getRole().getName()) && Boolean.TRUE.equals(u.getStatus()))
-                .count();
-        long totalPTs = userRepository.findAll().stream()
-                .filter(u -> "PT".equals(u.getRole().getName()) && Boolean.TRUE.equals(u.getStatus()))
-                .count();
+        // Dùng COUNT query trực tiếp trên DB thay vì load toàn bộ bảng Users
+        long totalMembers = userRepository.countByRole_NameAndStatus("MEMBER", true);
+        long totalPTs = userRepository.countByRole_NameAndStatus("PT", true);
         long totalPackages = gymPackageRepository.count();
 
         return ResponseEntity.ok(Map.of(

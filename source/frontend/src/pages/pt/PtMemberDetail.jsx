@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import PtLayout from '../../components/layout/PtLayout';
 import api from '../../services/api';
-import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus } from 'lucide-react';
+import { analyzeNutrition } from '../../services/nutritionAIService';
+import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus, Sparkles } from 'lucide-react';
 import '../admin/AdminManagement.css';
 
 const TABS = [
@@ -37,6 +38,11 @@ const PtMemberDetail = () => {
   const [dietForm, setDietForm] = useState({ ...emptyDiet });
   const [dietLoading, setDietLoading] = useState(false);
   const [dietSaving, setDietSaving] = useState(false);
+
+  // AI Analysis state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [analysisError, setAnalysisError] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -78,6 +84,8 @@ const PtMemberDetail = () => {
   };
 
   const startEditDiet = (type) => {
+    setAnalysisResult(null);
+    setAnalysisError(null);
     const existing = type === 'TRAINING_DAY' ? trainingDiet : restDiet;
     if (existing) {
       setDietForm({
@@ -105,6 +113,54 @@ const PtMemberDetail = () => {
   const cancelEditDiet = () => {
     setEditingDiet(null);
     setDietForm({ ...emptyDiet });
+    setAnalysisResult(null);
+    setAnalysisError(null);
+  };
+
+  const handleAIAnalyze = async () => {
+    const isRestDay = editingDiet === 'REST_DAY';
+    const mealsData = {
+      breakfastMeal: dietForm.breakfast || '',
+      preworkoutMeal: isRestDay ? '' : (dietForm.snackMorning || ''),
+      lunchMeal: dietForm.lunch || '',
+      postworkoutMeal: isRestDay ? '' : (dietForm.snackAfternoon || ''),
+      dinnerMeal: dietForm.dinner || '',
+      dayType: editingDiet || 'TRAINING_DAY',
+    };
+
+    const hasAnyMeal = [
+      mealsData.breakfastMeal,
+      mealsData.preworkoutMeal,
+      mealsData.lunchMeal,
+      mealsData.postworkoutMeal,
+      mealsData.dinnerMeal
+    ].some(v => v && v.trim());
+
+    if (!hasAnyMeal) {
+      setAnalysisError('Vui lòng nhập nội dung ít nhất một bữa ăn trước khi phân tích AI');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    setAnalysisResult(null);
+
+    try {
+      const result = await analyzeNutrition(mealsData);
+      setAnalysisResult(result);
+      setDietForm(prev => ({
+        ...prev,
+        calories: result.totalCalories || 0,
+        proteinG: result.totalProtein || 0,
+        carbsG: result.totalCarbs || 0,
+        fatG: result.totalFat || 0,
+        note: result.aiNote ? result.aiNote : prev.note,
+      }));
+    } catch (err) {
+      setAnalysisError(err.response?.data?.message || err.message || 'Có lỗi xảy ra khi phân tích. Vui lòng thử lại.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleSaveDiet = async (type) => {
@@ -284,6 +340,83 @@ const PtMemberDetail = () => {
               {renderMealInput('Bữa trưa', '☀️', 'lunch')}
               {type === 'TRAINING_DAY' && renderMealInput('Bữa phụ chiều / Post-workout', '💪', 'snackAfternoon')}
               {renderMealInput('Bữa tối', '🌙', 'dinner')}
+
+              {/* Button AI */}
+              <button
+                type="button"
+                onClick={handleAIAnalyze}
+                disabled={isAnalyzing}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  background: isAnalyzing ? '#64748b' : 'linear-gradient(135deg, #8b5cf6, #3b82f6)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: isAnalyzing ? 'not-allowed' : 'pointer',
+                  margin: '14px 0 10px 0',
+                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {isAnalyzing ? (
+                  <>⏳ Đang phân tích...</>
+                ) : (
+                  <>✨ Phân tích dinh dưỡng bằng AI <span style={{fontSize:'11px', background:'rgba(255,255,255,0.2)', padding:'2px 8px', borderRadius:'99px'}}>Gemini</span></>
+                )}
+              </button>
+
+              {/* Error AI */}
+              {analysisError && (
+                <div style={{
+                  background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: '8px', padding: '10px 14px',
+                  fontSize: '13px', color: '#fca5a5', marginBottom: '12px'
+                }}>
+                  ⚠️ {analysisError}
+                </div>
+              )}
+
+              {/* Panel kết quả chi tiết từ AI */}
+              {analysisResult && (
+                <div style={{
+                  background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)',
+                  borderRadius: '10px', padding: '14px', marginBottom: '14px'
+                }}>
+                  <div style={{fontSize:'13px', fontWeight:'700', color:'#c4b5fd', marginBottom:'10px', display:'flex', alignItems:'center', gap:'6px'}}>
+                    ✨ Kết quả phân tích từ Gemini AI
+                  </div>
+
+                  {/* Breakdown từng bữa */}
+                  {analysisResult.meals && analysisResult.meals.map((meal, idx) => (
+                    <div key={idx} style={{
+                      display:'flex', justifyContent:'space-between',
+                      padding:'6px 0', borderBottom:'1px solid rgba(255,255,255,0.06)',
+                      fontSize:'13px'
+                    }}>
+                      <span style={{color:'#ddd6fe', fontWeight:'500'}}>{meal.mealName}</span>
+                      <span style={{color:'#a78bfa', fontSize:'12px', fontWeight:'600'}}>
+                        {meal.calories} kcal · P {meal.protein}g · C {meal.carbs}g · F {meal.fat}g
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Lời khuyên từ AI */}
+                  {analysisResult.aiNote && (
+                    <div style={{
+                      marginTop:'10px', fontSize:'13px',
+                      color:'#e9d5ff', lineHeight:'1.6', background:'rgba(0,0,0,0.2)',
+                      padding:'8px 12px', borderRadius:'6px'
+                    }}>
+                      💡 {analysisResult.aiNote}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {renderMacroInputs()}
 

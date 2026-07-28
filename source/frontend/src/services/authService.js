@@ -55,6 +55,18 @@ const authService = {
   isLoggedIn: () => {
     return !!localStorage.getItem('token');
   },
+
+  // Quên mật khẩu — Gửi OTP
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  // Đặt lại mật khẩu
+  resetPassword: async (email, otp, newPassword, confirmPassword) => {
+    const response = await api.post('/auth/reset-password', { email, otp, newPassword, confirmPassword });
+    return response.data;
+  },
 };
 
 export default authService;

@@ -7,6 +7,17 @@ import ptService from '../../services/ptService';
 import { CreditCard, Calendar, RefreshCw, ChevronUp, Pause, Play, AlertTriangle, ShieldCheck, Tag } from 'lucide-react';
 import './MembershipManagePage.css';
 
+// Các mốc thời gian cố định
+const DURATION_MILESTONES = [
+  { days: 1,    label: '1 ngày' },
+  { days: 7,    label: '1 tuần' },
+  { days: 30,   label: '1 tháng' },
+  { days: 90,   label: '3 tháng' },
+  { days: 180,  label: '6 tháng' },
+  { days: 365,  label: '1 năm' },
+  { days: 730,  label: '2 năm' },
+];
+
 const MembershipManagePage = () => {
   const [membership, setMembership] = useState(null);
   const [history, setHistory] = useState([]);
@@ -378,14 +389,16 @@ const MembershipManagePage = () => {
                   {renewPreviewError && <div className="manage-alert error">{renewPreviewError}</div>}
                   
                   <div className="form-group">
-                    <label>Số ngày gia hạn thêm</label>
-                    <input 
-                      type="number" 
-                      min={membership.maxHoldTimes > 0 ? 7 : 1} // Hoặc minDays của gói
+                    <label>Chọn thời hạn gia hạn</label>
+                    <select
                       value={renewDays}
-                      onChange={(e) => setRenewDays(parseInt(e.target.value) || 0)}
+                      onChange={(e) => setRenewDays(parseInt(e.target.value))}
                       required
-                    />
+                    >
+                      {DURATION_MILESTONES.map(ms => (
+                        <option key={ms.days} value={ms.days}>{ms.label} ({ms.days} ngày)</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="form-group">
@@ -481,15 +494,18 @@ const MembershipManagePage = () => {
                   )}
 
                   <div className="form-group">
-                    <label>Gia hạn thêm số ngày (Tùy chọn)</label>
-                    <input 
-                      type="number" 
-                      min={0}
+                    <label>Gia hạn thêm (Tùy chọn)</label>
+                    <select
                       value={upgradeExtraDays}
-                      onChange={(e) => setUpgradeExtraDays(parseInt(e.target.value) || 0)}
-                    />
+                      onChange={(e) => setUpgradeExtraDays(parseInt(e.target.value))}
+                    >
+                      <option value={0}>Không gia hạn thêm (chỉ nâng cấp)</option>
+                      {DURATION_MILESTONES.map(ms => (
+                        <option key={ms.days} value={ms.days}>{ms.label} ({ms.days} ngày)</option>
+                      ))}
+                    </select>
                     <small style={{ color: '#94a3b8' }}>
-                      Nhập số ngày muốn gia hạn thêm sau khi nâng cấp (hoặc nhập 0 để chỉ nâng cấp số ngày còn lại).
+                      Chọn thời hạn muốn gia hạn thêm sau khi nâng cấp hoặc giữ "Không gia hạn" để chỉ nâng cấp số ngày còn lại.
                     </small>
                   </div>
 

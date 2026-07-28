@@ -14,6 +14,7 @@ import PtListPage from './pages/public/PtListPage';
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
 // Member Pages
 import MemberDashboard from './pages/member/MemberDashboard';
@@ -63,6 +64,7 @@ function App() {
           {/* === Auth === */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
           {/* === Profile Chung (Ai đăng nhập cũng vào được) === */}
           <Route path="/profile" element={

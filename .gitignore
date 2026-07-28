@@ -33,3 +33,8 @@ build/
 .vscode/
 docs/
 uploads/
+
+### Environment variables / secrets ###
+.env
+.env.*
+!.env.example
