@@ -35,7 +35,7 @@ public class Membership {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-    // ACTIVE | EXPIRED | PAUSED | CANCELLED
+    // PENDING | ACTIVE | EXPIRED | PAUSED | CANCELLED
     @Column(name = "status", length = 20)
     @Builder.Default
     private String status = "ACTIVE";
@@ -67,6 +67,11 @@ public class Membership {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
 
     @PrePersist
     protected void onCreate() {

@@ -2,40 +2,25 @@ package datn_gym.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import datn_gym.ai.AiClient;
 import datn_gym.dto.request.NutritionAnalysisRequest;
 import datn_gym.dto.response.NutritionAnalysisResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
-import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class GeminiService {
 
-    @Value("${gemini.api.key}")
-    private String apiKey;
-
-    @Value("${gemini.api.url}")
-    private String apiUrl;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private WebClient webClient;
-
-    @PostConstruct
-    public void init() {
-        this.webClient = WebClient.builder().build();
-    }
+    private final ObjectMapper objectMapper;
+    private final AiClient aiClient;
 
     public NutritionAnalysisResponse analyzeNutrition(NutritionAnalysisRequest request) {
         boolean isRestDay = "REST_DAY".equalsIgnoreCase(request.getDayType());
@@ -100,45 +85,8 @@ public class GeminiService {
             }
             """, dayTypeName, mealText, noteInstruction);
 
-        Map<String, Object> requestBody = Map.of(
-            "contents", List.of(
-                Map.of("parts", List.of(
-                    Map.of("text", prompt)
-                ))
-            ),
-            "generationConfig", Map.of(
-                "temperature", 0.1,
-                "maxOutputTokens", 8192,
-                "responseMimeType", "application/json"
-            )
-        );
-
-        String endpoint = apiUrl + (apiUrl.contains("?") ? "&key=" : "?key=") + apiKey;
-
         try {
-            Map<?, ?> responseMap = this.webClient.post()
-                .uri(endpoint)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
-
-            if (responseMap == null || !responseMap.containsKey("candidates")) {
-                throw new RuntimeException("Gemini API không trả về dữ liệu phù hợp");
-            }
-
-            List<?> candidates = (List<?>) responseMap.get("candidates");
-            if (candidates == null || candidates.isEmpty()) {
-                throw new RuntimeException("Gemini API trả về candidates rỗng");
-            }
-
-            Map<?, ?> firstCandidate = (Map<?, ?>) candidates.get(0);
-            Map<?, ?> content = (Map<?, ?>) firstCandidate.get("content");
-            List<?> parts = (List<?>) content.get("parts");
-            Map<?, ?> firstPart = (Map<?, ?>) parts.get(0);
-            String rawText = (String) firstPart.get("text");
-
+            String rawText = aiClient.generateJson(prompt);
             String jsonText = extractAndRepairJson(rawText);
             JsonNode rootNode = objectMapper.readTree(jsonText);
 
@@ -173,29 +121,13 @@ public class GeminiService {
                 .aiNote(aiNote)
                 .build();
 
-        } catch (ResponseStatusException e) {
-            throw e;
-        } catch (org.springframework.web.reactive.function.client.WebClientResponseException e) {
-            log.error("Lỗi HTTP từ Gemini API: Status = {}, Body = {}", e.getStatusCode(), e.getResponseBodyAsString());
-            String errorMsg = e.getMessage();
-            try {
-                JsonNode errNode = objectMapper.readTree(e.getResponseBodyAsString());
-                if (errNode.has("error") && errNode.get("error").has("message")) {
-                    errorMsg = errNode.get("error").get("message").asText();
-                }
-            } catch (Exception parseErr) {
-                // Ignore fallback to default message
-            }
-
-            if (e.getStatusCode().value() == 429) {
-                throw new RuntimeException("API Key đã vượt quá hạn ngạch sử dụng miễn phí (429 Rate Limit). Vui lòng thử lại sau ít phút hoặc tạo Key mới.");
-            } else if (e.getStatusCode().value() == 400 || e.getStatusCode().value() == 403) {
-                throw new RuntimeException("API Key hoặc đường dẫn Gemini không hợp lệ (" + e.getStatusCode() + "): " + errorMsg);
-            }
-            throw new RuntimeException("Lỗi từ Gemini API (" + e.getStatusCode() + "): " + errorMsg);
+        } catch (ResponseStatusException ex) {
+            throw ex;
         } catch (Exception e) {
-            log.error("Lỗi khi phân tích dinh dưỡng Gemini AI: ", e);
-            throw new RuntimeException("AI trả về dữ liệu không hợp lệ hoặc gặp lỗi kết nối: " + e.getMessage());
+            log.warn("AI trả về JSON dinh dưỡng không hợp lệ", e);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.");
         }
     }
 

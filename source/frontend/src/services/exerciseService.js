@@ -3,7 +3,7 @@ import api from './api';
 const exerciseService = {
   // Lấy danh sách (Admin)
   getAllExercises: async () => {
-    const response = await api.get('/admin/exercises');
+    const response = await api.get('/exercises');
     return response.data;
   },
 

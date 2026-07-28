@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Clock, User } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import blogService from '../../services/blogService';
+import { resolveFileUrl } from '../../utils/fileUrl';
 import './BlogPage.css';
 
 const BlogListPage = () => {
@@ -47,7 +48,7 @@ const BlogListPage = () => {
                 <div className="blog-thumb">
                   {blog.thumbnail ? (
                     <img 
-                      src={blog.thumbnail.startsWith('http') ? blog.thumbnail : `http://localhost:8080/api/public/uploads/${blog.thumbnail}`} 
+                      src={resolveFileUrl(blog.thumbnail)}
                       alt={blog.title} 
                     />
                   ) : (

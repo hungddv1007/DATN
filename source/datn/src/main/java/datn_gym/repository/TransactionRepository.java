@@ -9,9 +9,14 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Integer> {
-       List<Transaction> findByMembership_Id(Integer membershipId);
+       Optional<Transaction> findTopByMembership_IdOrderByCreatedAtDescIdDesc(Integer membershipId);
+
+       List<Transaction> findByMembership_User_IdOrderByCreatedAtDescIdDesc(Integer userId);
+
+       boolean existsByMembership_IdAndStatus(Integer membershipId, String status);
 
        List<Transaction> findByStatus(String status);
 

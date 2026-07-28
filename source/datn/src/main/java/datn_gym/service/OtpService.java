@@ -4,6 +4,7 @@ import datn_gym.entity.OtpEntity;
 import datn_gym.repository.OtpRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -23,6 +24,7 @@ public class OtpService {
         emailService.sendOtpEmail(email, otp);
     }
 
+    @Transactional
     public boolean validateOtp(String email, String otp) {
         Optional<OtpEntity> otpOpt = otpRepository.findTopByEmailOrderByExpirationTimeDesc(email);
         
@@ -45,7 +47,12 @@ public class OtpService {
             otpRepository.save(otpEntity);
             return true;
         }
-        
+
+        otpEntity.setFailedAttempts(otpEntity.getFailedAttempts() + 1);
+        if (otpEntity.getFailedAttempts() >= 5) {
+            otpEntity.setUsed(true);
+        }
+        otpRepository.save(otpEntity);
         return false;
     }
 

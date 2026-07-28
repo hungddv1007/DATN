@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import PtLayout from '../../components/layout/PtLayout';
 import api from '../../services/api';
 import { analyzeNutrition } from '../../services/nutritionAIService';
-import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus, Sparkles } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus } from 'lucide-react';
 import '../admin/AdminManagement.css';
 
 const TABS = [

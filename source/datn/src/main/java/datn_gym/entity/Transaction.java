@@ -24,6 +24,28 @@ public class Transaction {
     @JoinColumn(name = "promotion_id")
     private Promotion promotion;
 
+    /**
+     * Snapshot của thay đổi sẽ được áp dụng sau khi giao dịch được duyệt.
+     * Không cập nhật Membership khi giao dịch vẫn còn PENDING.
+     */
+    @Column(name = "requested_duration_days")
+    private Integer requestedDurationDays;
+
+    /**
+     * true với dữ liệu legacy đã sửa membership trước khi được duyệt.
+     */
+    @Column(name = "operation_applied", nullable = false)
+    @Builder.Default
+    private Boolean operationApplied = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requested_package_id")
+    private GymPackage requestedPackage;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requested_pt_id")
+    private User requestedPt;
+
     @Column(name = "amount", nullable = false, precision = 12, scale = 0)
     private BigDecimal amount;
 
@@ -50,6 +72,11 @@ public class Transaction {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
 
     @PrePersist
     protected void onCreate() { 

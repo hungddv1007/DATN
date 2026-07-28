@@ -1,7 +1,6 @@
 IF DB_ID('GymProDB') IS NOT NULL
 BEGIN
-    ALTER DATABASE GymProDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE GymProDB;
+    THROW 50001, 'GymProDB already exists. Use a migration script instead of recreating the database.', 1;
 END
 GO
 
@@ -114,13 +113,14 @@ CREATE TABLE memberships (
     start_date      DATE NOT NULL,
     end_date        DATE NOT NULL,
     status          NVARCHAR(20) DEFAULT 'ACTIVE'
-                    CHECK (status IN ('ACTIVE', 'EXPIRED', 'PAUSED', 'CANCELLED')),
+                    CHECK (status IN ('PENDING', 'ACTIVE', 'EXPIRED', 'PAUSED', 'CANCELLED')),
     pause_reason    NVARCHAR(255),
     duration_days   INT,
     daily_price     DECIMAL(12,0),
     hold_count      INT DEFAULT 0,
     paused_at       DATE,
     total_hold_days INT DEFAULT 0,
+    version         BIGINT NOT NULL DEFAULT 0,
     created_at      DATETIME2 DEFAULT GETDATE(),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (package_id) REFERENCES packages(id),
@@ -134,6 +134,10 @@ CREATE TABLE transactions (
     id                      INT IDENTITY(1,1) PRIMARY KEY,
     membership_id           INT NOT NULL,
     promotion_id            INT,
+    requested_duration_days INT,
+    requested_package_id    INT,
+    requested_pt_id         INT,
+    operation_applied       BIT NOT NULL DEFAULT 0,
     amount                  DECIMAL(12,0) NOT NULL,
     original_amount         DECIMAL(12,0),
     payment_method          NVARCHAR(20)
@@ -143,9 +147,12 @@ CREATE TABLE transactions (
     type                    NVARCHAR(20) DEFAULT 'NEW'
                             CHECK (type IN ('NEW', 'RENEW', 'UPGRADE')),
     confirmed_by            INT,
+    version                 BIGINT NOT NULL DEFAULT 0,
     created_at              DATETIME2 DEFAULT GETDATE(),
     FOREIGN KEY (membership_id) REFERENCES memberships(id),
     FOREIGN KEY (promotion_id) REFERENCES promotions(id),
+    FOREIGN KEY (requested_package_id) REFERENCES packages(id),
+    FOREIGN KEY (requested_pt_id) REFERENCES users(id),
     FOREIGN KEY (confirmed_by) REFERENCES users(id)
 );
 
@@ -289,6 +296,19 @@ CREATE TABLE notifications (
 );
 
 -- ============================================================
+-- 18. OTPS
+-- ============================================================
+CREATE TABLE otps (
+    id               INT IDENTITY(1,1) PRIMARY KEY,
+    email            NVARCHAR(100) NOT NULL,
+    otp              NVARCHAR(6) NOT NULL,
+    expiration_time  DATETIME2 NOT NULL,
+    created_at       DATETIME2 NOT NULL DEFAULT GETDATE(),
+    used             BIT NOT NULL DEFAULT 0,
+    failed_attempts  INT NOT NULL DEFAULT 0
+);
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 CREATE INDEX IX_users_role ON users(role_id);
@@ -300,11 +320,12 @@ CREATE INDEX IX_notifications_user ON notifications(user_id);
 CREATE INDEX IX_notifications_read ON notifications(is_read);
 CREATE INDEX IX_blogs_status ON blogs(status);
 CREATE INDEX IX_diets_member ON diets(member_id);
-CREATE INDEX IX_diets_date ON diets(date);
+CREATE INDEX IX_diets_date ON diets(diet_date);
 CREATE INDEX IX_pt_schedules_pt_date ON pt_schedules(pt_id, schedule_date, start_time);
 CREATE INDEX IX_pt_schedules_member_date ON pt_schedules(member_id, schedule_date);
 CREATE INDEX IX_pt_schedules_recurring ON pt_schedules(recurring_group_id);
 CREATE INDEX IX_attendances_member ON attendances(member_id);
+CREATE INDEX IX_otps_email_expiration ON otps(email, expiration_time DESC);
 
 GO
 

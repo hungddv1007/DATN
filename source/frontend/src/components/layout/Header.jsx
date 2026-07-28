@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import notificationService from '../../services/notificationService';
-import { Bell, CheckCheck, Trash2, X } from 'lucide-react';
+import { resolveFileUrl } from '../../utils/fileUrl';
+import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import './Header.css';
 
 const Header = () => {
@@ -193,7 +194,7 @@ const Header = () => {
               >
                 {user.avatar ? (
                   <img 
-                    src={user.avatar} 
+                    src={resolveFileUrl(user.avatar)}
                     alt="Avatar" 
                     className="header-avatar"
                   />

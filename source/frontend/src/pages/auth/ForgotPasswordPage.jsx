@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import authService from '../../services/authService';
 import { Mail, KeyRound, ShieldCheck, ArrowLeft, CheckCircle } from 'lucide-react';
@@ -13,7 +13,6 @@ const STEPS = {
 };
 
 const ForgotPasswordPage = () => {
-  const navigate = useNavigate();
   const [step, setStep] = useState(STEPS.EMAIL);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import userService from '../../services/userService';
 import fileService from '../../services/fileService';
+import { resolveFileUrl } from '../../utils/fileUrl';
 import MainLayout from '../../components/layout/MainLayout';
-import { Camera, Save, User as UserIcon } from 'lucide-react';
+import { Camera, Save } from 'lucide-react';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
@@ -159,7 +160,7 @@ const ProfilePage = () => {
             <div className="profile-sidebar">
               <div className="avatar-wrapper">
                 {formData.avatar ? (
-                  <img src={formData.avatar} alt="Avatar" className="profile-avatar" />
+                  <img src={resolveFileUrl(formData.avatar)} alt="Avatar" className="profile-avatar" />
                 ) : (
                   <div className="avatar-placeholder avatar-initial">
                     {formData.fullName?.charAt(0)?.toUpperCase() || user?.fullName?.charAt(0)?.toUpperCase() || '?'}

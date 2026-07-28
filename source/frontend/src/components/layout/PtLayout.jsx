@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, UserCircle, Calendar, Utensils, LogOut, Dumbbell, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, UserCircle, Calendar, LogOut, Dumbbell, MessageSquare } from 'lucide-react';
 import '../../pages/member/DashboardPage.css';
 
 const PtLayout = ({ children }) => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import userService from '../../services/userService';
+import { resolveFileUrl } from '../../utils/fileUrl';
 import { Lock, Unlock, ShieldAlert, CheckCircle, Search, Filter } from 'lucide-react';
 import './AdminManagement.css';
 
@@ -137,7 +138,7 @@ const UsersManagement = () => {
                         border: '2px solid #f97316'
                       }}>
                         {user.avatar ? (
-                          <img src={user.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={resolveFileUrl(user.avatar)} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           <div style={{ 
                             width: '100%', height: '100%', 

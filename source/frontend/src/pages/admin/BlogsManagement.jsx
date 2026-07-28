@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import blogService from '../../services/blogService';
+import { resolveFileUrl } from '../../utils/fileUrl';
 import fileService from '../../services/fileService';
 import { Edit, Trash2, Plus, Eye, EyeOff, Image as ImageIcon, Upload } from 'lucide-react';
 import './AdminManagement.css';
@@ -155,7 +156,7 @@ const BlogsManagement = () => {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
                     }}>
                       {blog.thumbnail ? (
-                        <img src={blog.thumbnail} alt="thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={resolveFileUrl(blog.thumbnail)} alt="thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <ImageIcon size={20} color="#94a3b8" />
                       )}
@@ -231,7 +232,7 @@ const BlogsManagement = () => {
                 </div>
                 {formData.thumbnail && (
                   <div style={{ marginTop: '10px' }}>
-                    <img src={formData.thumbnail} alt="preview" style={{ maxHeight: '100px', borderRadius: '4px', border: '1px solid #3b82f6' }} />
+                    <img src={resolveFileUrl(formData.thumbnail)} alt="preview" style={{ maxHeight: '100px', borderRadius: '4px', border: '1px solid #3b82f6' }} />
                   </div>
                 )}
               </div>

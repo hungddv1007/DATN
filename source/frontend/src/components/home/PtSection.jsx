@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SliderRaw from 'react-slick';
 import { Star } from 'lucide-react';
 import ptService from '../../services/ptService';
+import { resolveFileUrl } from '../../utils/fileUrl';
 import "slick-carousel/slick/slick.css"; 
 import "slick-carousel/slick/slick-theme.css";
 import './PtSection.css';
@@ -54,7 +55,7 @@ const PtSection = () => {
                 <div className="pt-card">
                   <div className="pt-img-wrapper">
                     {pt.avatar ? (
-                      <img src={pt.avatar.startsWith('http') ? pt.avatar : `http://localhost:8080/api/public/uploads/${pt.avatar}`} alt={pt.fullName} className="pt-img" />
+                      <img src={resolveFileUrl(pt.avatar)} alt={pt.fullName} className="pt-img" />
                     ) : (
                       <div className="pt-img pt-avatar-fallback">
                         {pt.fullName?.charAt(0)?.toUpperCase() || '?'}

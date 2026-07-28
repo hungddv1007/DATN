@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
 import packageService from '../../services/packageService';
 import ptService from '../../services/ptService';
-import { CreditCard, Calendar, RefreshCw, ChevronUp, Pause, Play, AlertTriangle, ShieldCheck, Tag } from 'lucide-react';
+import { Calendar, RefreshCw, ChevronUp, Pause, Play, AlertTriangle, ShieldCheck } from 'lucide-react';
 import './MembershipManagePage.css';
 
 // Các mốc thời gian cố định
@@ -45,8 +45,6 @@ const MembershipManagePage = () => {
   const [upgradePayMethod, setUpgradePayMethod] = useState('BANK');
   const [upgradePreview, setUpgradePreview] = useState(null);
   const [upgradePreviewError, setUpgradePreviewError] = useState('');
-
-  const navigate = useNavigate();
 
   const fetchMembershipData = async () => {
     try {
@@ -243,7 +241,13 @@ const MembershipManagePage = () => {
               <h2>Gói tập hiện tại</h2>
               {membership && (
                 <span className={`status-badge ${membership.status.toLowerCase()}`}>
-                  {membership.status === 'ACTIVE' ? 'Đang hoạt động' : membership.status === 'PAUSED' ? 'Đang bảo lưu' : 'Đã hủy'}
+                  {membership.status === 'ACTIVE'
+                    ? 'Đang hoạt động'
+                    : membership.status === 'PAUSED'
+                      ? 'Đang bảo lưu'
+                      : membership.status === 'PENDING'
+                        ? 'Chờ thanh toán'
+                        : 'Đã kết thúc'}
                 </span>
               )}
             </div>
@@ -256,6 +260,11 @@ const MembershipManagePage = () => {
                 </div>
 
                 <div className="info-list">
+                  {membership.status === 'PENDING' && (
+                    <div className="manage-alert">
+                      Gói tập chỉ được kích hoạt sau khi giao dịch được admin xác nhận.
+                    </div>
+                  )}
                   <div className="info-item">
                     <Calendar size={18} />
                     <div>

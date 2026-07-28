@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Check, X, Dumbbell, Users, Utensils, Tag, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, X, Dumbbell, Users, Utensils } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import packageService from '../../services/packageService';
 import { useAuth } from '../../context/AuthContext';

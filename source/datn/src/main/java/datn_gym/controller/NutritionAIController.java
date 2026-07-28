@@ -3,6 +3,7 @@ package datn_gym.controller;
 import datn_gym.dto.request.NutritionAnalysisRequest;
 import datn_gym.dto.response.NutritionAnalysisResponse;
 import datn_gym.service.GeminiService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,8 @@ public class NutritionAIController {
 
     @PostMapping("/analyze")
     @PreAuthorize("hasRole('PT')")
-    public ResponseEntity<NutritionAnalysisResponse> analyzeNutrition(@RequestBody NutritionAnalysisRequest request) {
+    public ResponseEntity<NutritionAnalysisResponse> analyzeNutrition(
+            @Valid @RequestBody NutritionAnalysisRequest request) {
         boolean allEmpty = isBlank(request.getBreakfastMeal())
                 && isBlank(request.getPreworkoutMeal())
                 && isBlank(request.getLunchMeal())

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import PtLayout from '../../components/layout/PtLayout';
 import ptScheduleService from '../../services/ptScheduleService';
 import ptDashboardService from '../../services/ptDashboardService';
-import { ChevronLeft, ChevronRight, Plus, X, Repeat, Bell, Trash2, Edit3, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Repeat, Bell, Trash2 } from 'lucide-react';
 import TimePickerWheel from '../../components/common/TimePickerWheel';
 import './PtSchedulePage.css';
 
@@ -68,7 +68,6 @@ const PtSchedulePage = () => {
   const [formDate, setFormDate] = useState('');
   const [formStartTime, setFormStartTime] = useState('08:00');
   const [formEndTime, setFormEndTime] = useState('09:00');
-  const [formExerciseNote, setFormExerciseNote] = useState('');
   const [formMuscleGroup, setFormMuscleGroup] = useState('Ngực');
   const [formCustomNote, setFormCustomNote] = useState('');
   const [formRecurring, setFormRecurring] = useState(false);
@@ -156,7 +155,6 @@ const PtSchedulePage = () => {
     setFormEndTime(`${pad2((parseInt(h, 10) + 1) % 24)}:${m}`);
     setFormMuscleGroup('Ngực');
     setFormCustomNote('');
-    setFormExerciseNote('');
     setFormRecurring(false);
     setFormRecurringWeeks(8);
     setFormSendNotification(false);
@@ -170,7 +168,6 @@ const PtSchedulePage = () => {
     setFormDate(schedule.scheduleDate);
     setFormStartTime(schedule.startTime);
     setFormEndTime(schedule.endTime);
-    setFormExerciseNote(schedule.exerciseNote || '');
     setFormMuscleGroup('');
     setFormCustomNote(schedule.exerciseNote || '');
     setFormRecurring(false);

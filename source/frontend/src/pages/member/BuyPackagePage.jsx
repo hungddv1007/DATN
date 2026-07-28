@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import packageService from '../../services/packageService';
 import ptService from '../../services/ptService';
 import membershipService from '../../services/membershipService';
-import { CreditCard, Banknote, CheckCircle, Info, Clock, Tag } from 'lucide-react';
+import { CreditCard, Banknote, CheckCircle, Clock, Tag } from 'lucide-react';
 import './BuyPackagePage.css';
 
 // Các mốc thời gian cố định
@@ -20,8 +20,6 @@ const DURATION_MILESTONES = [
 
 const BuyPackagePage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  
   const queryParams = new URLSearchParams(location.search);
   const pkgId = queryParams.get('pkgId');
 

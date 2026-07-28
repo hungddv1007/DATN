@@ -23,6 +23,7 @@ public class TransactionResponse {
     private BigDecimal originalAmount;
     private BigDecimal amount;
     private String paymentMethod;
+    private String type;
     private String status;
     private String confirmedByName;
     private LocalDateTime createdAt;
