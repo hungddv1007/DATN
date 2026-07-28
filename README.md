@@ -19,9 +19,9 @@ DATN/
 - SQL Server
 - Maven có thể dùng qua `mvnw`/`mvnw.cmd`
 
-Sao chép `.env.example` thành `.env` để lưu giá trị cục bộ. Spring Boot không
-tự đọc file `.env`; hãy nạp các biến này bằng IDE, terminal hoặc công cụ quản lý
-môi trường trước khi chạy backend. Không commit `.env`.
+Sao chép `.env.example` thành `.env` tại thư mục gốc để lưu giá trị cục bộ.
+Backend và frontend đều đã được cấu hình đọc file này khi chạy từ thư mục dự án.
+Không commit `.env`.
 
 Các biến bắt buộc:
 
@@ -29,7 +29,13 @@ Các biến bắt buộc:
 - `JWT_SECRET` (Base64, tối thiểu 32 byte entropy)
 - `MAIL_USERNAME`, `MAIL_PASSWORD`
 - `GOOGLE_CLIENT_ID`
+- `VITE_GOOGLE_CLIENT_ID` (giá trị public được frontend sử dụng)
 - `GEMINI_API_KEY`
+
+Spring Boot đọc `../../.env` qua `spring.config.import`. Có thể đặt biến
+`ENV_FILE` thành đường dẫn khác khi chạy từ một working directory khác.
+Vite dùng `envDir: '../../'` và chỉ đưa các biến có tiền tố `VITE_` vào bundle.
+Không bao giờ đặt mật khẩu hoặc API key vào biến `VITE_*`.
 
 ## Database
 

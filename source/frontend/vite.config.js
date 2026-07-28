@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Dùng chung file D:/DATN/.env với backend.
+  // Vite chỉ đưa các biến VITE_* vào bundle chạy trên trình duyệt.
+  envDir: '../../',
   server: {
     port: 5173,
     strictPort: true,
