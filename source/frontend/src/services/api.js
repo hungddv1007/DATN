@@ -11,7 +11,12 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+    const isPublicAuthRequest = config.url?.startsWith('/auth/');
+
+    // Không gửi JWT cũ vào các API đăng nhập/đăng ký công khai.
+    // Nếu token đã hết hạn, JwtAuthenticationFilter có thể chặn yêu cầu
+    // trước khi backend kịp xác thực thông tin đăng nhập mới.
+    if (token && !isPublicAuthRequest) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;

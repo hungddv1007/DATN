@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
+import AiChatWidget from './components/ai/AiChatWidget';
 
 const HomePage = lazy(() => import('./pages/public/HomePage'));
 const PackagesPage = lazy(() => import('./pages/public/PackagesPage'));
@@ -169,6 +170,7 @@ function App() {
             </ProtectedRoute>
           } />
           </Routes>
+          <AiChatWidget />
         </Suspense>
       </AuthProvider>
     </BrowserRouter>
