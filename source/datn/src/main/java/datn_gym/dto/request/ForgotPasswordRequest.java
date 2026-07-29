@@ -2,10 +2,10 @@ package datn_gym.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
+import lombok.Data;
 
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+// Bước 1: Nhập email để nhận OTP
+@Data
 public class ForgotPasswordRequest {
 
     @NotBlank(message = "Email không được để trống")
