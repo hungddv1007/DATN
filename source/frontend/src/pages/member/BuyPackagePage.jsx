@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import packageService from '../../services/packageService';
 import ptService from '../../services/ptService';
 import membershipService from '../../services/membershipService';
-import { CreditCard, Banknote, CheckCircle, Info } from 'lucide-react';
+import { CreditCard, Banknote, CheckCircle, Clock, Tag } from 'lucide-react';
 import './BuyPackagePage.css';
+
+// Các mốc thời gian cố định
+const DURATION_MILESTONES = [
+  { key: '1D',   days: 1,    label: '1 ngày' },
+  { key: '1W',   days: 7,    label: '1 tuần' },
+  { key: '1M',   days: 30,   label: '1 tháng' },
+  { key: '3M',   days: 90,   label: '3 tháng' },
+  { key: '6M',   days: 180,  label: '6 tháng' },
+  { key: '1Y',   days: 365,  label: '1 năm' },
+  { key: '2Y',   days: 730,  label: '2 năm' },
+];
 
 const BuyPackagePage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  
-  // Lấy pkgId từ query param: /member/buy-package?pkgId=1
   const queryParams = new URLSearchParams(location.search);
   const pkgId = queryParams.get('pkgId');
 
@@ -21,9 +29,9 @@ const BuyPackagePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const [durationDays, setDurationDays] = useState(30);
+  const [selectedMilestone, setSelectedMilestone] = useState('1M'); // mặc định 1 tháng
   const [promoCode, setPromoCode] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('BANK'); // BANK or CASH
+  const [paymentMethod, setPaymentMethod] = useState('BANK');
   const [selectedPtId, setSelectedPtId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successData, setSuccessData] = useState(null);
@@ -46,15 +54,12 @@ const BuyPackagePage = () => {
         }
 
         setGymPackage(pkgData);
-        setDurationDays(Math.max(30, pkgData.minDays));
         
-        // Nếu gói tập cho phép chọn PT, tải danh sách PT
         if (pkgData.canChoosePt) {
           const ptsData = await ptService.getAllPtProfiles();
           setPts(ptsData);
         }
 
-        // Tải danh sách chiết khấu để tính toán live
         const discountData = await packageService.getPublicDiscounts();
         setDiscounts(discountData);
       } catch (err) {
@@ -67,17 +72,23 @@ const BuyPackagePage = () => {
     fetchInitialData();
   }, [pkgId]);
 
+  const getDurationDays = () => {
+    const milestone = DURATION_MILESTONES.find(m => m.key === selectedMilestone);
+    return milestone ? milestone.days : 30;
+  };
+
+  const getDiscountForDays = (days) => {
+    if (!gymPackage) return 0;
+    const pkgDiscounts = discounts.filter(d => d.packageId === null || d.packageId === gymPackage.id);
+    const applicable = pkgDiscounts.filter(d => d.minDays <= days);
+    return applicable.length > 0 ? Math.max(...applicable.map(d => d.discountPercent)) : 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Nếu bắt buộc chọn PT mà chưa chọn thì báo lỗi
     if (gymPackage?.canChoosePt && !selectedPtId) {
       setError('Vui lòng chọn một Huấn luyện viên cá nhân!');
-      return;
-    }
-
-    if (gymPackage && durationDays < gymPackage.minDays) {
-      setError(`Gói này yêu cầu số ngày đăng ký tối thiểu là ${gymPackage.minDays} ngày!`);
       return;
     }
     
@@ -87,7 +98,7 @@ const BuyPackagePage = () => {
     try {
       const data = await membershipService.registerPackage({
         packageId: parseInt(pkgId),
-        durationDays: parseInt(durationDays),
+        durationDays: getDurationDays(),
         promotionCode: promoCode || null,
         paymentMethod: paymentMethod,
         ptId: selectedPtId ? parseInt(selectedPtId) : null
@@ -110,26 +121,10 @@ const BuyPackagePage = () => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
   };
 
-  // Tính toán số tiền trực tiếp trên giao diện
-  const calculateLivePrice = () => {
-    if (!gymPackage) return { gross: 0, discountPercent: 0, afterDiscount: 0 };
-    
-    const gross = gymPackage.dailyPrice * durationDays;
-    
-    // Lọc chiết khấu cho gói tập này
-    const pkgDiscounts = discounts.filter(d => d.packageId === null || d.packageId === gymPackage.id);
-    const applicable = pkgDiscounts.filter(d => d.minDays <= durationDays);
-    
-    const discountPercent = applicable.length > 0
-      ? Math.max(...applicable.map(d => d.discountPercent))
-      : 0;
-      
-    const afterDiscount = gross * (1 - discountPercent / 100);
-    
-    return { gross, discountPercent, afterDiscount };
-  };
-
-  const { gross, discountPercent, afterDiscount } = calculateLivePrice();
+  const durationDays = getDurationDays();
+  const gross = gymPackage ? gymPackage.dailyPrice * durationDays : 0;
+  const discountPercent = getDiscountForDays(durationDays);
+  const afterDiscount = gross * (1 - discountPercent / 100);
 
   if (loading) {
     return (
@@ -199,32 +194,45 @@ const BuyPackagePage = () => {
 
           {gymPackage && (
             <form className="buy-form" onSubmit={handleSubmit}>
+              {/* Chọn mốc thời gian */}
               <div className="form-group">
-                <label>Số ngày đăng ký tập luyện</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <input 
-                    type="number" 
-                    min={gymPackage.minDays}
-                    value={durationDays}
-                    onChange={(e) => setDurationDays(Math.max(gymPackage.minDays, parseInt(e.target.value) || 0))}
-                    style={{ flex: 1 }}
-                    required
-                  />
-                  <span style={{ color: '#94a3b8', fontWeight: 'bold' }}>ngày</span>
+                <label><Clock size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} />Chọn thời hạn đăng ký</label>
+                <div className="duration-milestones">
+                  {DURATION_MILESTONES.map((ms) => {
+                    const msDiscount = getDiscountForDays(ms.days);
+                    const isSelected = selectedMilestone === ms.key;
+                    const msPrice = gymPackage.dailyPrice * ms.days * (1 - msDiscount / 100);
+                    
+                    return (
+                      <button
+                        type="button"
+                        key={ms.key}
+                        className={`milestone-btn ${isSelected ? 'selected' : ''}`}
+                        onClick={() => setSelectedMilestone(ms.key)}
+                      >
+                        <span className="ms-label">{ms.label}</span>
+                        <span className="ms-price">{formatCurrency(msPrice)}</span>
+                        {msDiscount > 0 && (
+                          <span className="ms-discount">
+                            <Tag size={11} /> -{msDiscount}%
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-                <small style={{ color: '#94a3b8', marginTop: '5px', display: 'block' }}>
-                  Gói {gymPackage.name} yêu cầu đăng ký tối thiểu {gymPackage.minDays} ngày.
-                </small>
               </div>
 
               {/* Gợi ý chiết khấu */}
-              <div style={{ background: 'rgba(249, 115, 22, 0.05)', padding: '12px', borderRadius: '8px', border: '1px dashed rgba(249, 115, 22, 0.2)', marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                <Info size={18} color="#f97316" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
-                  <strong>Ưu đãi đăng ký dài hạn:</strong><br />
-                  Đăng ký từ 90 ngày (giảm 5%), 180 ngày (giảm 10%), 365 ngày (giảm 15%). Đăng ký càng dài càng tiết kiệm!
+              {discountPercent > 0 && (
+                <div className="discount-banner">
+                  <Tag size={18} />
+                  <div>
+                    <strong>Bạn được giảm {discountPercent}%!</strong><br/>
+                    Tiết kiệm <span className="saved-amount">{formatCurrency(gross - afterDiscount)}</span> khi đăng ký {DURATION_MILESTONES.find(m => m.key === selectedMilestone)?.label}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {gymPackage.canChoosePt && (
                 <div className="form-group">
@@ -233,7 +241,6 @@ const BuyPackagePage = () => {
                     value={selectedPtId} 
                     onChange={(e) => setSelectedPtId(e.target.value)}
                     required
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(15,23,42,0.5)', color: 'white', marginBottom: '15px' }}
                   >
                     <option value="">-- Vui lòng chọn một Huấn luyện viên --</option>
                     {pts.map(pt => (
@@ -276,21 +283,21 @@ const BuyPackagePage = () => {
               </div>
 
               {/* Bảng phân rã giá */}
-              <div style={{ background: 'rgba(15,23,42,0.4)', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
+              <div className="price-breakdown">
+                <div className="breakdown-row">
                   <span>Đơn giá/ngày:</span>
                   <span>{formatCurrency(gymPackage.dailyPrice)}/ngày</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
-                  <span>Số ngày tập:</span>
-                  <span>{durationDays} ngày</span>
+                <div className="breakdown-row">
+                  <span>Thời hạn:</span>
+                  <span>{DURATION_MILESTONES.find(m => m.key === selectedMilestone)?.label} ({durationDays} ngày)</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>
+                <div className="breakdown-row">
                   <span>Giá gốc:</span>
                   <span>{formatCurrency(gross)}</span>
                 </div>
                 {discountPercent > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#22c55e', fontSize: '0.9rem' }}>
+                  <div className="breakdown-row discount-row">
                     <span>Chiết khấu dài hạn ({discountPercent}%):</span>
                     <span>-{formatCurrency(gross - afterDiscount)}</span>
                   </div>

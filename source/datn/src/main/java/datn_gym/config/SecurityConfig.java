@@ -1,7 +1,9 @@
 package datn_gym.config;
 
 import datn_gym.security.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -24,6 +26,9 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
+    private String[] allowedOrigins;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -42,8 +47,9 @@ public class SecurityConfig {
 
             .cors(cors -> cors.configurationSource(request -> {
                 var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-                corsConfig.addAllowedOrigin("http://localhost:5173");
-                corsConfig.addAllowedOrigin("http://localhost:3000");
+                for (String origin : allowedOrigins) {
+                    corsConfig.addAllowedOrigin(origin.trim());
+                }
                 corsConfig.addAllowedMethod("*");
                 corsConfig.addAllowedHeader("*");
                 corsConfig.setAllowCredentials(true);
@@ -57,6 +63,8 @@ public class SecurityConfig {
 
                 // ✅ QUAN TRỌNG: Rule cụ thể phải đặt TRƯỚC rule chung
                 // Spring Security đọc từ trên xuống, dừng ở rule đầu tiên match
+                // Async dispatch của SSE đã được xác thực ở request ban đầu.
+                .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 
                 // 1. Auth - công khai hoàn toàn
                 .requestMatchers("/api/auth/**").permitAll()
@@ -70,6 +78,7 @@ public class SecurityConfig {
 
                 // 3. API PT - chỉ PT (đặt trước rule GET chung)
                 .requestMatchers("/api/pt/**").hasRole("PT")
+                .requestMatchers("/api/nutrition/**").hasRole("PT")
 
                 // 4. API Hội viên - chỉ MEMBER (đặt trước rule GET chung)
                 .requestMatchers("/api/member/**").hasRole("MEMBER")

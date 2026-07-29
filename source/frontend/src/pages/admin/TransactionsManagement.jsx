@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import transactionService from '../../services/transactionService';
-import { Check, X, Search } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import './AdminManagement.css';
 
 const TransactionsManagement = () => {
@@ -45,7 +45,7 @@ const TransactionsManagement = () => {
   };
 
   const handleCancel = async (id) => {
-    if (!window.confirm('Bạn chắc chắn muốn HỦY giao dịch này? Hành động này sẽ hủy luôn gói tập của Hội viên.')) return;
+    if (!window.confirm('Bạn chắc chắn muốn HỦY giao dịch này? Yêu cầu chưa duyệt sẽ không được áp dụng vào gói tập.')) return;
     try {
       await transactionService.cancelTransaction(id);
       alert('Đã hủy giao dịch thành công!');
@@ -93,6 +93,7 @@ const TransactionsManagement = () => {
               <th>Mã GD</th>
               <th>Hội viên</th>
               <th>Gói tập</th>
+              <th>Loại</th>
               <th>Số tiền</th>
               <th>Phương thức</th>
               <th>Thời gian</th>
@@ -102,9 +103,9 @@ const TransactionsManagement = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="8" style={{ textAlign: 'center' }}>Đang tải...</td></tr>
+              <tr><td colSpan="9" style={{ textAlign: 'center' }}>Đang tải...</td></tr>
             ) : transactions.length === 0 ? (
-              <tr><td colSpan="8" style={{ textAlign: 'center' }}>Không có giao dịch nào</td></tr>
+              <tr><td colSpan="9" style={{ textAlign: 'center' }}>Không có giao dịch nào</td></tr>
             ) : (
               transactions.map(tx => (
                 <tr key={tx.id}>
@@ -119,6 +120,7 @@ const TransactionsManagement = () => {
                       <div style={{ fontSize: '0.8rem', color: '#f97316' }}>Mã: {tx.promotionCode} (-{tx.discountPercent}%)</div>
                     )}
                   </td>
+                  <td>{tx.type === 'NEW' ? 'Đăng ký' : tx.type === 'RENEW' ? 'Gia hạn' : 'Nâng cấp'}</td>
                   <td style={{ fontWeight: 'bold', color: '#f1f5f9' }}>{formatCurrency(tx.amount)}</td>
                   <td>{tx.paymentMethod}</td>
                   <td>{formatDate(tx.createdAt)}</td>

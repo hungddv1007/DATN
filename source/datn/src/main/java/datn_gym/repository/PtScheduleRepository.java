@@ -5,22 +5,29 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 public interface PtScheduleRepository extends JpaRepository<PtSchedule, Integer> {
 
-    // Tất cả lịch kèm ACTIVE của 1 PT
-    List<PtSchedule> findByPtIdAndStatusOrderByDayOfWeekAscSlotIndexAsc(
-            Integer ptId, String status);
+    // PT lấy lịch theo khoảng ngày (theo tuần)
+    List<PtSchedule> findByPtIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
+            Integer ptId, LocalDate startDate, LocalDate endDate, String status);
 
-    // Lịch kèm với 1 member cụ thể
-    List<PtSchedule> findByPtIdAndMemberIdAndStatusOrderByDayOfWeekAscSlotIndexAsc(
-            Integer ptId, Integer memberId, String status);
+    // PT lấy lịch trong 1 ngày (dùng cho overlap check)
+    List<PtSchedule> findByPtIdAndScheduleDateAndStatus(
+            Integer ptId, LocalDate date, String status);
 
-    // Kiểm tra xung đột: slot này đã có ai chưa?
-    Optional<PtSchedule> findByPtIdAndDayOfWeekAndSlotIndexAndStatus(
-            Integer ptId, Integer dayOfWeek, Integer slotIndex, String status);
+    // Lấy tất cả buổi cùng nhóm lặp lại
+    List<PtSchedule> findByRecurringGroupIdAndStatus(
+            String recurringGroupId, String status);
+
+    // Lấy tất cả buổi cùng nhóm lặp lại (kể cả đã hủy)
+    List<PtSchedule> findByRecurringGroupId(String recurringGroupId);
+
+    // Member xem lịch theo khoảng ngày
+    List<PtSchedule> findByMemberIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
+            Integer memberId, LocalDate startDate, LocalDate endDate, String status);
 
     // Đếm số member ACTIVE (distinct) mà PT đang kèm
     @Query("SELECT COUNT(DISTINCT s.member.id) FROM PtSchedule s " +
@@ -31,8 +38,4 @@ public interface PtScheduleRepository extends JpaRepository<PtSchedule, Integer>
     @Query("SELECT COUNT(s) > 0 FROM PtSchedule s " +
            "WHERE s.member.id = :memberId AND s.status = 'ACTIVE'")
     boolean existsActiveMemberSchedule(@Param("memberId") Integer memberId);
-
-    // Lịch kèm của member (member xem lịch)
-    List<PtSchedule> findByMemberIdAndStatusOrderByDayOfWeekAscSlotIndexAsc(
-            Integer memberId, String status);
 }

@@ -1,20 +1,30 @@
 package datn_gym.dto.request;
 
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Min;
 import lombok.Data;
 
 @Data
 public class DietUpdateRequest {
 
-    // Tách riêng UpdateRequest — không cần memberId và date khi update
-    // Áp dụng nguyên tắc Single Responsibility đã học từ PtComment
+    private String title;
 
-    @Size(max = 1000, message = "Bữa sáng không vượt quá 1000 ký tự")
     private String breakfast;
-
-    @Size(max = 1000, message = "Bữa trưa không vượt quá 1000 ký tự")
+    private String snackMorning;
     private String lunch;
-
-    @Size(max = 1000, message = "Bữa tối không vượt quá 1000 ký tự")
+    private String snackAfternoon;
     private String dinner;
+
+    @Min(value = 0, message = "Calories không được âm")
+    private Integer calories;
+
+    @Min(value = 0, message = "Protein không được âm")
+    private Integer proteinG;
+
+    @Min(value = 0, message = "Carbs không được âm")
+    private Integer carbsG;
+
+    @Min(value = 0, message = "Fat không được âm")
+    private Integer fatG;
+
+    private String note;
 }

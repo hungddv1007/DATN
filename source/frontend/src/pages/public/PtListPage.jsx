@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Award, ShieldCheck, User } from 'lucide-react';
+import { Star, Award, ShieldCheck } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import ptService from '../../services/ptService';
+import { resolveFileUrl } from '../../utils/fileUrl';
 import './PtListPage.css';
 
 const PtListPage = () => {
@@ -41,7 +42,7 @@ const PtListPage = () => {
                 <div key={pt.id} className="pt-card">
                   <div className="pt-avatar">
                     {pt.avatar ? (
-                      <img src={pt.avatar} alt={pt.fullName} />
+                      <img src={resolveFileUrl(pt.avatar)} alt={pt.fullName} />
                     ) : (
                       <div className="avatar-placeholder avatar-initial">
                         {pt.fullName?.charAt(0)?.toUpperCase() || '?'}

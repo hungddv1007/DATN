@@ -1,138 +1,317 @@
-.member-schedule-page {
-  max-width: 1200px;
-  margin: 80px auto;
-  padding: 0 20px;
-  color: #f1f5f9;
+/* ============================================= */
+/* MEMBER SCHEDULE PAGE - Premium Dark Calendar  */
+/* ============================================= */
+
+.msp-page {
+  padding: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.schedule-header {
-  text-align: center;
-  margin-bottom: 40px;
+@media (min-width: 768px) {
+  .msp-page {
+    padding: 32px;
+  }
 }
 
-.schedule-header h1 {
-  font-size: 2.5rem;
+/* ============ HEADER ============ */
+.msp-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 768px) {
+  .msp-header {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.msp-title {
+  font-size: 1.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 10px;
-}
-
-.schedule-header p {
-  color: #94a3b8;
-  font-size: 1.1rem;
-}
-
-.schedule-error-box {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #f87171;
-  padding: 15px 20px;
-  border-radius: 8px;
-  margin-bottom: 30px;
-  text-align: center;
-  font-weight: 600;
-}
-
-.pt-info-summary {
+  color: #ffffff;
   display: flex;
   align-items: center;
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 15px 25px;
-  border-radius: 12px;
-  margin-bottom: 30px;
-  font-weight: 600;
-  font-size: 1rem;
+  gap: 10px;
+}
+
+.msp-title-bar {
+  width: 6px;
+  height: 24px;
+  background: linear-gradient(180deg, #54dee3 0%, #0284c7 100%);
+  border-radius: 9999px;
+  display: inline-block;
+  box-shadow: 0 0 12px rgba(84, 222, 227, 0.4);
+}
+
+.msp-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.msp-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.msp-btn-today {
+  background-color: #161e2e;
+  border: 1px solid #243044;
   color: #cbd5e1;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.pt-info-summary svg {
-  color: #f97316;
-  margin-right: 8px;
+.msp-btn-today:hover:not(:disabled) {
+  background-color: #243044;
+  color: #ffffff;
 }
 
-.pt-info-summary strong {
-  color: white;
+.msp-btn-today:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
-/* Timetable styling similar to PT side but without hover cursor pointer */
-.timetable-container {
-  overflow-x: auto;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
+.msp-week-nav {
+  display: flex;
+  align-items: center;
+  background-color: #161e2e;
+  border-radius: 10px;
+  padding: 4px;
+  border: 1px solid #243044;
 }
 
-.timetable {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 900px;
-}
-
-.timetable th, .timetable td {
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 12px;
-  text-align: center;
-}
-
-.timetable th {
-  background: rgba(15, 23, 42, 0.5);
+.msp-nav-btn {
+  background: none;
+  border: none;
   color: #94a3b8;
-  font-weight: 700;
-  font-size: 0.95rem;
-  text-transform: uppercase;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
 }
 
-.period-cell {
-  background: rgba(15, 23, 42, 0.3);
-  font-weight: 800;
-  color: #f97316;
-  font-size: 1.1rem;
+.msp-nav-btn:hover {
+  background-color: #243044;
+  color: #ffffff;
 }
 
-.time-cell {
-  background: rgba(15, 23, 42, 0.2);
-  font-weight: 700;
+.msp-week-text {
+  padding: 0 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 140px;
+  text-align: center;
   color: #cbd5e1;
-  font-size: 0.9rem;
 }
 
-.schedule-cell {
-  height: 70px;
-  width: 140px;
-  vertical-align: middle;
+/* ============ INFO & ERRORS ============ */
+.msp-pt-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  background-color: rgba(22, 30, 46, 0.5);
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #1e293b;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
-.cell-empty {
-  background: rgba(255, 255, 255, 0.01);
+.msp-pt-info strong {
+  color: #54dee3;
 }
 
-.cell-booked {
-  background: rgba(249, 115, 22, 0.08);
-  border: 2px solid rgba(249, 115, 22, 0.5) !important;
+.msp-error-box {
+  background-color: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  color: #fb7185;
+  padding: 16px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
 }
 
-.cell-details {
+.msp-empty-box {
+  background-color: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.2);
+  color: #facc15;
+  padding: 16px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+
+/* ============ GRID ============ */
+.msp-grid-container {
+  background-color: #111827;
+  border-radius: 16px;
+  border: 1px solid #1f293d;
+  overflow-x: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.msp-grid-table {
+  min-width: 1000px;
+}
+
+.msp-grid-row {
+  display: grid;
+  grid-template-columns: 100px repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid rgba(31, 41, 61, 0.6);
+}
+
+.msp-grid-header {
+  background-color: #0d1322;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid #1f293d;
+}
+
+.msp-col-header {
+  padding: 14px 8px;
+  text-align: center;
+  border-right: 1px solid rgba(31, 41, 61, 0.5);
+}
+
+.msp-time-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  position: sticky;
+  left: 0;
+  z-index: 12;
+  background-color: #0d1322;
 }
 
-.exercise-badge {
-  background: #f97316;
-  color: white;
+.msp-day-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.msp-day-num {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-top: 2px;
+  color: #e2e8f0;
+}
+
+.msp-day-today .msp-day-num {
+  color: #54dee3;
+}
+
+.msp-day-today {
+  background-color: rgba(84, 222, 227, 0.03);
+}
+
+.msp-grid-row-body {
+  min-height: 100px;
+}
+
+.msp-time-cell {
+  padding: 10px 8px;
   font-size: 0.8rem;
   font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
-  max-width: 125px;
+  color: #94a3b8;
+  border-right: 1px solid rgba(31, 41, 61, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #0d1322;
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  gap: 4px;
+}
+
+.msp-time-range {
+  font-size: 0.6rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.msp-slot-cell {
+  padding: 6px;
+  border-right: 1px solid rgba(31, 41, 61, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ============ CARDS ============ */
+.msp-card {
+  width: 100%;
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(13, 31, 45, 0.95));
+  border: 1px solid rgba(84, 222, 227, 0.25);
+  position: relative;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.msp-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 10px 0 0 10px;
+  background: #54dee3;
+  box-shadow: 0 0 8px #54dee3;
+}
+
+.msp-card-time {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  width: fit-content;
+}
+
+.msp-card-note {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #54dee3;
+  background-color: rgba(84, 222, 227, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+/* ============ LOADING ============ */
+.msp-loading {
+  padding: 80px 20px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
 }

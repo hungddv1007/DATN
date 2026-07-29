@@ -226,3 +226,118 @@
     font-size: 1.6rem;
   }
 }
+
+/* ============================================
+   FORGOT PASSWORD — Steps & OTP
+   ============================================ */
+
+/* Step Progress Indicator */
+.fp-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 28px;
+}
+
+.fp-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.fp-step-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  color: #475569;
+  background: rgba(15, 23, 42, 0.4);
+  transition: all 0.3s;
+}
+
+.fp-step.active .fp-step-icon {
+  border-color: #f97316;
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.fp-step.done .fp-step-icon {
+  border-color: #22c55e;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.fp-step-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fp-step.active .fp-step-label {
+  color: #f97316;
+}
+
+.fp-step.done .fp-step-label {
+  color: #22c55e;
+}
+
+.fp-step-line {
+  width: 40px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 8px;
+  margin-bottom: 22px;
+  transition: background 0.3s;
+}
+
+.fp-step-line.active {
+  background: linear-gradient(90deg, #22c55e, #f97316);
+}
+
+/* OTP Inputs */
+.fp-otp-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.fp-otp-input {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  color: #f97316;
+  outline: none;
+  transition: all 0.2s;
+  caret-color: #f97316;
+}
+
+.fp-otp-input:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+  background: rgba(249, 115, 22, 0.05);
+}
+
+@media (max-width: 540px) {
+  .fp-otp-input {
+    width: 40px;
+    height: 48px;
+    font-size: 1.2rem;
+  }
+  .fp-otp-inputs {
+    gap: 6px;
+  }
+}

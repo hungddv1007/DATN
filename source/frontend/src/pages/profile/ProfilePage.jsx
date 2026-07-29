@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import userService from '../../services/userService';
 import fileService from '../../services/fileService';
+import { resolveFileUrl } from '../../utils/fileUrl';
 import MainLayout from '../../components/layout/MainLayout';
-import { Camera, Save, User as UserIcon } from 'lucide-react';
+import { Camera, Save } from 'lucide-react';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
@@ -72,9 +73,26 @@ const ProfilePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setMessage('');
     setError('');
+
+    // 1. Validate họ tên (chỉ được chứa chữ cái và khoảng trắng)
+    const nameRegex = /^[\p{L}\s'-]+$/u;
+    if (!nameRegex.test(formData.fullName)) {
+      setError('Họ và tên chỉ được chứa chữ cái và khoảng trắng!');
+      return;
+    }
+
+    // 2. Validate số điện thoại (phải đúng định dạng số điện thoại Việt Nam hoặc bỏ trống)
+    if (formData.phone) {
+      const phoneRegex = /^(0|84)(2(0[3-9]|1[0-6|8|9]|2[0-2|5-9]|3[2-9]|4[0-9]|5[1|2|4-9]|6[9]|7[0-7|9]|8[0-9]|9[0-4|6|7|9])|3[2-9]|5[5|6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])([0-9]{7})$/;
+      if (!phoneRegex.test(formData.phone)) {
+        setError('Số điện thoại không hợp lệ hoặc không đúng định dạng Việt Nam!');
+        return;
+      }
+    }
+
+    setLoading(true);
     
     try {
       const updatedProfile = await userService.updateMyProfile({
@@ -142,7 +160,7 @@ const ProfilePage = () => {
             <div className="profile-sidebar">
               <div className="avatar-wrapper">
                 {formData.avatar ? (
-                  <img src={formData.avatar} alt="Avatar" className="profile-avatar" />
+                  <img src={resolveFileUrl(formData.avatar)} alt="Avatar" className="profile-avatar" />
                 ) : (
                   <div className="avatar-placeholder avatar-initial">
                     {formData.fullName?.charAt(0)?.toUpperCase() || user?.fullName?.charAt(0)?.toUpperCase() || '?'}

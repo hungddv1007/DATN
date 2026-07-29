@@ -27,6 +27,7 @@ public class MembershipService {
     private final MembershipRepository membershipRepository;
     private final GymPackageRepository gymPackageRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
     private final PromotionRepository promotionRepository;
     private final TransactionRepository transactionRepository;
     private final PackageDiscountRepository discountRepository;
@@ -37,13 +38,17 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse registerPackage(String memberEmail, MembershipRequest request) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
 
-        // Kiểm tra đã có gói ACTIVE chưa
-        membershipRepository.findByUser_IdAndStatus(member.getId(), "ACTIVE")
+        expireOverdueMemberships();
+
+        // Không cho tạo thêm gói khi đang có gói hoạt động/bảo lưu hoặc chờ thanh toán
+        membershipRepository.findByUser_IdAndStatusIn(
+                        member.getId(), List.of("ACTIVE", "PAUSED", "PENDING"))
                 .ifPresent(m -> {
                     throw new IllegalArgumentException(
-                            "Bạn đang có gói tập đang hoạt động. Vui lòng gia hạn, nâng cấp hoặc hủy gói hiện tại!");
+                            "Bạn đang có gói tập hoặc yêu cầu thanh toán chưa xử lý. "
+                                    + "Vui lòng hoàn tất yêu cầu hiện tại trước!");
                 });
 
         GymPackage gymPackage = getActivePackage(request.getPackageId());
@@ -71,7 +76,7 @@ public class MembershipService {
                 .pt(pt)
                 .startDate(startDate)
                 .endDate(endDate)
-                .status("ACTIVE")
+                .status("PENDING")
                 .durationDays(request.getDurationDays())
                 .dailyPrice(gymPackage.getDailyPrice())
                 .build();
@@ -79,7 +84,9 @@ public class MembershipService {
         membershipRepository.save(membership);
 
         // Tạo Transaction
-        Transaction transaction = createTransaction(membership, calc, request.getPaymentMethod(), "NEW");
+        Transaction transaction = createTransaction(
+                membership, calc, request.getPaymentMethod(), "NEW",
+                request.getDurationDays(), gymPackage, pt);
 
         return toResponse(membership, transaction);
     }
@@ -89,8 +96,9 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse renewMembership(String memberEmail, RenewRequest request) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
+        assertNoPendingTransaction(membership.getId());
         GymPackage gymPackage = membership.getGymPackage();
 
         if (request.getDurationDays() < gymPackage.getMinDays()) {
@@ -102,12 +110,9 @@ public class MembershipService {
         PriceCalc calc = calculatePrice(gymPackage, request.getDurationDays(),
                 request.getPromotionCode(), BigDecimal.ZERO);
 
-        // Cập nhật endDate
-        membership.setEndDate(membership.getEndDate().plusDays(request.getDurationDays()));
-        membership.setDurationDays(membership.getDurationDays() + request.getDurationDays());
-        membershipRepository.save(membership);
-
-        Transaction transaction = createTransaction(membership, calc, request.getPaymentMethod(), "RENEW");
+        Transaction transaction = createTransaction(
+                membership, calc, request.getPaymentMethod(), "RENEW",
+                request.getDurationDays(), gymPackage, membership.getPt());
 
         return toResponse(membership, transaction);
     }
@@ -117,8 +122,9 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse upgradeMembership(String memberEmail, UpgradeRequest request) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
+        assertNoPendingTransaction(membership.getId());
         GymPackage oldPackage = membership.getGymPackage();
         GymPackage newPackage = getActivePackage(request.getNewPackageId());
 
@@ -154,18 +160,9 @@ public class MembershipService {
         // Xử lý PT mới (nếu gói mới có canChoosePt)
         User pt = resolvePt(newPackage, request.getPtId());
 
-        // Cập nhật membership
-        membership.setGymPackage(newPackage);
-        membership.setDailyPrice(newPackage.getDailyPrice());
-        if (pt != null) membership.setPt(pt);
-        if (extraDays > 0) {
-            membership.setEndDate(membership.getEndDate().plusDays(extraDays));
-            membership.setDurationDays(membership.getDurationDays() + extraDays);
-        }
-        membershipRepository.save(membership);
-
-        Transaction transaction = createTransaction(membership, calc,
-                request.getPaymentMethod(), "UPGRADE");
+        Transaction transaction = createTransaction(
+                membership, calc, request.getPaymentMethod(), "UPGRADE",
+                extraDays, newPackage, pt);
 
         return toResponse(membership, transaction);
     }
@@ -175,8 +172,9 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse pauseMembership(String memberEmail) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
+        assertNoPendingTransaction(membership.getId());
         GymPackage gymPackage = membership.getGymPackage();
 
         if (gymPackage.getMaxHoldTimes() <= 0) {
@@ -201,7 +199,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse resumeMembership(String memberEmail) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = membershipRepository.findByUser_IdAndStatus(member.getId(), "PAUSED")
                 .orElseThrow(() -> new IllegalArgumentException("Bạn không có gói đang bảo lưu!"));
 
@@ -227,10 +225,11 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse cancelMembership(String memberEmail) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = membershipRepository.findByUser_IdAndStatusIn(
                 member.getId(), List.of("ACTIVE", "PAUSED"))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói tập để hủy!"));
+        assertNoPendingTransaction(membership.getId());
 
         membership.setStatus("CANCELLED");
         membership.setPausedAt(null);
@@ -243,7 +242,7 @@ public class MembershipService {
     // PREVIEW ENDPOINTS (xem trước giá)
     // ================================================================
     public PricePreviewResponse previewRenew(String memberEmail, int days) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         GymPackage pkg = membership.getGymPackage();
 
@@ -269,7 +268,7 @@ public class MembershipService {
     }
 
     public PricePreviewResponse previewUpgrade(String memberEmail, int newPackageId, Integer extraDays) {
-        User member = getUserByEmail(memberEmail);
+        User member = userService.getUserByEmail(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         GymPackage oldPkg = membership.getGymPackage();
         GymPackage newPkg = getActivePackage(newPackageId);
@@ -305,30 +304,28 @@ public class MembershipService {
     // XEM GÓI HIỆN TẠI + LỊCH SỬ
     // ================================================================
     public MembershipResponse getMyCurrentMembership(String email) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
+        expireOverdueMemberships();
         Membership membership = membershipRepository.findByUser_IdAndStatusIn(
-                user.getId(), List.of("ACTIVE", "PAUSED"))
+                user.getId(), List.of("ACTIVE", "PAUSED", "PENDING"))
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Bạn chưa đăng ký gói tập nào"));
         return toResponse(membership, getLatestTransaction(membership.getId()));
     }
 
     public List<MembershipResponse> getMyMembershipHistory(String email) {
-        User user = getUserByEmail(email);
-        return membershipRepository.findByUser_IdOrderByCreatedAtDesc(user.getId())
+        User user = userService.getUserByEmail(email);
+        return transactionRepository
+                .findByMembership_User_IdOrderByCreatedAtDescIdDesc(user.getId())
                 .stream()
-                .map(m -> toResponse(m, getLatestTransaction(m.getId())))
+                .map(this::toHistoryResponse)
                 .collect(Collectors.toList());
     }
 
     // ================================================================
     // HELPERS
     // ================================================================
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
+
 
     private GymPackage getActivePackage(Integer packageId) {
         GymPackage pkg = gymPackageRepository.findById(packageId)
@@ -341,9 +338,22 @@ public class MembershipService {
     }
 
     private Membership getActiveMembership(Integer userId) {
-        return membershipRepository.findByUser_IdAndStatus(userId, "ACTIVE")
+        expireOverdueMemberships();
+        return membershipRepository.findByUser_IdAndStatusAndEndDateGreaterThanEqual(
+                        userId, "ACTIVE", LocalDate.now())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Bạn không có gói tập đang hoạt động!"));
+    }
+
+    private void expireOverdueMemberships() {
+        membershipRepository.expireActiveMembershipsBefore(LocalDate.now());
+    }
+
+    private void assertNoPendingTransaction(Integer membershipId) {
+        if (transactionRepository.existsByMembership_IdAndStatus(membershipId, "PENDING")) {
+            throw new IllegalArgumentException(
+                    "Gói tập đang có một giao dịch chờ duyệt. Vui lòng xử lý giao dịch đó trước!");
+        }
     }
 
     private User resolvePt(GymPackage gymPackage, Integer ptId) {
@@ -369,8 +379,9 @@ public class MembershipService {
     }
 
     private Transaction getLatestTransaction(Integer membershipId) {
-        List<Transaction> txList = transactionRepository.findByMembership_Id(membershipId);
-        return txList.isEmpty() ? null : txList.get(0);
+        return transactionRepository
+                .findTopByMembership_IdOrderByCreatedAtDescIdDesc(membershipId)
+                .orElse(null);
     }
 
     // --- Tính giá ---
@@ -418,11 +429,20 @@ public class MembershipService {
                 .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
     }
 
-    private Transaction createTransaction(Membership membership, PriceCalc calc,
-                                           String paymentMethod, String type) {
+    private Transaction createTransaction(
+            Membership membership,
+            PriceCalc calc,
+            String paymentMethod,
+            String type,
+            Integer requestedDurationDays,
+            GymPackage requestedPackage,
+            User requestedPt) {
         Transaction transaction = Transaction.builder()
                 .membership(membership)
                 .promotion(calc.promotion)
+                .requestedDurationDays(requestedDurationDays)
+                .requestedPackage(requestedPackage)
+                .requestedPt(requestedPt)
                 .originalAmount(calc.grossAmount)
                 .amount(calc.finalAmount)
                 .paymentMethod(paymentMethod != null ? paymentMethod : "BANK")
@@ -469,5 +489,15 @@ public class MembershipService {
                 .discountPercent(tx != null && tx.getPromotion() != null ? tx.getPromotion().getDiscountPercent() : null)
                 .remainingDays(remainingDays)
                 .build();
+    }
+
+    private MembershipResponse toHistoryResponse(Transaction tx) {
+        MembershipResponse response = toResponse(tx.getMembership(), tx);
+        if (tx.getRequestedPackage() != null) {
+            response.setPackageId(tx.getRequestedPackage().getId());
+            response.setPackageName(tx.getRequestedPackage().getName());
+            response.setDailyPrice(tx.getRequestedPackage().getDailyPrice());
+        }
+        return response;
     }
 }

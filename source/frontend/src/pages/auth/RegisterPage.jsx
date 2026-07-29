@@ -1,15 +1,14 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import authService from '../../services/authService';
 import MainLayout from '../../components/layout/MainLayout';
 import './AuthPages.css';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { loginGoogle } = useAuth();
+  const googleButtonRef = useRef(null);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -24,6 +23,20 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [countdown, setCountdown] = useState(0);
+  const [googleClientId, setGoogleClientId] = useState('');
+
+  // Lấy Google Client ID từ backend
+  useEffect(() => {
+    const fetchClientId = async () => {
+      try {
+        const id = await authService.getGoogleClientId();
+        setGoogleClientId(id);
+      } catch (err) {
+        console.error('Không thể lấy Google Client ID từ backend', err);
+      }
+    };
+    fetchClientId();
+  }, []);
 
   // Xử lý đếm ngược OTP
   React.useEffect(() => {
@@ -46,6 +59,20 @@ const RegisterPage = () => {
     }
     if (formData.password.length < 6) {
       setError('Mật khẩu phải có ít nhất 6 ký tự!');
+      return;
+    }
+
+    // Validate họ tên (chỉ được chứa chữ cái và khoảng trắng)
+    const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂÂÊÔƠưăâêôơ\s]+$/;
+    if (!nameRegex.test(formData.fullName)) {
+      setError('Họ và tên chỉ được chứa chữ cái và khoảng trắng!');
+      return;
+    }
+
+    // Validate số điện thoại (phải đúng định dạng số điện thoại Việt Nam)
+    const phoneRegex = /^(0|84)(2(0[3-9]|1[0-6|8|9]|2[0-2|5-9]|3[2-9]|4[0-9]|5[1|2|4-9]|6[9]|7[0-7|9]|8[0-9]|9[0-4|6|7|9])|3[2-9]|5[5|6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])([0-9]{7})$/;
+    if (!phoneRegex.test(formData.phone)) {
+      setError('Số điện thoại không hợp lệ hoặc không đúng định dạng Việt Nam!');
       return;
     }
 
@@ -135,21 +162,20 @@ const RegisterPage = () => {
   }, [loginGoogle, navigate]);
 
   useEffect(() => {
-    if (window.google && GOOGLE_CLIENT_ID) {
+    if (window.google && googleClientId && googleButtonRef.current) {
       window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: googleClientId,
         callback: handleGoogleResponse,
       });
-    }
-  }, [handleGoogleResponse]);
 
-  const handleGoogleClick = () => {
-    if (window.google && GOOGLE_CLIENT_ID) {
-      window.google.accounts.id.prompt();
-    } else {
-      setError('Google Sign-In chưa sẵn sàng. Vui lòng thử lại sau.');
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: '100%',
+        text: 'signup_with',
+      });
     }
-  };
+  }, [handleGoogleResponse, googleClientId]);
 
   return (
     <MainLayout>
@@ -276,15 +302,7 @@ const RegisterPage = () => {
           {step === 1 && (
             <>
               <div className="auth-divider">hoặc</div>
-              <button 
-                type="button" 
-                className="btn-google" 
-                onClick={handleGoogleClick}
-                disabled={loading}
-              >
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-                Đăng ký bằng Google
-              </button>
+              <div ref={googleButtonRef} style={{ marginTop: '15px' }}></div>
             </>
           )}
 

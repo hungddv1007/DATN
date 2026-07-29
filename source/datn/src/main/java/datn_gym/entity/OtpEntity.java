@@ -32,4 +32,8 @@ public class OtpEntity {
     @Column(nullable = false)
     @Builder.Default
     private boolean used = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int failedAttempts = 0;
 }

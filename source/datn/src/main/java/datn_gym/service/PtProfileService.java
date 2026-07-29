@@ -25,6 +25,7 @@ public class PtProfileService {
 
     private final PtProfileRepository ptProfileRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
     private final ReviewRepository reviewRepository;
     private final MembershipRepository membershipRepository;
 
@@ -54,7 +55,7 @@ public class PtProfileService {
     // PT: Xem hồ sơ của chính mình (dùng email từ JWT)
     // ----------------------------------------------------------------
     public PtProfileResponse getMyProfile(String email) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
         PtProfile profile = ptProfileRepository.findByUser_Id(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ PT"));
@@ -66,7 +67,7 @@ public class PtProfileService {
     // ----------------------------------------------------------------
     @Transactional
     public PtProfileResponse updateMyProfile(String email, UpdatePtProfileRequest request) {
-        User user = getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
 
         // FIX LỖI: Kiểm tra SĐT trùng với user khác trước khi lưu
         // Pattern giống UserService.updateMyProfile()
@@ -122,14 +123,7 @@ public class PtProfileService {
         ptProfileRepository.save(profile);
     }
 
-    // ----------------------------------------------------------------
-    // HELPER: Lấy User từ email (từ JWT)
-    // ----------------------------------------------------------------
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
+
 
     // ----------------------------------------------------------------
     // HELPER: Chuyển Entity → Response DTO

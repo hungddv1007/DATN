@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, User, ArrowRight } from 'lucide-react';
 import blogService from '../../services/blogService';
+import { resolveFileUrl } from '../../utils/fileUrl';
 import './NewsVideoSection.css';
 
 const NewsVideoSection = () => {
@@ -41,7 +42,7 @@ const NewsVideoSection = () => {
               {blogs[0].thumbnail && (
                 <div className="featured-thumb-wrapper">
                   <img 
-                    src={blogs[0].thumbnail.startsWith('http') ? blogs[0].thumbnail : `http://localhost:8080/api/public/uploads/${blogs[0].thumbnail}`} 
+                    src={resolveFileUrl(blogs[0].thumbnail)}
                     alt={blogs[0].title} 
                     className="featured-thumb" 
                   />
@@ -67,7 +68,7 @@ const NewsVideoSection = () => {
                   <div className="news-thumb-wrapper">
                     {blog.thumbnail ? (
                       <img 
-                        src={blog.thumbnail.startsWith('http') ? blog.thumbnail : `http://localhost:8080/api/public/uploads/${blog.thumbnail}`} 
+                        src={resolveFileUrl(blog.thumbnail)}
                         alt={blog.title} 
                         className="news-thumb" 
                       />

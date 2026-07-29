@@ -1,6 +1,9 @@
 package datn_gym.controller;
 
+import datn_gym.dto.request.PackageDiscountRequest;
+import datn_gym.dto.response.PackageDiscountResponse;
 import datn_gym.service.PackageDiscountService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,7 +11,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -20,7 +22,7 @@ public class PackageDiscountController {
     // PUBLIC: Lấy danh sách chiết khấu (frontend hiển thị cho member xem)
     // ================================================================
     @GetMapping("/api/public/discounts")
-    public ResponseEntity<List<Map<String, Object>>> getPublicDiscounts() {
+    public ResponseEntity<List<PackageDiscountResponse>> getPublicDiscounts() {
         return ResponseEntity.ok(discountService.getAll());
     }
 
@@ -29,29 +31,23 @@ public class PackageDiscountController {
     // ================================================================
     @GetMapping("/api/admin/discounts")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Map<String, Object>>> getAll() {
+    public ResponseEntity<List<PackageDiscountResponse>> getAll() {
         return ResponseEntity.ok(discountService.getAll());
     }
 
     @PostMapping("/api/admin/discounts")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        Integer packageId = body.get("packageId") != null ? (Integer) body.get("packageId") : null;
-        int minDays = (Integer) body.get("minDays");
-        int discountPercent = (Integer) body.get("discountPercent");
+    public ResponseEntity<PackageDiscountResponse> create(@Valid @RequestBody PackageDiscountRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(discountService.create(packageId, minDays, discountPercent));
+                .body(discountService.create(request.getPackageId(), request.getMinDays(), request.getDiscountPercent()));
     }
 
     @PutMapping("/api/admin/discounts/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> update(
+    public ResponseEntity<PackageDiscountResponse> update(
             @PathVariable Integer id,
-            @RequestBody Map<String, Object> body) {
-        Integer packageId = body.get("packageId") != null ? (Integer) body.get("packageId") : null;
-        int minDays = (Integer) body.get("minDays");
-        int discountPercent = (Integer) body.get("discountPercent");
-        return ResponseEntity.ok(discountService.update(id, packageId, minDays, discountPercent));
+            @Valid @RequestBody PackageDiscountRequest request) {
+        return ResponseEntity.ok(discountService.update(id, request.getPackageId(), request.getMinDays(), request.getDiscountPercent()));
     }
 
     @DeleteMapping("/api/admin/discounts/{id}")

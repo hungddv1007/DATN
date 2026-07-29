@@ -1,47 +1,39 @@
-import React from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
+import AiChatWidget from './components/ai/AiChatWidget';
 
-// Public Pages
-import HomePage from './pages/public/HomePage';
-import PackagesPage from './pages/public/PackagesPage';
-import BlogListPage from './pages/public/BlogListPage';
-import BlogDetailPage from './pages/public/BlogDetailPage';
-import AboutPage from './pages/public/AboutPage';
-import PtListPage from './pages/public/PtListPage';
-
-// Auth Pages
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-
-// Member Pages
-import MemberDashboard from './pages/member/MemberDashboard';
-import BuyPackagePage from './pages/member/BuyPackagePage';
-import MemberTransactions from './pages/member/MemberTransactions';
-import MembershipManagePage from './pages/member/MembershipManagePage';
-import MemberSchedulePage from './pages/member/MemberSchedulePage';
-
-// PT Pages
-import PtDashboard from './pages/pt/PtDashboard';
-import PtMembersList from './pages/pt/PtMembersList';
-import PtMemberDetail from './pages/pt/PtMemberDetail';
-import PtProfilePage from './pages/pt/PtProfilePage';
-import PtReviewsPage from './pages/pt/PtReviewsPage';
-import PtSchedulePage from './pages/pt/PtSchedulePage';
-
-// Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import TransactionsManagement from './pages/admin/TransactionsManagement';
-import PackagesManagement from './pages/admin/PackagesManagement';
-import UsersManagement from './pages/admin/UsersManagement';
-import PromotionsManagement from './pages/admin/PromotionsManagement';
-import BlogsManagement from './pages/admin/BlogsManagement';
-import ExercisesManagement from './pages/admin/ExercisesManagement';
-import DiscountsManagement from './pages/admin/DiscountsManagement';
-
-// Profile Page
-import ProfilePage from './pages/profile/ProfilePage';
+const HomePage = lazy(() => import('./pages/public/HomePage'));
+const PackagesPage = lazy(() => import('./pages/public/PackagesPage'));
+const BlogListPage = lazy(() => import('./pages/public/BlogListPage'));
+const BlogDetailPage = lazy(() => import('./pages/public/BlogDetailPage'));
+const AboutPage = lazy(() => import('./pages/public/AboutPage'));
+const PtListPage = lazy(() => import('./pages/public/PtListPage'));
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const MemberDashboard = lazy(() => import('./pages/member/MemberDashboard'));
+const BuyPackagePage = lazy(() => import('./pages/member/BuyPackagePage'));
+const MemberTransactions = lazy(() => import('./pages/member/MemberTransactions'));
+const MembershipManagePage = lazy(() => import('./pages/member/MembershipManagePage'));
+const MemberSchedulePage = lazy(() => import('./pages/member/MemberSchedulePage'));
+const MemberDietPage = lazy(() => import('./pages/member/MemberDietPage'));
+const PtDashboard = lazy(() => import('./pages/pt/PtDashboard'));
+const PtMembersList = lazy(() => import('./pages/pt/PtMembersList'));
+const PtMemberDetail = lazy(() => import('./pages/pt/PtMemberDetail'));
+const PtProfilePage = lazy(() => import('./pages/pt/PtProfilePage'));
+const PtReviewsPage = lazy(() => import('./pages/pt/PtReviewsPage'));
+const PtSchedulePage = lazy(() => import('./pages/pt/PtSchedulePage'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const TransactionsManagement = lazy(() => import('./pages/admin/TransactionsManagement'));
+const PackagesManagement = lazy(() => import('./pages/admin/PackagesManagement'));
+const UsersManagement = lazy(() => import('./pages/admin/UsersManagement'));
+const PromotionsManagement = lazy(() => import('./pages/admin/PromotionsManagement'));
+const BlogsManagement = lazy(() => import('./pages/admin/BlogsManagement'));
+const ExercisesManagement = lazy(() => import('./pages/admin/ExercisesManagement'));
+const DiscountsManagement = lazy(() => import('./pages/admin/DiscountsManagement'));
+const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 
 import './index.css';
 
@@ -49,7 +41,8 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <Suspense fallback={<div className="page-loading">Đang tải...</div>}>
+          <Routes>
           {/* === Trang công khai === */}
           <Route path="/" element={<HomePage />} />
           <Route path="/packages" element={<PackagesPage />} />
@@ -62,6 +55,7 @@ function App() {
           {/* === Auth === */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
           {/* === Profile Chung (Ai đăng nhập cũng vào được) === */}
           <Route path="/profile" element={
@@ -94,6 +88,11 @@ function App() {
           <Route path="/member/schedule" element={
             <ProtectedRoute allowedRoles={['MEMBER']}>
               <MemberSchedulePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/member/diet" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MemberDietPage />
             </ProtectedRoute>
           } />
 
@@ -170,7 +169,9 @@ function App() {
               <DiscountsManagement />
             </ProtectedRoute>
           } />
-        </Routes>
+          </Routes>
+          <AiChatWidget />
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
   );

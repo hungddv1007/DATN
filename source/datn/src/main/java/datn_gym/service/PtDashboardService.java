@@ -22,13 +22,13 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class PtDashboardService {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final MembershipRepository membershipRepository;
     private final ReviewRepository reviewRepository;
     private final datn_gym.repository.PtScheduleRepository ptScheduleRepository;
 
     public PtDashboardResponse getDashboardStats(String email) {
-        User pt = getUserByEmail(email);
+        User pt = userService.getUserByEmail(email);
 
         long activeMembers = membershipRepository.countByPt_IdAndStatus(pt.getId(), "ACTIVE");
         long totalTemplates = 0L;
@@ -42,12 +42,11 @@ public class PtDashboardService {
     }
 
     public List<PtMemberResponse> getAssignedMembers(String email) {
-        User pt = getUserByEmail(email);
+        User pt = userService.getUserByEmail(email);
         List<Membership> memberships = membershipRepository.findByPtIdAndStatusWithDetails(pt.getId(), "ACTIVE");
 
         return memberships.stream().map(m -> {
-            boolean isScheduled = !ptScheduleRepository.findByPtIdAndMemberIdAndStatusOrderByDayOfWeekAscSlotIndexAsc(
-                    pt.getId(), m.getUser().getId(), "ACTIVE").isEmpty();
+            boolean isScheduled = ptScheduleRepository.existsActiveMemberSchedule(m.getUser().getId());
             return PtMemberResponse.builder()
                     .memberId(m.getUser().getId())
                     .memberName(m.getUser().getFullName())
@@ -63,8 +62,5 @@ public class PtDashboardService {
         }).collect(Collectors.toList());
     }
 
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
-    }
+
 }

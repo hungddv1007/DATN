@@ -17,10 +17,13 @@ import datn_gym.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 import java.util.Collections;
@@ -42,6 +45,13 @@ public class AuthService {
 
     // Đăng nhập
     public JwtResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Email hoặc mật khẩu không chính xác!"));
+
+        if (Boolean.FALSE.equals(user.getStatus())) {
+            throw new DisabledException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin!");
+        }
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -50,9 +60,6 @@ public class AuthService {
         );
 
         String token = tokenProvider.generateToken(authentication);
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
 
         return JwtResponse.builder()
                 .token(token)
@@ -66,6 +73,7 @@ public class AuthService {
     }
 
     // Đăng nhập / Đăng ký bằng Google
+    @Transactional
     public JwtResponse loginWithGoogle(String idTokenString) {
         try {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
@@ -107,7 +115,6 @@ public class AuthService {
 
                 user = User.builder()
                         .email(email)
-                        .password(null)
                         .fullName(fullName != null ? fullName : email)
                         .avatar(avatar)
                         .role(roleMember)
@@ -151,6 +158,7 @@ public class AuthService {
     }
 
     // Đăng ký
+    @Transactional
     public MessageResponse register(RegisterRequest request) {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new IllegalArgumentException("Mật khẩu xác nhận không khớp!");
@@ -184,5 +192,38 @@ public class AuthService {
         userRepository.save(user);
 
         return new MessageResponse("Đăng ký tài khoản thành công!");
+    }
+
+    // Quên mật khẩu — Gửi OTP
+    public MessageResponse forgotPassword(String email) {
+        if (!userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email này chưa được đăng ký trong hệ thống!");
+        }
+        otpService.generateAndSendResetOtp(email);
+        return new MessageResponse("Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn. Mã có hiệu lực trong 5 phút.");
+    }
+
+    // Đặt lại mật khẩu — Xác thực OTP + Đổi mật khẩu
+    @Transactional
+    public MessageResponse resetPassword(String email, String otp, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("Mật khẩu xác nhận không khớp!");
+        }
+
+        if (newPassword.length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu mới phải có ít nhất 6 ký tự!");
+        }
+
+        if (!otpService.validateOtp(email, otp)) {
+            throw new IllegalArgumentException("Mã OTP không hợp lệ hoặc đã hết hạn!");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Email không tồn tại trong hệ thống!"));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        return new MessageResponse("Đặt lại mật khẩu thành công! Bạn có thể đăng nhập với mật khẩu mới.");
     }
 }

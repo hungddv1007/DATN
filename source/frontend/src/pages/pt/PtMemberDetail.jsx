@@ -1,23 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import PtLayout from '../../components/layout/PtLayout';
 import api from '../../services/api';
-import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Plus, Edit2, CheckCircle } from 'lucide-react';
+import { analyzeNutrition } from '../../services/nutritionAIService';
+import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus } from 'lucide-react';
 import '../admin/AdminManagement.css';
+
+const TABS = [
+  { key: 'notes', label: 'Ghi chú', icon: StickyNote },
+  { key: 'diet', label: 'Khẩu phần ăn', icon: Utensils },
+];
+
+const emptyDiet = {
+  title: '', breakfast: '', snackMorning: '', lunch: '',
+  snackAfternoon: '', dinner: '', calories: 0, proteinG: 0,
+  carbsG: 0, fatG: 0, note: ''
+};
 
 const PtMemberDetail = () => {
   const { memberId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryTab = new URLSearchParams(location.search).get('tab');
+  const initialTab = location.state?.tab || queryTab || 'notes';
+
   const [member, setMember] = useState(null);
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState('');
   const [editingNote, setEditingNote] = useState(null);
+  const [activeTab, setActiveTab] = useState(initialTab);
 
+  // Diet state
+  const [trainingDiet, setTrainingDiet] = useState(null);
+  const [restDiet, setRestDiet] = useState(null);
+  const [editingDiet, setEditingDiet] = useState(null); // 'TRAINING_DAY' | 'REST_DAY' | null
+  const [dietForm, setDietForm] = useState({ ...emptyDiet });
+  const [dietLoading, setDietLoading] = useState(false);
+  const [dietSaving, setDietSaving] = useState(false);
+
+  // AI Analysis state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [analysisError, setAnalysisError] = useState(null);
 
   useEffect(() => {
     fetchData();
   }, [memberId]);
+
+  useEffect(() => {
+    if (activeTab === 'diet') fetchDiets();
+  }, [activeTab]);
 
   const fetchData = async () => {
     try {
@@ -32,6 +65,134 @@ const PtMemberDetail = () => {
       console.error('Lỗi tải dữ liệu:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ===== DIETS =====
+  const fetchDiets = async () => {
+    setDietLoading(true);
+    try {
+      const res = await api.get(`/pt/diets/member/${memberId}`);
+      const diets = res.data;
+      setTrainingDiet(diets.find(d => d.dayType === 'TRAINING_DAY') || null);
+      setRestDiet(diets.find(d => d.dayType === 'REST_DAY') || null);
+    } catch (err) {
+      console.error('Lỗi tải khẩu phần:', err);
+    } finally {
+      setDietLoading(false);
+    }
+  };
+
+  const startEditDiet = (type) => {
+    setAnalysisResult(null);
+    setAnalysisError(null);
+    const existing = type === 'TRAINING_DAY' ? trainingDiet : restDiet;
+    if (existing) {
+      setDietForm({
+        title: existing.title || '',
+        breakfast: existing.breakfast || '',
+        snackMorning: existing.snackMorning || '',
+        lunch: existing.lunch || '',
+        snackAfternoon: existing.snackAfternoon || '',
+        dinner: existing.dinner || '',
+        calories: existing.calories || 0,
+        proteinG: existing.proteinG || 0,
+        carbsG: existing.carbsG || 0,
+        fatG: existing.fatG || 0,
+        note: existing.note || ''
+      });
+    } else {
+      setDietForm({
+        ...emptyDiet,
+        title: type === 'TRAINING_DAY' ? 'Thực đơn ngày tập' : 'Thực đơn ngày nghỉ'
+      });
+    }
+    setEditingDiet(type);
+  };
+
+  const cancelEditDiet = () => {
+    setEditingDiet(null);
+    setDietForm({ ...emptyDiet });
+    setAnalysisResult(null);
+    setAnalysisError(null);
+  };
+
+  const handleAIAnalyze = async () => {
+    const isRestDay = editingDiet === 'REST_DAY';
+    const mealsData = {
+      breakfastMeal: dietForm.breakfast || '',
+      preworkoutMeal: isRestDay ? '' : (dietForm.snackMorning || ''),
+      lunchMeal: dietForm.lunch || '',
+      postworkoutMeal: isRestDay ? '' : (dietForm.snackAfternoon || ''),
+      dinnerMeal: dietForm.dinner || '',
+      dayType: editingDiet || 'TRAINING_DAY',
+    };
+
+    const hasAnyMeal = [
+      mealsData.breakfastMeal,
+      mealsData.preworkoutMeal,
+      mealsData.lunchMeal,
+      mealsData.postworkoutMeal,
+      mealsData.dinnerMeal
+    ].some(v => v && v.trim());
+
+    if (!hasAnyMeal) {
+      setAnalysisError('Vui lòng nhập nội dung ít nhất một bữa ăn trước khi phân tích AI');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    setAnalysisResult(null);
+
+    try {
+      const result = await analyzeNutrition(mealsData);
+      setAnalysisResult(result);
+      setDietForm(prev => ({
+        ...prev,
+        calories: result.totalCalories || 0,
+        proteinG: result.totalProtein || 0,
+        carbsG: result.totalCarbs || 0,
+        fatG: result.totalFat || 0,
+        note: result.aiNote ? result.aiNote : prev.note,
+      }));
+    } catch (err) {
+      setAnalysisError(err.response?.data?.message || err.message || 'Có lỗi xảy ra khi phân tích. Vui lòng thử lại.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleSaveDiet = async (type) => {
+    setDietSaving(true);
+    try {
+      const existing = type === 'TRAINING_DAY' ? trainingDiet : restDiet;
+      if (existing) {
+        await api.put(`/pt/diets/${existing.id}`, dietForm);
+      } else {
+        await api.post('/pt/diets', {
+          ...dietForm,
+          memberId: parseInt(memberId),
+          dayType: type
+        });
+      }
+      await fetchDiets();
+      setEditingDiet(null);
+      setDietForm({ ...emptyDiet });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi lưu thực đơn');
+    } finally {
+      setDietSaving(false);
+    }
+  };
+
+  const handleDeleteDiet = async (dietId) => {
+    if (!window.confirm('Bạn có chắc muốn xóa mẫu thực đơn này?')) return;
+    try {
+      await api.delete(`/pt/diets/${dietId}`);
+      await fetchDiets();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Lỗi xóa thực đơn');
     }
   };
 
@@ -75,6 +236,286 @@ const PtMemberDetail = () => {
     setNoteText('');
   };
 
+  // ===== RENDER HELPERS =====
+
+  const renderMealInput = (label, icon, field) => (
+    <div style={{ marginBottom: '12px' }}>
+      <label style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+        {icon} {label}
+      </label>
+      <textarea
+        value={dietForm[field]}
+        onChange={e => setDietForm(prev => ({ ...prev, [field]: e.target.value }))}
+        placeholder={`Nhập ${label.toLowerCase()}...`}
+        rows={2}
+        style={{
+          width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)',
+          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+          color: '#f8fafc', fontSize: '0.9rem', outline: 'none', resize: 'vertical',
+          fontFamily: 'inherit'
+        }}
+      />
+    </div>
+  );
+
+  const renderMacroInputs = () => (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px', marginTop: '12px' }}>
+      {[
+        { label: 'Calo (kcal)', field: 'calories', color: '#f97316' },
+        { label: 'Protein (g)', field: 'proteinG', color: '#3b82f6' },
+        { label: 'Carbs (g)', field: 'carbsG', color: '#eab308' },
+        { label: 'Fat (g)', field: 'fatG', color: '#ef4444' },
+      ].map(({ label, field, color }) => (
+        <div key={field}>
+          <label style={{ color: '#94a3b8', fontSize: '0.78rem', fontWeight: 600, marginBottom: '4px', display: 'block' }}>
+            <span style={{ color, fontWeight: 700 }}>●</span> {label}
+          </label>
+          <input
+            type="number" min="0"
+            value={dietForm[field]}
+            onChange={e => setDietForm(prev => ({ ...prev, [field]: parseInt(e.target.value) || 0 }))}
+            style={{
+              width: '100%', padding: '8px 10px', background: 'rgba(15,23,42,0.5)',
+              border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+              color: '#f8fafc', fontSize: '0.9rem', outline: 'none'
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderDietPanel = (type, diet, bgGrad, icon, titleLabel) => {
+    const isEditing = editingDiet === type;
+
+    return (
+      <div className="admin-table-container" style={{ marginTop: 0, overflow: 'visible' }}>
+        {/* Header */}
+        <div style={{
+          padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+          background: bgGrad, borderRadius: '12px 12px 0 0',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+        }}>
+          <h3 style={{ color: '#f1f5f9', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {icon} {titleLabel}
+          </h3>
+          <div className="action-btns">
+            {!isEditing && (
+              <button className="btn-submit" onClick={() => startEditDiet(type)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '0.85rem' }}>
+                {diet ? <><Edit2 size={14} /> Sửa</> : <><Plus size={14} /> Tạo mẫu</>}
+              </button>
+            )}
+            {diet && !isEditing && (
+              <button className="btn-icon cancel" title="Xóa mẫu" onClick={() => handleDeleteDiet(diet.id)}>
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: '16px 20px' }}>
+          {isEditing ? (
+            // EDIT MODE
+            <>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
+                  Tiêu đề thực đơn
+                </label>
+                <input
+                  type="text" value={dietForm.title}
+                  onChange={e => setDietForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="VD: Thực đơn tăng cơ ngày tập"
+                  style={{
+                    width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)',
+                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+                    color: '#f8fafc', fontSize: '0.9rem', outline: 'none'
+                  }}
+                />
+              </div>
+
+              {renderMealInput('Bữa sáng', '🌅', 'breakfast')}
+              {type === 'TRAINING_DAY' && renderMealInput('Bữa phụ sáng / Pre-workout', '⚡', 'snackMorning')}
+              {renderMealInput('Bữa trưa', '☀️', 'lunch')}
+              {type === 'TRAINING_DAY' && renderMealInput('Bữa phụ chiều / Post-workout', '💪', 'snackAfternoon')}
+              {renderMealInput('Bữa tối', '🌙', 'dinner')}
+
+              {/* Button AI */}
+              <button
+                type="button"
+                onClick={handleAIAnalyze}
+                disabled={isAnalyzing}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  background: isAnalyzing ? '#64748b' : 'linear-gradient(135deg, #8b5cf6, #3b82f6)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: isAnalyzing ? 'not-allowed' : 'pointer',
+                  margin: '14px 0 10px 0',
+                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {isAnalyzing ? (
+                  <>⏳ Đang phân tích...</>
+                ) : (
+                  <>✨ Phân tích dinh dưỡng bằng AI <span style={{fontSize:'11px', background:'rgba(255,255,255,0.2)', padding:'2px 8px', borderRadius:'99px'}}>Gemini</span></>
+                )}
+              </button>
+
+              {/* Error AI */}
+              {analysisError && (
+                <div style={{
+                  background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: '8px', padding: '10px 14px',
+                  fontSize: '13px', color: '#fca5a5', marginBottom: '12px'
+                }}>
+                  ⚠️ {analysisError}
+                </div>
+              )}
+
+              {/* Panel kết quả chi tiết từ AI */}
+              {analysisResult && (
+                <div style={{
+                  background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)',
+                  borderRadius: '10px', padding: '14px', marginBottom: '14px'
+                }}>
+                  <div style={{fontSize:'13px', fontWeight:'700', color:'#c4b5fd', marginBottom:'10px', display:'flex', alignItems:'center', gap:'6px'}}>
+                    ✨ Kết quả phân tích từ Gemini AI
+                  </div>
+
+                  {/* Breakdown từng bữa */}
+                  {analysisResult.meals && analysisResult.meals.map((meal, idx) => (
+                    <div key={idx} style={{
+                      display:'flex', justifyContent:'space-between',
+                      padding:'6px 0', borderBottom:'1px solid rgba(255,255,255,0.06)',
+                      fontSize:'13px'
+                    }}>
+                      <span style={{color:'#ddd6fe', fontWeight:'500'}}>{meal.mealName}</span>
+                      <span style={{color:'#a78bfa', fontSize:'12px', fontWeight:'600'}}>
+                        {meal.calories} kcal · P {meal.protein}g · C {meal.carbs}g · F {meal.fat}g
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Lời khuyên từ AI */}
+                  {analysisResult.aiNote && (
+                    <div style={{
+                      marginTop:'10px', fontSize:'13px',
+                      color:'#e9d5ff', lineHeight:'1.6', background:'rgba(0,0,0,0.2)',
+                      padding:'8px 12px', borderRadius:'6px'
+                    }}>
+                      💡 {analysisResult.aiNote}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {renderMacroInputs()}
+
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
+                  📝 Ghi chú cho học viên
+                </label>
+                <textarea
+                  value={dietForm.note}
+                  onChange={e => setDietForm(prev => ({ ...prev, note: e.target.value }))}
+                  placeholder="VD: Uống 3-4 lít nước/ngày..."
+                  rows={2}
+                  style={{
+                    width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)',
+                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+                    color: '#f8fafc', fontSize: '0.9rem', outline: 'none', resize: 'vertical',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
+                <button className="btn-cancel" onClick={cancelEditDiet} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <X size={14} /> Hủy
+                </button>
+                <button className="btn-submit" onClick={() => handleSaveDiet(type)} disabled={dietSaving}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Save size={14} /> {dietSaving ? 'Đang lưu...' : 'Lưu thực đơn'}
+                </button>
+              </div>
+            </>
+          ) : diet ? (
+            // VIEW MODE
+            <>
+              {diet.title && (
+                <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: '1.05rem', marginBottom: '14px' }}>
+                  {diet.title}
+                </div>
+              )}
+
+              {[
+                { label: '🌅 Bữa sáng', val: diet.breakfast },
+                { label: '⚡ Pre-workout', val: diet.snackMorning },
+                { label: '☀️ Bữa trưa', val: diet.lunch },
+                { label: '💪 Post-workout', val: diet.snackAfternoon },
+                { label: '🌙 Bữa tối', val: diet.dinner },
+              ].filter(m => m.val).map((m, i) => (
+                <div key={i} style={{
+                  padding: '10px 14px', marginBottom: '8px', borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)'
+                }}>
+                  <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>{m.label}</div>
+                  <div style={{ color: '#e2e8f0', fontSize: '0.95rem', lineHeight: 1.5 }}>{m.val}</div>
+                </div>
+              ))}
+
+              {/* Macro badges */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
+                {[
+                  { label: 'Calo', val: diet.calories, unit: 'kcal', color: '#f97316', bg: 'rgba(249,115,22,0.1)' },
+                  { label: 'Protein', val: diet.proteinG, unit: 'g', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+                  { label: 'Carbs', val: diet.carbsG, unit: 'g', color: '#eab308', bg: 'rgba(234,179,8,0.1)' },
+                  { label: 'Fat', val: diet.fatG, unit: 'g', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+                ].map(({ label, val, unit, color, bg }) => (
+                  <div key={label} style={{
+                    padding: '8px 14px', borderRadius: '10px', background: bg,
+                    border: `1px solid ${color}30`, textAlign: 'center', minWidth: '80px'
+                  }}>
+                    <div style={{ color, fontWeight: 700, fontSize: '1.1rem' }}>{val || 0}</div>
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600 }}>{label} ({unit})</div>
+                  </div>
+                ))}
+              </div>
+
+              {diet.note && (
+                <div style={{
+                  marginTop: '14px', padding: '12px 14px', borderRadius: '8px',
+                  background: 'rgba(234,179,8,0.05)', border: '1px solid rgba(234,179,8,0.15)',
+                  color: '#fde68a', fontSize: '0.9rem', lineHeight: 1.5
+                }}>
+                  📝 {diet.note}
+                </div>
+              )}
+            </>
+          ) : (
+            // EMPTY STATE
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '10px' }}>{type === 'TRAINING_DAY' ? '🏋️' : '☕'}</div>
+              <p>Chưa có mẫu thực đơn {type === 'TRAINING_DAY' ? 'ngày tập' : 'ngày nghỉ'}.</p>
+              <button className="btn-submit" onClick={() => startEditDiet(type)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
+                <Plus size={16} /> Tạo mẫu
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
 
   if (loading) {
@@ -101,7 +542,7 @@ const PtMemberDetail = () => {
         </button>
         <h1 style={{ margin: 0 }}>Chi Tiết Học Viên</h1>
       </div>
-      <p>Thông tin và ghi chú cho học viên <strong style={{ color: '#f97316' }}>{member.memberName}</strong>.</p>
+      <p>Thông tin và quản lý cho học viên <strong style={{ color: '#f97316' }}>{member.memberName}</strong>.</p>
 
       {/* Member Info Cards */}
       <div className="admin-stats" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
@@ -121,9 +562,11 @@ const PtMemberDetail = () => {
           <div className="stat-value" style={{ fontSize: '1.2rem' }}>{new Date(member.endDate).toLocaleDateString('vi-VN')}</div>
         </div>
         <div className="stat-card">
-          <StickyNote size={24} className="stat-icon" style={{ color: '#a855f7' }} />
-          <div className="stat-label">Ghi chú</div>
-          <div className="stat-value" style={{ fontSize: '1.2rem' }}>{notes.length}</div>
+          <Utensils size={24} className="stat-icon" style={{ color: '#10b981' }} />
+          <div className="stat-label">Khẩu phần ăn</div>
+          <div className="stat-value" style={{ fontSize: '1.2rem' }}>
+            {(trainingDiet ? 1 : 0) + (restDiet ? 1 : 0)} / 2 mẫu
+          </div>
         </div>
       </div>
 
@@ -144,66 +587,105 @@ const PtMemberDetail = () => {
         </div>
       </div>
 
-      {/* Two columns: Routes + Notes */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-
-
-
-        {/* Notes */}
-        <div className="admin-table-container" style={{ marginTop: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <h3 style={{ color: '#f1f5f9', margin: 0 }}>Ghi chú của PT</h3>
-          </div>
-
-          {/* Note input */}
-          <form onSubmit={handleAddNote} style={{ padding: '16px 20px', display: 'flex', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <input type="text" value={noteText} onChange={e => setNoteText(e.target.value)}
-              placeholder={editingNote ? 'Sửa ghi chú...' : 'Viết ghi chú mới...'}
+      {/* Tabs */}
+      <div style={{
+        display: 'flex', gap: '4px', marginBottom: '20px', background: 'rgba(15,23,42,0.4)',
+        borderRadius: '12px', padding: '4px', width: 'fit-content'
+      }}>
+        {TABS.map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          return (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               style={{
-                flex: 1, padding: '10px 14px', background: 'rgba(15,23,42,0.5)',
-                border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
-                color: '#f8fafc', fontSize: '0.95rem', outline: 'none'
-              }} />
-            <button type="submit" className="btn-submit" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px' }}>
-              <Send size={16} /> {editingNote ? 'Lưu' : 'Gửi'}
+                display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px',
+                borderRadius: '10px', border: 'none', cursor: 'pointer', fontWeight: 600,
+                fontSize: '0.9rem', transition: 'all 0.2s',
+                background: isActive ? 'linear-gradient(135deg, #f97316, #ea580c)' : 'transparent',
+                color: isActive ? '#fff' : '#94a3b8',
+              }}>
+              <Icon size={16} /> {tab.label}
             </button>
-            {editingNote && (
-              <button type="button" className="btn-cancel" onClick={cancelEdit} style={{ padding: '8px 14px' }}>Hủy</button>
-            )}
-          </form>
-
-          {/* Note list */}
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: '400px' }}>
-            {notes.length === 0 ? (
-              <div style={{ padding: '30px 20px', textAlign: 'center', color: '#64748b' }}>Chưa có ghi chú nào.</div>
-            ) : (
-              notes.map(note => (
-                <div key={note.id} style={{
-                  padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  transition: 'background 0.2s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <p style={{ color: '#e2e8f0', margin: '0 0 6px 0', lineHeight: '1.5', flex: 1 }}>{note.content}</p>
-                    <div className="action-btns" style={{ marginLeft: '10px', flexShrink: 0 }}>
-                      <button className="btn-icon" title="Sửa" onClick={() => startEdit(note)} style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.1)' }}>
-                        <Edit2 size={14} />
-                      </button>
-                      <button className="btn-icon cancel" title="Xóa" onClick={() => handleDeleteNote(note.id)}><Trash2 size={14} /></button>
-                    </div>
-                  </div>
-                  <span style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                    {note.createdAt ? new Date(note.createdAt).toLocaleString('vi-VN') : ''}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+          );
+        })}
       </div>
 
+      {/* Tab Content */}
+      {activeTab === 'notes' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+          <div className="admin-table-container" style={{ marginTop: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h3 style={{ color: '#f1f5f9', margin: 0 }}>Ghi chú của PT</h3>
+            </div>
+
+            <form onSubmit={handleAddNote} style={{ padding: '16px 20px', display: 'flex', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <input type="text" value={noteText} onChange={e => setNoteText(e.target.value)}
+                placeholder={editingNote ? 'Sửa ghi chú...' : 'Viết ghi chú mới...'}
+                style={{
+                  flex: 1, padding: '10px 14px', background: 'rgba(15,23,42,0.5)',
+                  border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+                  color: '#f8fafc', fontSize: '0.95rem', outline: 'none'
+                }} />
+              <button type="submit" className="btn-submit" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px' }}>
+                <Send size={16} /> {editingNote ? 'Lưu' : 'Gửi'}
+              </button>
+              {editingNote && (
+                <button type="button" className="btn-cancel" onClick={cancelEdit} style={{ padding: '8px 14px' }}>Hủy</button>
+              )}
+            </form>
+
+            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '500px' }}>
+              {notes.length === 0 ? (
+                <div style={{ padding: '30px 20px', textAlign: 'center', color: '#64748b' }}>Chưa có ghi chú nào.</div>
+              ) : (
+                notes.map(note => (
+                  <div key={note.id} style={{
+                    padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <p style={{ color: '#e2e8f0', margin: '0 0 6px 0', lineHeight: '1.5', flex: 1 }}>{note.content}</p>
+                      <div className="action-btns" style={{ marginLeft: '10px', flexShrink: 0 }}>
+                        <button className="btn-icon" title="Sửa" onClick={() => startEdit(note)} style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.1)' }}>
+                          <Edit2 size={14} />
+                        </button>
+                        <button className="btn-icon cancel" title="Xóa" onClick={() => handleDeleteNote(note.id)}><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                    <span style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                      {note.createdAt ? new Date(note.createdAt).toLocaleString('vi-VN') : ''}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'diet' && (
+        dietLoading ? (
+          <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Đang tải thực đơn...</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {renderDietPanel(
+              'TRAINING_DAY', trainingDiet,
+              'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(234,88,12,0.08))',
+              <Dumbbell size={18} style={{ color: '#f97316' }} />,
+              'Ngày Tập (Training Day)'
+            )}
+            {renderDietPanel(
+              'REST_DAY', restDiet,
+              'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.08))',
+              <Coffee size={18} style={{ color: '#3b82f6' }} />,
+              'Ngày Nghỉ (Rest Day)'
+            )}
+          </div>
+        )
+      )}
 
     </PtLayout>
   );

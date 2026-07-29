@@ -4,6 +4,7 @@ import datn_gym.entity.Membership;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,6 +16,8 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
 
     Optional<Membership> findByUser_IdAndStatus(Integer userId, String status);
     Optional<Membership> findByUser_IdAndStatusIn(Integer userId, List<String> statuses);
+    Optional<Membership> findByUser_IdAndStatusAndEndDateGreaterThanEqual(
+            Integer userId, String status, LocalDate date);
     List<Membership> findByUser_IdOrderByCreatedAtDesc(Integer userId);
     List<Membership> findByPt_IdAndStatus(Integer ptId, String status);
     List<Membership> findByPt_Id(Integer ptId);
@@ -24,6 +27,7 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
 
     @Query("SELECT m FROM Membership m WHERE " +
            "m.pt IS NULL AND m.status = 'ACTIVE' " +
+           "AND m.endDate >= CURRENT_DATE " +
            "AND m.gymPackage.hasPt = true")
     List<Membership> findUnassignedPtMemberships();
 
@@ -43,16 +47,30 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
 
     Page<Membership> findByStatus(String status, Pageable pageable);
 
-    int countByPt_IdAndStatus(Integer ptId, String status);
+    @Query("SELECT COUNT(m) FROM Membership m WHERE m.pt.id = :ptId " +
+           "AND m.status = :status " +
+           "AND (:status <> 'ACTIVE' OR m.endDate >= CURRENT_DATE)")
+    int countByPt_IdAndStatus(
+            @Param("ptId") Integer ptId,
+            @Param("status") String status);
 
     long countByCreatedAtAfter(java.time.LocalDateTime date);
 
-    @Query("SELECT m.gymPackage.name, COUNT(m) FROM Membership m WHERE m.status = 'ACTIVE' GROUP BY m.gymPackage.name")
+    @Query("SELECT m.gymPackage.name, COUNT(m) FROM Membership m " +
+           "WHERE m.status = 'ACTIVE' AND m.endDate >= CURRENT_DATE " +
+           "GROUP BY m.gymPackage.name")
     List<Object[]> countActiveMembershipsByPackage();
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE Membership m SET m.status = 'EXPIRED' " +
+           "WHERE m.status = 'ACTIVE' AND m.endDate < :today")
+    int expireActiveMembershipsBefore(@Param("today") LocalDate today);
 
     // Dùng cho: PtNote, PtComment, TrainingRoute, Review
     @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
-           "m.pt.id = :ptId AND m.user.id = :memberId AND m.status = 'ACTIVE'")
+           "m.pt.id = :ptId AND m.user.id = :memberId AND m.status = 'ACTIVE' " +
+           "AND m.endDate >= CURRENT_DATE")
     boolean existsActiveMembershipByPtAndMember(
             @Param("ptId") Integer ptId,
             @Param("memberId") Integer memberId);
@@ -62,6 +80,7 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
     // Kiểm tra HV có gói ACTIVE với hasMealPlan = true không
     @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
            "m.user.id = :memberId AND m.status = 'ACTIVE' " +
+           "AND m.endDate >= CURRENT_DATE " +
            "AND m.gymPackage.hasMealPlan = true")
     boolean existsVipMembership(@Param("memberId") Integer memberId);
 
@@ -70,7 +89,8 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
     // Kiểm tra HV có gói VIP ACTIVE và đang thuộc PT này không
     @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
            "m.pt.id = :ptId AND m.user.id = :memberId " +
-           "AND m.status = 'ACTIVE' AND m.gymPackage.hasMealPlan = true")
+           "AND m.status = 'ACTIVE' AND m.endDate >= CURRENT_DATE " +
+           "AND m.gymPackage.hasMealPlan = true")
     boolean existsVipMembershipByPtAndMember(
             @Param("ptId") Integer ptId,
             @Param("memberId") Integer memberId);

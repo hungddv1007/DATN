@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class GymPackageController {
     // POST /api/packages — Tạo gói tập mới (Admin gọi, SecurityConfig chặn theo /api/admin/**)
     // Note: Dùng /api/admin/packages cho Admin CRUD, nhưng GET công khai dùng /api/packages
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GymPackageResponse> createPackage(
             @Valid @RequestBody GymPackageRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -43,6 +45,7 @@ public class GymPackageController {
 
     // PUT /api/packages/{id} — Cập nhật gói tập (cần auth)
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GymPackageResponse> updatePackage(
             @PathVariable Integer id,
             @Valid @RequestBody GymPackageRequest request) {
@@ -51,12 +54,14 @@ public class GymPackageController {
 
     // PUT /api/packages/{id}/toggle-status — Ẩn/hiện gói tập (Admin gọi)
     @PutMapping("/{id}/toggle-status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GymPackageResponse> togglePackageStatus(@PathVariable Integer id) {
         return ResponseEntity.ok(gymPackageService.togglePackageStatus(id));
     }
 
     // DELETE /api/packages/{id} — Xóa gói tập (cần auth)
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletePackage(@PathVariable Integer id) {
         gymPackageService.deletePackage(id);
         return ResponseEntity.noContent().build();

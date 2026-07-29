@@ -19,15 +19,11 @@ public class ExerciseController {
 
     // GET /api/exercises — Bất kỳ ai đăng nhập đều có thể xem danh sách bài tập
     @GetMapping("/api/exercises")
-    public ResponseEntity<List<ExerciseResponse>> getExercisesPublic() {
+    public ResponseEntity<List<ExerciseResponse>> getAllExercises() {
         return ResponseEntity.ok(exerciseService.getAllExercises());
     }
 
     // === ADMIN CRUD ===
-    @GetMapping("/api/admin/exercises")
-    public ResponseEntity<List<ExerciseResponse>> getAllExercises() {
-        return ResponseEntity.ok(exerciseService.getAllExercises());
-    }
 
     @PostMapping("/api/admin/exercises")
     public ResponseEntity<ExerciseResponse> createExercise(
@@ -47,6 +43,6 @@ public class ExerciseController {
     @DeleteMapping("/api/admin/exercises/{id}")
     public ResponseEntity<Void> deleteExercise(@PathVariable Integer id) {
         exerciseService.deleteExercise(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

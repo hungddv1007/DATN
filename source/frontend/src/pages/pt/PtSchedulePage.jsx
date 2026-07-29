@@ -1,407 +1,591 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import PtLayout from '../../components/layout/PtLayout';
 import ptScheduleService from '../../services/ptScheduleService';
 import ptDashboardService from '../../services/ptDashboardService';
-import { Calendar, Save, Trash2, Edit3, UserCheck, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Repeat, Bell, Trash2 } from 'lucide-react';
+import TimePickerWheel from '../../components/common/TimePickerWheel';
 import './PtSchedulePage.css';
 
-const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-const SLOTS = [
-  { index: 0, label: 'Sáng', time: '07:00 - 08:00' },
-  { index: 1, label: 'Sáng', time: '08:00 - 09:00' },
-  { index: 2, label: 'Sáng', time: '09:00 - 10:00' },
-  { index: 3, label: 'Chiều', time: '13:00 - 14:00' },
-  { index: 4, label: 'Chiều', time: '14:00 - 15:00' },
-  { index: 5, label: 'Chiều', time: '15:00 - 16:00' },
-  { index: 6, label: 'Tối', time: '18:00 - 19:00' },
-  { index: 7, label: 'Tối', time: '19:00 - 20:00' }
+const DAY_LABELS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
+const BLOCKS = [
+  { label: 'NGÀY', range: '06:00 – 18:00', startHour: 6, endHour: 18 },
+  { label: 'ĐÊM', range: '18:00 – 06:00', startHour: 18, endHour: 6 }
 ];
+const MUSCLE_GROUPS = ['Ngực', 'Lưng/Xô', 'Đùi/Mông/Chân', 'Vai', 'Tay Trước/Sau', 'Bụng/Core', 'Cardio/Thể lực', 'Toàn thân', 'Giãn cơ/Phục hồi'];
 
-const MUSCLE_GROUPS = ['Ngực', 'Lưng/Xô', 'Đùi/Mông/Chân', 'Vai', 'Tay Trước/Sau', 'Bụng/Core', 'Cardio/Thể lực', 'Nghỉ ngơi'];
+// ============ Helpers ============
+const pad2 = (n) => String(n).padStart(2, '0');
+const toISODate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const formatDDMM = (d) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+
+function getMonday(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const day = x.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  x.setDate(x.getDate() + diff);
+  return x;
+}
+
+function addDays(d, n) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+function timeToMinutes(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function isInBlock(startTime, blockIdx) {
+  const mins = timeToMinutes(startTime);
+  if (blockIdx === 0) return mins >= 360 && mins < 1080; // 06:00-18:00
+  return mins >= 1080 || mins < 360; // 18:00-06:00
+}
 
 const PtSchedulePage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const initialMemberId = queryParams.get('memberId');
 
+  // State
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [schedules, setSchedules] = useState([]);
   const [members, setMembers] = useState([]);
-  const [selectedMemberId, setSelectedMemberId] = useState('');
-  const [ptSchedules, setPtSchedules] = useState([]); // Tất cả lịch của PT này
-  const [memberSchedules, setMemberSchedules] = useState([]); // Lịch tạm thời của member đang chọn
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [tooltip, setTooltip] = useState({ show: false, text: '', type: '', x: 0, y: 0 });
+  const [formError, setFormError] = useState('');
 
-  const handleMouseEnter = (e, text, type) => {
-    if (!text) return;
-    setTooltip({
-      show: true,
-      text: text,
-      type: type,
-      x: e.clientX,
-      y: e.clientY
-    });
-  };
+  // Form fields
+  const [formMemberId, setFormMemberId] = useState('');
+  const [formDate, setFormDate] = useState('');
+  const [formStartTime, setFormStartTime] = useState('08:00');
+  const [formEndTime, setFormEndTime] = useState('09:00');
+  const [formMuscleGroup, setFormMuscleGroup] = useState('Ngực');
+  const [formCustomNote, setFormCustomNote] = useState('');
+  const [formRecurring, setFormRecurring] = useState(false);
+  const [formRecurringWeeks, setFormRecurringWeeks] = useState(8);
+  const [formSendNotification, setFormSendNotification] = useState(false);
 
-  const handleMouseMove = (e) => {
-    setTooltip(prev => ({
-      ...prev,
-      x: e.clientX,
-      y: e.clientY
-    }));
-  };
+  // Delete modal state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteAll, setDeleteAll] = useState(false);
+  const [deleteNotify, setDeleteNotify] = useState(false);
 
-  const handleMouseLeave = () => {
-    setTooltip(prev => ({ ...prev, show: false }));
-  };
+  // ============ Computed ============
+  const getDisplayedMonday = useCallback(() => {
+    return addDays(getMonday(new Date()), weekOffset * 7);
+  }, [weekOffset]);
 
-  // Dialog/Form state cho mô tả buổi tập
-  const [showNoteModal, setShowNoteModal] = useState(false);
-  const [currentSlotConfig, setCurrentSlotConfig] = useState(null); // { day, slotIndex }
-  const [muscleGroup, setMuscleGroup] = useState('Ngực');
-  const [customNote, setCustomNote] = useState('');
+  const getDisplayedDates = useCallback(() => {
+    const monday = getDisplayedMonday();
+    return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  }, [getDisplayedMonday]);
 
-  const loadData = async () => {
+  const weekStartISO = toISODate(getDisplayedMonday());
+
+  // ============ Data Loading ============
+  const loadSchedules = useCallback(async () => {
     try {
-      const membersData = await ptDashboardService.getAssignedMembers();
-      setMembers(membersData);
-      
-      const schedulesData = await ptScheduleService.getPtSchedules();
-      setPtSchedules(schedulesData);
-
-      if (initialMemberId) {
-        setSelectedMemberId(initialMemberId);
-      }
+      const data = await ptScheduleService.getPtSchedules(weekStartISO);
+      setSchedules(data);
     } catch (err) {
-      setError('Lỗi tải dữ liệu thời khóa biểu');
-    } finally {
-      setLoading(false);
+      console.error('Lỗi tải lịch:', err);
+    }
+  }, [weekStartISO]);
+
+  const loadMembers = async () => {
+    try {
+      const data = await ptDashboardService.getAssignedMembers();
+      setMembers(data);
+    } catch (err) {
+      console.error('Lỗi tải danh sách học viên:', err);
     }
   };
 
   useEffect(() => {
-    loadData();
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([loadSchedules(), loadMembers()]);
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    loadSchedules();
+  }, [weekStartISO]);
+
+  useEffect(() => {
+    if (initialMemberId) setFormMemberId(initialMemberId);
   }, [initialMemberId]);
 
-  // Cập nhật memberSchedules khi đổi selectedMemberId
-  useEffect(() => {
-    if (!selectedMemberId) {
-      setMemberSchedules([]);
-      return;
-    }
-    // Lấy tất cả slot có sẵn trong ptSchedules của member này làm nháp
-    const currentMemberSlots = ptSchedules
-      .filter(s => s.memberId === parseInt(selectedMemberId))
-      .map(s => ({
-        dayOfWeek: s.dayOfWeek,
-        slotIndex: s.slotIndex,
-        exerciseNote: s.exerciseNote
-      }));
-    setMemberSchedules(currentMemberSlots);
-  }, [selectedMemberId, ptSchedules]);
-
-  const handleCellClick = (dayIndex, slotIndex) => {
-    if (!selectedMemberId) {
-      alert("Vui lòng chọn học viên ở thanh phía trên trước!");
-      return;
-    }
-
-    // Tìm xem ô này có trong lịch của PT chưa
-    const existingSlot = ptSchedules.find(s => s.dayOfWeek === dayIndex && s.slotIndex === slotIndex);
-    
-    if (existingSlot && existingSlot.memberId !== parseInt(selectedMemberId)) {
-      // Slot đã bị học viên khác chiếm (Màu đỏ)
-      return;
-    }
-
-    const isAlreadySelected = memberSchedules.some(s => s.dayOfWeek === dayIndex && s.slotIndex === slotIndex);
-
-    if (isAlreadySelected) {
-      // Hủy chọn (Vàng -> Xanh)
-      setMemberSchedules(prev => prev.filter(s => !(s.dayOfWeek === dayIndex && s.slotIndex === slotIndex)));
-    } else {
-      // Mở modal cấu hình bài tập cho ô này
-      setCurrentSlotConfig({ day: dayIndex, slotIndex });
-      setMuscleGroup('Ngực');
-      setCustomNote('');
-      setShowNoteModal(true);
-    }
+  // ============ Toast ============
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
-  const handleSaveSlotNote = (e) => {
+  // ============ Week Navigation ============
+  const navigateWeek = (delta) => setWeekOffset(prev => prev + delta);
+  const goToday = () => setWeekOffset(0);
+
+  // ============ Get schedules for a cell ============
+  const getSchedulesForCell = (dateISO, blockIdx) => {
+    return schedules
+      .filter(s => s.scheduleDate === dateISO && isInBlock(s.startTime, blockIdx))
+      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+  };
+
+  // ============ Modal Open/Close ============
+  const openCreateModal = (dateISO, defaultStart) => {
+    setEditingSchedule(null);
+    setFormError('');
+    setFormMemberId(initialMemberId || '');
+    setFormDate(dateISO || toISODate(new Date()));
+    setFormStartTime(defaultStart || '08:00');
+    const [h, m] = (defaultStart || '08:00').split(':');
+    setFormEndTime(`${pad2((parseInt(h, 10) + 1) % 24)}:${m}`);
+    setFormMuscleGroup('Ngực');
+    setFormCustomNote('');
+    setFormRecurring(false);
+    setFormRecurringWeeks(8);
+    setFormSendNotification(false);
+    setShowModal(true);
+  };
+
+  const openEditModal = (schedule) => {
+    setEditingSchedule(schedule);
+    setFormError('');
+    setFormMemberId(String(schedule.memberId));
+    setFormDate(schedule.scheduleDate);
+    setFormStartTime(schedule.startTime);
+    setFormEndTime(schedule.endTime);
+    setFormMuscleGroup('');
+    setFormCustomNote(schedule.exerciseNote || '');
+    setFormRecurring(false);
+    setFormRecurringWeeks(8);
+    setFormSendNotification(false);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingSchedule(null);
+    setShowDeleteConfirm(false);
+  };
+
+  // ============ Form Submit ============
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!currentSlotConfig) return;
+    setFormError('');
 
-    const note = customNote.trim() ? customNote.trim() : muscleGroup;
-    const newSlot = {
-      dayOfWeek: currentSlotConfig.day,
-      slotIndex: currentSlotConfig.slotIndex,
-      exerciseNote: note
-    };
+    if (!formDate || !formStartTime || !formEndTime) {
+      setFormError('Vui lòng điền đầy đủ ngày và giờ.');
+      return;
+    }
+    if (timeToMinutes(formEndTime) <= timeToMinutes(formStartTime)) {
+      setFormError('Giờ kết thúc phải sau giờ bắt đầu.');
+      return;
+    }
 
-    setMemberSchedules(prev => [...prev, newSlot]);
-    setShowNoteModal(false);
-    setCurrentSlotConfig(null);
-  };
+    const exerciseNote = formCustomNote.trim() || formMuscleGroup || '';
 
-  const handleSaveAll = async () => {
-    if (!selectedMemberId) return;
     setSubmitting(true);
-    setError('');
-    setSuccess('');
-
     try {
-      await ptScheduleService.saveMemberSchedule({
-        memberId: parseInt(selectedMemberId),
-        slots: memberSchedules
-      });
-      setSuccess('Lưu lịch trình huấn luyện thành công!');
-      // Tải lại toàn bộ lịch và danh sách học viên
-      const [schedulesData, membersData] = await Promise.all([
-        ptScheduleService.getPtSchedules(),
-        ptDashboardService.getAssignedMembers()
-      ]);
-      setPtSchedules(schedulesData);
-      setMembers(membersData);
+      if (editingSchedule) {
+        // Update
+        await ptScheduleService.updateSchedule(editingSchedule.id, {
+          scheduleDate: formDate,
+          startTime: formStartTime,
+          endTime: formEndTime,
+          exerciseNote,
+          sendNotification: formSendNotification
+        });
+        showToast('Đã cập nhật buổi tập thành công!');
+      } else {
+        // Create
+        if (!formMemberId) {
+          setFormError('Vui lòng chọn học viên.');
+          setSubmitting(false);
+          return;
+        }
+        await ptScheduleService.createSchedule({
+          memberId: parseInt(formMemberId),
+          scheduleDate: formDate,
+          startTime: formStartTime,
+          endTime: formEndTime,
+          exerciseNote,
+          recurring: formRecurring,
+          recurringWeeks: formRecurring ? formRecurringWeeks : null,
+          sendNotification: formSendNotification
+        });
+        showToast(formRecurring
+          ? `Đã tạo ${formRecurringWeeks} buổi tập lặp lại hàng tuần!`
+          : 'Đã tạo buổi tập thành công!');
+      }
+      closeModal();
+      await loadSchedules();
+      await loadMembers();
     } catch (err) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu lịch trình');
+      setFormError(err.response?.data?.message || err.response?.data || 'Có lỗi xảy ra.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const getCellStatus = (dayIndex, slotIndex) => {
-    // 1. Kiểm tra trong danh sách nháp trước
-    const draftSlot = memberSchedules.find(s => s.dayOfWeek === dayIndex && s.slotIndex === slotIndex);
-    if (draftSlot) {
-      return { type: 'SELECTED', note: draftSlot.exerciseNote };
-    }
-
-    // 2. Kiểm tra trong danh sách tổng
-    const bookedSlot = ptSchedules.find(s => s.dayOfWeek === dayIndex && s.slotIndex === slotIndex);
-    if (bookedSlot) {
-      return { type: 'BOOKED', note: bookedSlot.exerciseNote, memberName: bookedSlot.memberName };
-    }
-
-    return { type: 'EMPTY' };
+  // ============ Delete ============
+  const handleDeleteClick = () => {
+    setDeleteAll(false);
+    setDeleteNotify(false);
+    setShowDeleteConfirm(true);
   };
+
+  const confirmDelete = async () => {
+    if (!editingSchedule) return;
+    setSubmitting(true);
+    try {
+      await ptScheduleService.deleteSchedule(editingSchedule.id, deleteAll, deleteNotify);
+      showToast(deleteAll ? 'Đã hủy tất cả buổi trong nhóm lặp lại!' : 'Đã hủy buổi tập!');
+      closeModal();
+      await loadSchedules();
+      await loadMembers();
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Lỗi khi hủy buổi tập.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ============ Render ============
+  const todayISO = toISODate(new Date());
+  const dates = getDisplayedDates();
+  const mondayDisplay = getDisplayedMonday();
+  const sundayDisplay = addDays(mondayDisplay, 6);
+  const weekLabel = `${formatDDMM(mondayDisplay)} – ${formatDDMM(sundayDisplay)}`;
 
   if (loading) {
     return (
       <PtLayout>
-        <div className="pt-schedule-page">
-          <p style={{ color: '#94a3b8', marginTop: '100px', textAlign: 'center' }}>Đang tải cấu hình thời khóa biểu...</p>
+        <div className="pts-page">
+          <div className="pts-loading">Đang tải lịch dạy tuần...</div>
         </div>
       </PtLayout>
     );
   }
 
-  const selectedMember = members.find(m => m.memberId === parseInt(selectedMemberId));
-
   return (
     <PtLayout>
-      <div className="pt-schedule-page">
-        <div className="schedule-header">
-          <h1>Lịch Trình Huấn Luyện</h1>
-          <p>Xếp lịch tập cố định hàng tuần và chuẩn bị nội dung bài tập cho từng học viên</p>
-        </div>
-
-        {error && <div className="schedule-alert error">{error}</div>}
-        {success && <div className="schedule-alert success">{success}</div>}
-
-        {/* Bảng cấu hình */}
-        <div className="schedule-controls">
-          <div className="control-group">
-            <label htmlFor="memberSelect">Chọn học viên cần lên lịch:</label>
-            <select
-              id="memberSelect"
-              value={selectedMemberId}
-              onChange={(e) => setSelectedMemberId(e.target.value)}
-            >
-              <option value="">-- Chọn học viên --</option>
-              {members.map(m => (
-                <option key={m.memberId} value={m.memberId}>
-                  {m.memberName} ({m.packageName}) {m.isScheduled ? '✓ Đã có lịch' : '⚠ Chưa có lịch'}
-                </option>
-              ))}
-            </select>
+      <div className="pts-page">
+        {/* HEADER */}
+        <div className="pts-header">
+          <div className="pts-title-group">
+            <h1 className="pts-title">
+              <span className="pts-title-bar" />
+              Lịch Dạy Tuần Của PT
+            </h1>
+            <p className="pts-subtitle">Nhấp vào ô trống để thêm buổi tập, nhấp vào buổi tập đã có để sửa hoặc hủy</p>
           </div>
-
-          {selectedMemberId && (
-            <button className="btn-save-schedule" onClick={handleSaveAll} disabled={submitting}>
-              <Save size={18} /> {submitting ? 'Đang lưu...' : 'Lưu lịch trình'}
+          <div className="pts-actions">
+            <button className="pts-btn-today" onClick={goToday} disabled={weekOffset === 0}>
+              Hôm nay
             </button>
-          )}
+            <div className="pts-week-nav">
+              <button className="pts-nav-btn" onClick={() => navigateWeek(-1)}>
+                <ChevronLeft size={16} />
+              </button>
+              <span className="pts-week-text">{weekLabel}</span>
+              <button className="pts-nav-btn" onClick={() => navigateWeek(1)}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <button className="pts-btn-primary" onClick={() => openCreateModal()}>
+              <Plus size={16} /> Đặt lịch mới
+            </button>
+          </div>
         </div>
 
-        {/* Legend */}
-        <div className="schedule-legend">
-          <div className="legend-item"><span className="box green"></span> Trống (Click để xếp)</div>
-          <div className="legend-item"><span className="box yellow"></span> Đang chọn (Học viên này)</div>
-          <div className="legend-item"><span className="box red"></span> Đã bận (Học viên khác)</div>
+        {/* LEGEND */}
+        <div className="pts-legend">
+          <div className="pts-legend-item"><span className="pts-dot pts-dot-booked" /> Đã xác nhận</div>
+          <div className="pts-legend-item"><span className="pts-dot pts-dot-recurring" /> Lịch lặp lại</div>
         </div>
 
-        {/* Grid thời khóa biểu */}
-        <div className="timetable-container">
-          <table className="timetable">
-            <thead>
-              <tr>
-                <th>Buổi</th>
-                <th>Khung giờ</th>
-                {DAYS.map((day, i) => <th key={i}>{day}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {SLOTS.map((slot, sIdx) => {
-                // Kiểm tra xem đây có phải là hàng đầu tiên của 1 buổi để gộp row không
-                const showPeriodCell = sIdx === 0 || sIdx === 3 || sIdx === 6;
-                const periodRowSpan = sIdx === 0 || sIdx === 3 ? 3 : 2;
-
+        {/* SCHEDULE GRID */}
+        <div className="pts-grid-container">
+          <div className="pts-grid-table">
+            {/* Header row */}
+            <div className="pts-grid-row pts-grid-header">
+              <div className="pts-col-header pts-time-header">Khung Giờ</div>
+              {dates.map((d, i) => {
+                const iso = toISODate(d);
+                const isToday = iso === todayISO;
                 return (
-                  <tr key={slot.index}>
-                    {showPeriodCell && (
-                      <td className="period-cell" rowSpan={periodRowSpan}>
-                        {slot.label}
-                      </td>
-                    )}
-                    <td className="time-cell">{slot.time}</td>
-                    {DAYS.map((_, dIdx) => {
-                      const status = getCellStatus(dIdx, slot.index);
-                      
-                      let cellClass = 'cell-empty';
-                      let cellContent = null;
-                      let hoverTitle = '';
-
-                      if (status.type === 'SELECTED') {
-                        cellClass = 'cell-selected';
-                        const currentName = selectedMember?.memberName || 'Học viên đang chọn';
-                        hoverTitle = currentName + (status.note ? ` - ${status.note}` : '');
-                        cellContent = (
-                          <div className="cell-details">
-                            <span className="member-name">{currentName}</span>
-                            <span className="exercise-badge">{status.note}</span>
-                          </div>
-                        );
-                      } else if (status.type === 'BOOKED') {
-                        cellClass = 'cell-booked';
-                        hoverTitle = status.memberName + (status.note ? ` - ${status.note}` : '');
-                        cellContent = (
-                          <div className="cell-details">
-                            <span className="member-name">{status.memberName}</span>
-                            <span className="exercise-badge">{status.note}</span>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <td 
-                          key={dIdx} 
-                          className={`schedule-cell ${cellClass}`}
-                          onClick={() => handleCellClick(dIdx, slot.index)}
-                          onMouseEnter={(e) => handleMouseEnter(e, hoverTitle, status.type)}
-                          onMouseMove={handleMouseMove}
-                          onMouseLeave={handleMouseLeave}
-                        >
-                          {cellContent}
-                        </td>
-                      );
-                    })}
-                  </tr>
+                  <div key={i} className={`pts-col-header ${isToday ? 'pts-day-today' : ''}`}>
+                    <div className="pts-day-name">{DAY_LABELS[i]}</div>
+                    <div className="pts-day-num">{formatDDMM(d)}</div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Body rows - NGÀY and ĐÊM */}
+            {BLOCKS.map((block, blockIdx) => (
+              <div key={blockIdx} className="pts-grid-row pts-grid-row-body">
+                <div className="pts-time-cell">
+                  {block.label}
+                  <span className="pts-time-range">{block.range}</span>
+                </div>
+                {dates.map((d, dayIdx) => {
+                  const iso = toISODate(d);
+                  const isToday = iso === todayISO;
+                  const items = getSchedulesForCell(iso, blockIdx);
+                  const defaultStart = blockIdx === 0 ? '08:00' : '19:00';
+
+                  return (
+                    <div key={dayIdx} className={`pts-slot-cell ${isToday ? 'pts-day-today' : ''}`}>
+                      <div className="pts-cell-cards">
+                        {items.map(item => (
+                          <button
+                            key={item.id}
+                            className={`pts-card ${item.recurringGroupId ? 'pts-card-recurring' : 'pts-card-confirmed'}`}
+                            onClick={() => openEditModal(item)}
+                          >
+                            <div className="pts-card-top">
+                              <span className="pts-time-badge">{item.startTime} - {item.endTime}</span>
+                            </div>
+                            <div className="pts-client-name">{item.memberName}</div>
+                            {item.exerciseNote && (
+                              <div className="pts-workout-pill">{item.exerciseNote}</div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        className={`pts-add-mini ${items.length ? 'pts-add-compact' : 'pts-add-empty'}`}
+                        onClick={() => openCreateModal(iso, defaultStart)}
+                      >
+                        + {items.length ? 'Thêm' : 'Thêm lịch'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Modal ghi chú bài tập */}
-        {showNoteModal && (
-          <div className="note-modal-overlay">
-            <div className="note-modal">
-              <div className="modal-header">
-                <h2>Nội Dung Tập Luyện</h2>
-                <button className="btn-close" onClick={() => setShowNoteModal(false)}>×</button>
+        {/* BOOKING MODAL */}
+        {showModal && (
+          <div className="pts-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
+            <div className="pts-modal-card">
+              <div className="pts-modal-header">
+                <h3 className="pts-modal-title">
+                  <span className="pts-modal-dot" />
+                  {editingSchedule ? 'Sửa Buổi Tập' : 'Xếp Lịch Tập Mới'}
+                </h3>
+                <button className="pts-btn-close" onClick={closeModal}><X size={18} /></button>
               </div>
-              <form onSubmit={handleSaveSlotNote}>
-                <div className="modal-body">
-                  <div className="form-group">
-                    <label>Chọn nhóm cơ / mục tiêu chính:</label>
-                    <div className="muscle-options">
-                      {MUSCLE_GROUPS.map((mg, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          className={`muscle-btn ${muscleGroup === mg ? 'active' : ''}`}
-                          onClick={() => setMuscleGroup(mg)}
-                        >
-                          {mg}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
-                  <div className="form-group" style={{ marginTop: '20px' }}>
-                    <label htmlFor="customNoteInput">Ghi chú chi tiết (Tùy chọn):</label>
-                    <input
-                      id="customNoteInput"
-                      type="text"
-                      placeholder="Nhập ghi chú tùy ý (ví dụ: Deadlift nặng, Cardio chạy bộ...)"
-                      value={customNote}
-                      onChange={(e) => setCustomNote(e.target.value)}
+              <form onSubmit={handleSubmit} noValidate>
+                {/* Học viên */}
+                {!editingSchedule && (
+                  <div className="pts-form-group">
+                    <label className="pts-form-label">Học viên</label>
+                    <select
+                      className="pts-form-control"
+                      value={formMemberId}
+                      onChange={(e) => setFormMemberId(e.target.value)}
+                    >
+                      <option value="" disabled>-- Chọn học viên --</option>
+                      {members.map(m => (
+                        <option key={m.memberId} value={m.memberId}>
+                          {m.memberName} ({m.packageName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {editingSchedule && (
+                  <div className="pts-form-group">
+                    <label className="pts-form-label">Học viên</label>
+                    <div className="pts-form-static">{editingSchedule.memberName}</div>
+                  </div>
+                )}
+
+                {/* Ngày */}
+                <div className="pts-form-group">
+                  <label className="pts-form-label">Ngày</label>
+                  <input
+                    type="date"
+                    className="pts-form-control"
+                    value={formDate}
+                    onChange={(e) => setFormDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Giờ */}
+                <div className="pts-form-grid2">
+                  <div className="pts-form-group">
+                    <TimePickerWheel
+                      label="Giờ bắt đầu"
+                      value={formStartTime}
+                      onChange={(val) => setFormStartTime(val)}
+                    />
+                  </div>
+                  <div className="pts-form-group">
+                    <TimePickerWheel
+                      label="Giờ kết thúc"
+                      value={formEndTime}
+                      onChange={(val) => setFormEndTime(val)}
                     />
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn-cancel" onClick={() => setShowNoteModal(false)}>Hủy</button>
-                  <button type="submit" className="btn-save">Gán vào thời khóa biểu</button>
+
+                {/* Nhóm cơ */}
+                <div className="pts-form-group">
+                  <label className="pts-form-label">Nội dung buổi tập</label>
+                  <div className="pts-workout-tags">
+                    {MUSCLE_GROUPS.map((mg, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`pts-tag-btn ${formMuscleGroup === mg ? 'active' : ''}`}
+                        onClick={() => { setFormMuscleGroup(mg); setFormCustomNote(''); }}
+                      >
+                        {mg}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Ghi chú tùy chỉnh */}
+                <div className="pts-form-group">
+                  <label className="pts-form-label">Ghi chú chi tiết (Tùy chọn)</label>
+                  <input
+                    type="text"
+                    className="pts-form-control"
+                    placeholder="VD: Deadlift nặng, Cardio chạy bộ..."
+                    value={formCustomNote}
+                    onChange={(e) => setFormCustomNote(e.target.value)}
+                  />
+                </div>
+
+                {/* Lặp lại - chỉ khi tạo mới */}
+                {!editingSchedule && (
+                  <div className="pts-form-group">
+                    <label className="pts-checkbox-group">
+                      <input
+                        type="checkbox"
+                        checked={formRecurring}
+                        onChange={(e) => setFormRecurring(e.target.checked)}
+                      />
+                      <Repeat size={14} />
+                      <span>Lặp lại cố định hàng tuần</span>
+                    </label>
+                    {formRecurring && (
+                      <div className="pts-recurring-weeks">
+                        <label className="pts-form-label">Số tuần lặp lại (tính cả tuần này)</label>
+                        <input
+                          type="number"
+                          className="pts-form-control pts-input-narrow"
+                          min="2"
+                          max="52"
+                          value={formRecurringWeeks}
+                          onChange={(e) => setFormRecurringWeeks(parseInt(e.target.value) || 8)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Thông báo */}
+                <div className="pts-form-group">
+                  <label className="pts-checkbox-group">
+                    <input
+                      type="checkbox"
+                      checked={formSendNotification}
+                      onChange={(e) => setFormSendNotification(e.target.checked)}
+                    />
+                    <Bell size={14} />
+                    <span>Gửi thông báo cho học viên</span>
+                  </label>
+                </div>
+
+                {/* Error */}
+                {formError && <div className="pts-form-error">{formError}</div>}
+
+                {/* Actions */}
+                <div className="pts-modal-footer">
+                  {editingSchedule && (
+                    <button type="button" className="pts-btn-danger" onClick={handleDeleteClick}>
+                      <Trash2 size={14} /> Hủy buổi này
+                    </button>
+                  )}
+                  <button type="button" className="pts-btn-secondary" onClick={closeModal}>Đóng</button>
+                  <button type="submit" className="pts-btn-primary" disabled={submitting}>
+                    {submitting ? 'Đang xử lý...' : (editingSchedule ? 'Cập Nhật' : 'Xác Nhận Đặt Lịch')}
+                  </button>
                 </div>
               </form>
+
+              {/* Delete confirmation overlay */}
+              {showDeleteConfirm && (
+                <div className="pts-delete-overlay">
+                  <div className="pts-delete-card">
+                    <h4>Xác nhận hủy buổi tập</h4>
+                    <p>Bạn có chắc muốn hủy buổi tập của <strong>{editingSchedule?.memberName}</strong>?</p>
+
+                    {editingSchedule?.recurringGroupId && (
+                      <label className="pts-checkbox-group" style={{ marginTop: '12px' }}>
+                        <input
+                          type="checkbox"
+                          checked={deleteAll}
+                          onChange={(e) => setDeleteAll(e.target.checked)}
+                        />
+                        <Repeat size={14} />
+                        <span>Hủy tất cả buổi trong nhóm lặp lại</span>
+                      </label>
+                    )}
+
+                    <label className="pts-checkbox-group" style={{ marginTop: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={deleteNotify}
+                        onChange={(e) => setDeleteNotify(e.target.checked)}
+                      />
+                      <Bell size={14} />
+                      <span>Gửi thông báo cho học viên</span>
+                    </label>
+
+                    <div className="pts-delete-actions">
+                      <button className="pts-btn-secondary" onClick={() => setShowDeleteConfirm(false)}>Hủy bỏ</button>
+                      <button className="pts-btn-danger" onClick={confirmDelete} disabled={submitting}>
+                        {submitting ? 'Đang xóa...' : 'Xác nhận hủy'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Custom Premium Tooltip */}
-        {tooltip.show && (() => {
-          const isSelected = tooltip.type === 'SELECTED';
-          const borderColor = isSelected ? 'rgba(234, 179, 8, 0.7)' : 'rgba(239, 68, 68, 0.7)';
-          const nameColor = isSelected ? '#facc15' : '#f87171';
-          const parts = tooltip.text.split(' - ');
-          
-          return (
-            <div 
-              className="custom-schedule-tooltip"
-              style={{
-                position: 'fixed',
-                left: (tooltip.x + 15) + 'px',
-                top: (tooltip.y + 15) + 'px',
-                pointerEvents: 'none',
-                zIndex: 9999,
-                background: 'rgba(15, 23, 42, 0.96)',
-                border: `1px solid ${borderColor}`,
-                borderRadius: '8px',
-                padding: '10px 14px',
-                color: '#f8fafc',
-                fontSize: '0.85rem',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(8px)',
-                animation: 'tooltipFadeIn 0.15s ease-out',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '2px'
-              }}
-            >
-              <div style={{ fontWeight: 'bold', color: nameColor, fontSize: '0.9rem' }}>{parts[0]}</div>
-              {parts[1] && (
-                <div style={{ marginTop: '4px', color: '#94a3b8', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>🎯</span> {parts[1]}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        {/* Toast */}
+        {toast && (
+          <div className={`pts-toast pts-toast-${toast.type}`}>
+            {toast.message}
+          </div>
+        )}
       </div>
     </PtLayout>
   );

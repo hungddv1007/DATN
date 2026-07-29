@@ -134,9 +134,14 @@ const PtMembersList = () => {
                         </button>
 
                         <button 
-                          title="Khẩu phần ăn (Chức năng tương lai)" 
-                          disabled
-                          style={{ background: 'rgba(255,255,255,0.02)', border: 'none', color: '#64748b', padding: '6px', borderRadius: '6px', cursor: 'not-allowed' }}
+                          title="Thiết lập / Xem khẩu phần ăn" 
+                          onClick={() => navigate(`/pt/members/${member.memberId}?tab=diet`, { state: { tab: 'diet' } })}
+                          style={{
+                            background: 'rgba(249,115,22,0.12)',
+                            border: '1px solid rgba(249,115,22,0.3)',
+                            color: '#f97316', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', fontWeight: 'bold'
+                          }}
                         >
                           <Utensils size={16} />
                         </button>

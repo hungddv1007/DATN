@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, User, ArrowLeft } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import blogService from '../../services/blogService';
+import { resolveFileUrl } from '../../utils/fileUrl';
 import './BlogPage.css';
 
 const BlogDetailPage = () => {
@@ -65,7 +66,7 @@ const BlogDetailPage = () => {
           {blog.thumbnail && (
             <div className="blog-detail-thumb">
               <img 
-                src={blog.thumbnail.startsWith('http') ? blog.thumbnail : `http://localhost:8080/api/public/uploads/${blog.thumbnail}`} 
+                src={resolveFileUrl(blog.thumbnail)}
                 alt={blog.title} 
               />
             </div>

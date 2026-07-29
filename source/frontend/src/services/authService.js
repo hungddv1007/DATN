@@ -33,6 +33,12 @@ const authService = {
     return response.data;
   },
 
+  // Lấy Google Client ID từ backend
+  getGoogleClientId: async () => {
+    const response = await api.get('/auth/google/client-id');
+    return response.data.clientId;
+  },
+
   // Đăng xuất
   logout: () => {
     localStorage.removeItem('token');
@@ -48,6 +54,18 @@ const authService = {
   // Kiểm tra đã đăng nhập chưa
   isLoggedIn: () => {
     return !!localStorage.getItem('token');
+  },
+
+  // Quên mật khẩu — Gửi OTP
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  // Đặt lại mật khẩu
+  resetPassword: async (email, otp, newPassword, confirmPassword) => {
+    const response = await api.post('/auth/reset-password', { email, otp, newPassword, confirmPassword });
+    return response.data;
   },
 };
 

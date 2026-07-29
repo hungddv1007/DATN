@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, UserCircle, Calendar, Utensils, LogOut, Dumbbell, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, UserCircle, Calendar, LogOut, Dumbbell, MessageSquare } from 'lucide-react';
 import '../../pages/member/DashboardPage.css';
 
 const PtLayout = ({ children }) => {
@@ -46,11 +46,6 @@ const PtLayout = ({ children }) => {
           <li>
             <Link to="/pt/schedule" className={isActive('/pt/schedule')}>
               <Calendar size={18} /> Lịch trình huấn luyện
-            </Link>
-          </li>
-          <li>
-            <Link to="#" className="disabled-nav-item" style={{ pointerEvents: 'none', opacity: 0.5, display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', color: '#64748b' }}>
-              <Utensils size={18} /> Khẩu phần ăn
             </Link>
           </li>
           <li>
