@@ -112,6 +112,8 @@ Chatbot MEMBER dùng Gemini Interactions API:
 - Hồ sơ thể chất chỉ được đưa vào ngữ cảnh sau khi thành viên đồng ý.
 - Không gửi email, số điện thoại, JWT hay thông tin đăng nhập vào prompt.
 - Chatbot chỉ đọc dữ liệu; không sửa lịch tập, thực đơn hay hồ sơ.
+- Câu hỏi về trạng thái tài khoản, gói tập và hạn sử dụng được backend trả
+  trực tiếp từ database, không qua Gemini và không tiêu tốn quota AI.
 - Giới hạn Free Tier được giữ trong bộ nhớ theo từng tài khoản. Khi backend
   khởi động lại, bộ đếm bắt đầu lại; quota thật của Google vẫn được áp dụng.
 

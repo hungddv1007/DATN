@@ -1,6 +1,8 @@
 package datn_gym.service;
 
+import datn_gym.entity.GymPackage;
 import datn_gym.entity.MemberProfile;
+import datn_gym.entity.Membership;
 import datn_gym.entity.User;
 import datn_gym.repository.DietRepository;
 import datn_gym.repository.MemberProfileRepository;
@@ -86,5 +88,31 @@ class AiChatContextServiceTest {
         String context = service.buildMemberContext(member.getEmail(), true);
 
         assertThat(context).contains("Đau đầu gối trái");
+    }
+
+    @Test
+    void accountStatusCopiesMembershipDatesDirectlyFromDatabase() {
+        User pt = User.builder().fullName("Trần Đức Việt").build();
+        Membership membership = Membership.builder()
+                .user(member)
+                .gymPackage(GymPackage.builder().name("VIP").build())
+                .pt(pt)
+                .startDate(LocalDate.of(2099, 7, 22))
+                .endDate(LocalDate.of(2099, 9, 20))
+                .durationDays(60)
+                .status("ACTIVE")
+                .build();
+        when(membershipRepository.findByUser_IdOrderByCreatedAtDesc(member.getId()))
+                .thenReturn(List.of(membership));
+
+        String response =
+                service.buildAccountStatusResponse(member.getEmail(), false);
+
+        assertThat(response)
+                .contains("VIP")
+                .contains("22/07/2099")
+                .contains("20/09/2099")
+                .contains("Trần Đức Việt")
+                .doesNotContain("20/07/2099");
     }
 }

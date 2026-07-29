@@ -14,11 +14,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class AiChatContextService {
+
+    private static final DateTimeFormatter DISPLAY_DATE =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final UserService userService;
     private final MembershipRepository membershipRepository;
@@ -41,17 +46,98 @@ public class AiChatContextService {
         return context.toString().trim();
     }
 
+    @Transactional(readOnly = true)
+    public String buildAccountStatusResponse(
+            String email,
+            boolean includePhysicalData) {
+        User member = userService.getUserByEmail(email);
+        LocalDate today = LocalDate.now();
+        Membership membership = findActiveMembership(member.getId(), today);
+        List<PtSchedule> schedules = ptScheduleRepository
+                .findByMemberIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
+                        member.getId(),
+                        today,
+                        today.plusDays(7),
+                        "ACTIVE");
+        List<Diet> diets =
+                dietRepository.findByMember_IdOrderByCreatedAtDesc(member.getId());
+
+        StringBuilder response = new StringBuilder()
+                .append("Chào ").append(member.getFullName())
+                .append(". Đây là trạng thái hiện tại được lấy trực tiếp từ GymPro:\n\n");
+
+        if (membership == null) {
+            response.append("- **Gói tập:** Chưa có gói đang hoạt động.\n")
+                    .append("- **PT phụ trách:** Chưa được phân công.\n");
+        } else {
+            response.append("- **Gói tập:** ")
+                    .append(membership.getGymPackage().getName())
+                    .append('\n')
+                    .append("- **Thời hạn:** ")
+                    .append(membership.getStartDate().format(DISPLAY_DATE))
+                    .append(" đến ")
+                    .append(membership.getEndDate().format(DISPLAY_DATE))
+                    .append(" (còn ")
+                    .append(Math.max(0, ChronoUnit.DAYS.between(
+                            today,
+                            membership.getEndDate())))
+                    .append(" ngày)\n")
+                    .append("- **PT phụ trách:** ")
+                    .append(membership.getPt() != null
+                            ? membership.getPt().getFullName()
+                            : "Chưa được phân công")
+                    .append('\n');
+        }
+
+        if (schedules.isEmpty()) {
+            response.append("- **Lịch tập 7 ngày tới:** Chưa có lịch.\n");
+        } else {
+            response.append("- **Lịch tập 7 ngày tới:**\n");
+            schedules.stream().limit(10).forEach(schedule -> response
+                    .append("  - ")
+                    .append(schedule.getScheduleDate().format(DISPLAY_DATE))
+                    .append(' ')
+                    .append(schedule.getStartTime())
+                    .append('-')
+                    .append(schedule.getEndTime())
+                    .append(": ")
+                    .append(textOrFallback(
+                            schedule.getExerciseNote(),
+                            "Buổi tập với PT"))
+                    .append('\n'));
+        }
+
+        if (diets.isEmpty()) {
+            response.append("- **Thực đơn:** PT chưa thiết lập.\n");
+        } else {
+            Diet latestDiet = diets.get(0);
+            response.append("- **Thực đơn gần nhất:** ")
+                    .append(textOrFallback(latestDiet.getTitle(), "Thực đơn"))
+                    .append(" — ")
+                    .append(latestDiet.getCalories()).append(" kcal, ")
+                    .append(latestDiet.getProteinG()).append("g protein, ")
+                    .append(latestDiet.getCarbsG()).append("g carbs, ")
+                    .append(latestDiet.getFatG()).append("g fat.\n");
+        }
+
+        if (!includePhysicalData) {
+            response.append("- **Hồ sơ thể chất:** Chưa được chia sẻ theo lựa chọn của bạn.");
+        } else {
+            String condition = memberProfileRepository.findByUser_Id(member.getId())
+                    .map(MemberProfile::getPhysicalCondition)
+                    .filter(value -> !value.isBlank())
+                    .orElse("Chưa có thông tin");
+            response.append("- **Hồ sơ thể chất:** ").append(condition).append('.');
+        }
+
+        return response.toString();
+    }
+
     private void appendMembership(
             StringBuilder context,
             Integer memberId,
             LocalDate today) {
-        Membership activeMembership = membershipRepository
-                .findByUser_IdOrderByCreatedAtDesc(memberId)
-                .stream()
-                .filter(membership -> "ACTIVE".equals(membership.getStatus())
-                        && !membership.getEndDate().isBefore(today))
-                .findFirst()
-                .orElse(null);
+        Membership activeMembership = findActiveMembership(memberId, today);
 
         if (activeMembership == null) {
             context.append("Gói tập hiện tại: chưa có gói đang hoạt động.\n");
@@ -135,6 +221,16 @@ public class AiChatContextService {
         context.append("Hồ sơ thể chất do PT ghi nhận: ")
                 .append(condition)
                 .append('\n');
+    }
+
+    private Membership findActiveMembership(Integer memberId, LocalDate today) {
+        return membershipRepository
+                .findByUser_IdOrderByCreatedAtDesc(memberId)
+                .stream()
+                .filter(membership -> "ACTIVE".equals(membership.getStatus())
+                        && !membership.getEndDate().isBefore(today))
+                .findFirst()
+                .orElse(null);
     }
 
     private String textOrFallback(String value, String fallback) {

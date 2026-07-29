@@ -23,11 +23,13 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -42,6 +44,7 @@ public class AiChatService {
             Không chẩn đoán bệnh, kê thuốc hoặc tự nhận là bác sĩ. Với dấu hiệu đau, chấn thương,
             bệnh lý hoặc tình huống khẩn cấp, hãy khuyên người dùng dừng tập và gặp chuyên gia y tế.
             Không bịa lịch tập, gói tập hay thực đơn. Nếu dữ liệu không có, hãy nói rõ là chưa có.
+            Khi nhắc lại mã, số liệu hoặc ngày tháng, phải sao chép nguyên văn từ dữ liệu GymPro.
             Chỉ tư vấn; không tuyên bố rằng bạn đã sửa lịch tập, thực đơn hoặc dữ liệu hệ thống.
             Trả lời ngắn gọn, dễ hiểu và thực tế. Thông tin dinh dưỡng chỉ mang tính ước lượng.
             """;
@@ -110,9 +113,12 @@ public class AiChatService {
             Integer conversationId,
             AiChatRequest request) {
         AiConversation conversation = requireOwnedConversation(email, conversationId);
-        rateLimitService.checkAndRecord(conversation.getUser().getId());
-
         String userText = request.getMessage().trim();
+        boolean deterministicAccountQuery = isDeterministicAccountQuery(userText);
+        if (!deterministicAccountQuery) {
+            rateLimitService.checkAndRecord(conversation.getUser().getId());
+        }
+
         AiMessage userMessage = AiMessage.builder()
                 .conversation(conversation)
                 .role("USER")
@@ -125,6 +131,13 @@ public class AiChatService {
         }
         conversation.setUpdatedAt(LocalDateTime.now());
         conversationRepository.save(conversation);
+
+        if (deterministicAccountQuery) {
+            String response = contextService.buildAccountStatusResponse(
+                    email,
+                    Boolean.TRUE.equals(conversation.getPhysicalDataConsent()));
+            return streamDeterministicResponse(conversation, response);
+        }
 
         String model = request.isDeepAnalysis()
                 ? requireModel(properties.chatComplexModel(), "GEMINI_CHAT_COMPLEX_MODEL")
@@ -190,6 +203,63 @@ public class AiChatService {
         List<AiConversation> expired = conversationRepository.findByUpdatedAtBefore(
                 LocalDateTime.now().minusDays(retentionDays));
         conversationRepository.deleteAll(expired);
+    }
+
+    private SseEmitter streamDeterministicResponse(
+            AiConversation conversation,
+            String content) {
+        SseEmitter emitter = new SseEmitter(10_000L);
+        AiMessage assistantMessage = AiMessage.builder()
+                .conversation(conversation)
+                .role("ASSISTANT")
+                .content(limitText(content, 16_000))
+                .model("GYMPRO_DATA")
+                .inputTokens(0)
+                .outputTokens(0)
+                .totalTokens(0)
+                .build();
+        AiMessage saved = messageRepository.save(assistantMessage);
+        conversation.setUpdatedAt(LocalDateTime.now());
+        conversationRepository.save(conversation);
+
+        sendEvent(emitter, "meta", Map.of(
+                "model", "GYMPRO_DATA",
+                "deepAnalysis", false));
+        sendEvent(emitter, "chunk", Map.of("text", saved.getContent()));
+        sendEvent(emitter, "done", toMessageResponse(saved));
+        emitter.complete();
+        return emitter;
+    }
+
+    boolean isDeterministicAccountQuery(String text) {
+        String normalized = normalizeIntentText(text);
+        boolean accountStatus = normalized.contains("trang thai")
+                && normalized.contains("tai khoan");
+        boolean accountInformation = normalized.contains("tai khoan cua toi")
+                && (normalized.contains("thong tin")
+                    || normalized.contains("hien tai"));
+        boolean ownPackage = normalized.contains("goi tap cua toi")
+                || normalized.contains("goi cua toi")
+                || normalized.contains("goi tap hien tai");
+        boolean packageExpiry = normalized.contains("goi")
+                && (normalized.contains("con bao lau")
+                    || normalized.contains("het han")
+                    || normalized.contains("ngay ket thuc")
+                    || normalized.contains("thoi han"));
+        return accountStatus || accountInformation || ownPackage || packageExpiry;
+    }
+
+    private String normalizeIntentText(String text) {
+        if (text == null) {
+            return "";
+        }
+        return Normalizer.normalize(
+                        text.toLowerCase(Locale.ROOT),
+                        Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd')
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private String buildPrompt(Integer conversationId, String memberContext) {
