@@ -32,6 +32,17 @@ Các biến bắt buộc:
 - `VITE_GOOGLE_CLIENT_ID` (giá trị public được frontend sử dụng)
 - `GEMINI_API_KEY`
 
+Các biến Gemini có giá trị mặc định phù hợp Free Tier:
+
+- `GEMINI_NUTRITION_MODEL=gemini-3.5-flash-lite`
+- `GEMINI_CHAT_MODEL=gemini-3.5-flash-lite`
+- `GEMINI_CHAT_COMPLEX_MODEL=gemini-3.6-flash`
+- `GEMINI_FREE_TIER_REQUESTS_PER_HOUR=10`
+- `GEMINI_FREE_TIER_REQUESTS_PER_DAY=50`
+- `GEMINI_CONVERSATION_RETENTION_DAYS=90`
+- `CORS_ALLOWED_ORIGINS` cho phép cả `localhost` và `127.0.0.1` ở cổng
+  phát triển 5173/3000 theo `.env.example`.
+
 Spring Boot đọc `../../.env` qua `spring.config.import`. Có thể đặt biến
 `ENV_FILE` thành đường dẫn khác khi chạy từ một working directory khác.
 Vite dùng `envDir: '../../'` và chỉ đưa các biến có tiền tố `VITE_` vào bundle.
@@ -45,6 +56,7 @@ seed data nếu cần.
 Database đang tồn tại: không chạy lại file khởi tạo. Chạy migration theo thứ tự:
 
 1. [database/migrations/V2__payment_membership_and_otp_hardening.sql](database/migrations/V2__payment_membership_and_otp_hardening.sql)
+2. [database/migrations/V3__ai_chat.sql](database/migrations/V3__ai_chat.sql)
 
 Ứng dụng mặc định dùng `ddl-auto=validate`, vì vậy schema phải được migrate trước
 khi khởi động. Có thể tạm đặt `JPA_DDL_AUTO=update` chỉ trong môi trường phát triển,
@@ -85,13 +97,35 @@ GitHub Actions chạy các bước này cho mọi push và pull request.
 
 ## Nền tảng AI
 
-`AiClient` là cổng tích hợp AI dùng chung; `GeminiClient` là implementation hiện
-tại. Tính năng phân tích dinh dưỡng gọi qua cổng này. Chatbot mới nên phụ thuộc
-`AiClient`, đặt prompt/use-case ở service riêng và không truy cập trực tiếp API
-key hoặc `WebClient`.
+Phân tích dinh dưỡng dùng `gemini-3.5-flash-lite` và Structured Output với JSON
+Schema. Kết quả vẫn được kiểm tra phạm vi calo/macro ở backend trước khi trả cho
+PT.
+
+Chatbot MEMBER dùng Gemini Interactions API:
+
+- Chế độ thường: `gemini-3.5-flash-lite`.
+- Nút **Phân tích sâu**: `gemini-3.6-flash`.
+- Phản hồi được stream qua SSE.
+- Luôn gửi `store=false`; Google không quản lý lịch sử hội thoại.
+- Lịch sử nằm trong `ai_conversations` và `ai_messages`, tự xóa sau 90 ngày.
+- Thành viên có thể xóa hội thoại bất kỳ lúc nào.
+- Hồ sơ thể chất chỉ được đưa vào ngữ cảnh sau khi thành viên đồng ý.
+- Không gửi email, số điện thoại, JWT hay thông tin đăng nhập vào prompt.
+- Chatbot chỉ đọc dữ liệu; không sửa lịch tập, thực đơn hay hồ sơ.
+- Giới hạn Free Tier được giữ trong bộ nhớ theo từng tài khoản. Khi backend
+  khởi động lại, bộ đếm bắt đầu lại; quota thật của Google vẫn được áp dụng.
 
 API key được gửi trong header, có timeout cấu hình bằng `GEMINI_TIMEOUT`, và lỗi
 nhà cung cấp không được trả nguyên văn cho client.
+
+Để thử chatbot:
+
+1. Chạy migration V2 và V3.
+2. Khởi động backend và frontend.
+3. Đăng nhập tài khoản có role `MEMBER`.
+4. Mở một trang `/member/*`, sau đó chọn nút **GymPro AI** ở góc phải.
+
+Thông tin do AI cung cấp chỉ mang tính tham khảo và không thay thế tư vấn y tế.
 
 ## Lưu ý vận hành
 
