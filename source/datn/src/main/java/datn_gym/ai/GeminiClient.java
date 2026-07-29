@@ -1,7 +1,7 @@
 package datn_gym.ai;
 
+import datn_gym.config.GeminiProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -19,39 +19,49 @@ import java.util.concurrent.TimeoutException;
 public class GeminiClient implements AiClient {
 
     private final WebClient webClient;
+    private final String nutritionModel;
     private final Duration timeout;
 
     public GeminiClient(
             WebClient.Builder webClientBuilder,
-            @Value("${gemini.api.url}") String apiUrl,
-            @Value("${gemini.api.key}") String apiKey,
-            @Value("${gemini.api.timeout:30s}") Duration timeout) {
+            GeminiProperties properties) {
+        String apiKey = properties.apiKey();
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("Thiếu cấu hình GEMINI_API_KEY.");
         }
+        this.nutritionModel = requireText(
+                properties.nutritionModel(), "GEMINI_NUTRITION_MODEL");
         this.webClient = webClientBuilder
-                .baseUrl(apiUrl)
-                // Không đặt API key trên query string để tránh lộ qua access log.
+                .baseUrl(requireText(properties.baseUrl(), "GEMINI_BASE_URL"))
                 .defaultHeader("x-goog-api-key", apiKey)
                 .build();
-        this.timeout = timeout;
+        this.timeout = properties.timeout() != null
+                ? properties.timeout()
+                : Duration.ofSeconds(30);
     }
 
     @Override
-    public String generateJson(String prompt) {
+    public String generateStructuredJson(
+            String prompt,
+            Map<String, Object> jsonSchema) {
         Map<String, Object> requestBody = Map.of(
                 "contents", List.of(
                         Map.of("parts", List.of(Map.of("text", prompt)))
                 ),
                 "generationConfig", Map.of(
-                        "temperature", 0.1,
-                        "maxOutputTokens", 8192,
-                        "responseMimeType", "application/json"
+                        "maxOutputTokens", 4096,
+                        "responseFormat", Map.of(
+                                "text", Map.of(
+                                        "mimeType", "APPLICATION_JSON",
+                                        "schema", jsonSchema
+                                )
+                        )
                 )
         );
 
         try {
             Map<?, ?> response = webClient.post()
+                    .uri("/v1beta/models/{model}:generateContent", nutritionModel)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
                     .retrieve()
@@ -118,5 +128,12 @@ public class GeminiClient implements AiClient {
             current = current.getCause();
         }
         return false;
+    }
+
+    private String requireText(String value, String environmentName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Thiếu cấu hình " + environmentName + ".");
+        }
+        return value.trim();
     }
 }

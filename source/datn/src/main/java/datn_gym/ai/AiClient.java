@@ -1,10 +1,11 @@
 package datn_gym.ai;
 
+import java.util.Map;
+
 /**
- * Cổng dùng chung cho các tính năng AI. Chatbot sau này phụ thuộc interface
- * này thay vì gọi trực tiếp SDK/API của một nhà cung cấp.
+ * Cổng dùng chung cho các tác vụ AI trả về dữ liệu có cấu trúc.
  */
 public interface AiClient {
 
-    String generateJson(String prompt);
+    String generateStructuredJson(String prompt, Map<String, Object> jsonSchema);
 }

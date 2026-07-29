@@ -13,11 +13,40 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class GeminiService {
+
+    private static final int MAX_REASONABLE_CALORIES = 20_000;
+    private static final int MAX_REASONABLE_MACRO_GRAMS = 2_000;
+
+    private static final Map<String, Object> NUTRITION_SCHEMA = Map.of(
+            "type", "object",
+            "properties", Map.of(
+                    "total", Map.of(
+                            "type", "object",
+                            "properties", nutritionProperties(),
+                            "required", List.of("calories", "protein", "carbs", "fat")
+                    ),
+                    "meals", Map.of(
+                            "type", "array",
+                            "items", Map.of(
+                                    "type", "object",
+                                    "properties", mealProperties(),
+                                    "required", List.of(
+                                            "name", "calories", "protein", "carbs", "fat")
+                            )
+                    ),
+                    "note", Map.of(
+                            "type", "string",
+                            "description", "Lời khuyên ngắn gọn 1-2 câu bằng tiếng Việt"
+                    )
+            ),
+            "required", List.of("total", "meals", "note")
+    );
 
     private final ObjectMapper objectMapper;
     private final AiClient aiClient;
@@ -63,32 +92,12 @@ public class GeminiService {
             - Tính calo (kcal), protein (g), carbs (g), fat (g) cho từng bữa và tổng ngày.
             - Viết súc tích, ngắn gọn.
             - Mục "note": %s
-            - Trả về JSON hợp lệ theo đúng format sau, không thêm bất kỳ văn bản nào khác:
-
-            {
-              "total": {
-                "calories": <số nguyên>,
-                "protein": <số nguyên>,
-                "carbs": <số nguyên>,
-                "fat": <số nguyên>
-              },
-              "meals": [
-                {
-                  "name": "<tên bữa>",
-                  "calories": <số nguyên>,
-                  "protein": <số nguyên>,
-                  "carbs": <số nguyên>,
-                  "fat": <số nguyên>
-                }
-              ],
-              "note": "<lời khuyên/ghi chú ngắn 1-2 câu dành cho học viên>"
-            }
+            - Chỉ trả về dữ liệu theo JSON Schema đã được cung cấp.
             """, dayTypeName, mealText, noteInstruction);
 
         try {
-            String rawText = aiClient.generateJson(prompt);
-            String jsonText = extractAndRepairJson(rawText);
-            JsonNode rootNode = objectMapper.readTree(jsonText);
+            String rawText = aiClient.generateStructuredJson(prompt, NUTRITION_SCHEMA);
+            JsonNode rootNode = objectMapper.readTree(rawText);
 
             JsonNode totalNode = rootNode.path("total");
             int totalCalories = totalNode.path("calories").asInt(0);
@@ -111,6 +120,12 @@ public class GeminiService {
                         .build());
                 }
             }
+            validateNutritionResult(
+                    totalCalories,
+                    totalProtein,
+                    totalCarbs,
+                    totalFat,
+                    mealList);
 
             return NutritionAnalysisResponse.builder()
                 .totalCalories(totalCalories)
@@ -124,7 +139,8 @@ public class GeminiService {
         } catch (ResponseStatusException ex) {
             throw ex;
         } catch (Exception e) {
-            log.warn("AI trả về JSON dinh dưỡng không hợp lệ", e);
+            log.warn("AI trả về JSON dinh dưỡng không hợp lệ: {}", e.getMessage());
+            log.debug("Chi tiết lỗi phản hồi dinh dưỡng từ AI", e);
             throw new ResponseStatusException(
                     HttpStatus.BAD_GATEWAY,
                     "AI trả về dữ liệu không hợp lệ. Vui lòng thử lại.");
@@ -135,75 +151,56 @@ public class GeminiService {
         return str != null && !str.trim().isEmpty();
     }
 
-    private String extractAndRepairJson(String text) {
-        if (text == null) return "{}";
-        int firstBrace = text.indexOf('{');
-        if (firstBrace == -1) return text.trim();
-
-        int lastBrace = text.lastIndexOf('}');
-        String json;
-        if (lastBrace > firstBrace) {
-            json = text.substring(firstBrace, lastBrace + 1);
-        } else {
-            json = text.substring(firstBrace);
+    private void validateNutritionResult(
+            int calories,
+            int protein,
+            int carbs,
+            int fat,
+            List<NutritionAnalysisResponse.MealNutrition> meals) {
+        if (meals.isEmpty()) {
+            throw new IllegalStateException("AI không trả về dinh dưỡng cho từng bữa.");
         }
-
-        // Tự động sửa lỗi JSON nếu bị ngắt dòng chừng (Unclosed brackets/braces)
-        return repairJson(json);
+        validateNutritionNumbers(calories, protein, carbs, fat);
+        meals.forEach(meal -> validateNutritionNumbers(
+                meal.getCalories(),
+                meal.getProtein(),
+                meal.getCarbs(),
+                meal.getFat()));
     }
 
-    private String repairJson(String json) {
-        if (json == null || json.isEmpty()) return "{}";
-        json = json.trim();
-
-        int openBraces = 0;
-        int openBrackets = 0;
-        boolean inString = false;
-        boolean escape = false;
-
-        StringBuilder repaired = new StringBuilder();
-        for (int i = 0; i < json.length(); i++) {
-            char c = json.charAt(i);
-            repaired.append(c);
-            if (escape) {
-                escape = false;
-                continue;
-            }
-            if (c == '\\') {
-                escape = true;
-                continue;
-            }
-            if (c == '"') {
-                inString = !inString;
-                continue;
-            }
-            if (!inString) {
-                if (c == '{') openBraces++;
-                else if (c == '}') openBraces--;
-                else if (c == '[') openBrackets++;
-                else if (c == ']') openBrackets--;
-            }
+    private void validateNutritionNumbers(int calories, int protein, int carbs, int fat) {
+        if (calories < 0 || calories > MAX_REASONABLE_CALORIES
+                || protein < 0 || protein > MAX_REASONABLE_MACRO_GRAMS
+                || carbs < 0 || carbs > MAX_REASONABLE_MACRO_GRAMS
+                || fat < 0 || fat > MAX_REASONABLE_MACRO_GRAMS) {
+            throw new IllegalStateException("AI trả về chỉ số dinh dưỡng ngoài phạm vi hợp lý.");
         }
+    }
 
-        if (inString) {
-            repaired.append('"');
-        }
+    private static Map<String, Object> nutritionProperties() {
+        return Map.of(
+                "calories", integerField("Năng lượng tính bằng kcal"),
+                "protein", integerField("Protein tính bằng gram"),
+                "carbs", integerField("Carbohydrate tính bằng gram"),
+                "fat", integerField("Chất béo tính bằng gram")
+        );
+    }
 
-        String current = repaired.toString().trim();
-        if (current.endsWith(",")) {
-            current = current.substring(0, current.length() - 1);
-            repaired = new StringBuilder(current);
-        }
+    private static Map<String, Object> mealProperties() {
+        return Map.of(
+                "name", Map.of("type", "string"),
+                "calories", integerField("Năng lượng của bữa ăn tính bằng kcal"),
+                "protein", integerField("Protein của bữa ăn tính bằng gram"),
+                "carbs", integerField("Carbohydrate của bữa ăn tính bằng gram"),
+                "fat", integerField("Chất béo của bữa ăn tính bằng gram")
+        );
+    }
 
-        while (openBrackets > 0) {
-            repaired.append("]");
-            openBrackets--;
-        }
-        while (openBraces > 0) {
-            repaired.append("}");
-            openBraces--;
-        }
-
-        return repaired.toString();
+    private static Map<String, Object> integerField(String description) {
+        return Map.of(
+                "type", "integer",
+                "minimum", 0,
+                "description", description
+        );
     }
 }
