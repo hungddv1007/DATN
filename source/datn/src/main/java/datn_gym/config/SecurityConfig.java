@@ -1,6 +1,7 @@
 package datn_gym.config;
 
 import datn_gym.security.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -62,6 +63,8 @@ public class SecurityConfig {
 
                 // ✅ QUAN TRỌNG: Rule cụ thể phải đặt TRƯỚC rule chung
                 // Spring Security đọc từ trên xuống, dừng ở rule đầu tiên match
+                // Async dispatch của SSE đã được xác thực ở request ban đầu.
+                .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 
                 // 1. Auth - công khai hoàn toàn
                 .requestMatchers("/api/auth/**").permitAll()

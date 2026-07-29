@@ -309,6 +309,37 @@ CREATE TABLE otps (
 );
 
 -- ============================================================
+-- 19. AI CONVERSATIONS
+-- ============================================================
+CREATE TABLE ai_conversations (
+    id                      INT IDENTITY(1,1) PRIMARY KEY,
+    user_id                 INT NOT NULL,
+    title                   NVARCHAR(120) NOT NULL,
+    physical_data_consent   BIT NOT NULL DEFAULT 0,
+    created_at              DATETIME2 NOT NULL DEFAULT GETDATE(),
+    updated_at              DATETIME2 NOT NULL DEFAULT GETDATE(),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- ============================================================
+-- 20. AI MESSAGES
+-- ============================================================
+CREATE TABLE ai_messages (
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
+    conversation_id     INT NOT NULL,
+    role                NVARCHAR(20) NOT NULL
+                        CHECK (role IN ('USER', 'ASSISTANT')),
+    content             NVARCHAR(MAX) NOT NULL,
+    model               NVARCHAR(80),
+    input_tokens        INT,
+    output_tokens       INT,
+    total_tokens        INT,
+    created_at          DATETIME2 NOT NULL DEFAULT GETDATE(),
+    FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id)
+        ON DELETE CASCADE
+);
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 CREATE INDEX IX_users_role ON users(role_id);
@@ -326,6 +357,8 @@ CREATE INDEX IX_pt_schedules_member_date ON pt_schedules(member_id, schedule_dat
 CREATE INDEX IX_pt_schedules_recurring ON pt_schedules(recurring_group_id);
 CREATE INDEX IX_attendances_member ON attendances(member_id);
 CREATE INDEX IX_otps_email_expiration ON otps(email, expiration_time DESC);
+CREATE INDEX IX_ai_conversations_user_updated ON ai_conversations(user_id, updated_at DESC);
+CREATE INDEX IX_ai_messages_conversation_created ON ai_messages(conversation_id, created_at ASC);
 
 GO
 
