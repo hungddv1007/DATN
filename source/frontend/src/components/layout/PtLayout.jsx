@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, UserCircle, Calendar, LogOut, Dumbbell, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, UserCircle, Calendar, LogOut, Dumbbell, MessageSquare, Bell } from 'lucide-react';
 import '../../pages/member/DashboardPage.css';
 
 const PtLayout = ({ children }) => {
@@ -56,6 +56,11 @@ const PtLayout = ({ children }) => {
           <li>
             <Link to="/pt/reviews" className={isActive('/pt/reviews')}>
               <MessageSquare size={18} /> Đánh giá
+            </Link>
+          </li>
+          <li>
+            <Link to="/pt/notifications" className={isActive('/pt/notifications')}>
+              <Bell size={18} /> Gửi thông báo
             </Link>
           </li>
           <li style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>

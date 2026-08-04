@@ -3,12 +3,15 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import exerciseService from '../../services/exerciseService';
 import fileService from '../../services/fileService';
 import { Edit, Trash2, Plus, PlayCircle, Upload } from 'lucide-react';
+import AdminPagination from '../../components/admin/AdminPagination';
+import useClientPagination from '../../hooks/useClientPagination';
 import './AdminManagement.css';
 
 const ExercisesManagement = () => {
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const { page, setPage, totalPages, pageItems: visibleExercises } = useClientPagination(exercises);
   
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -141,7 +144,7 @@ const ExercisesManagement = () => {
             ) : exercises.length === 0 ? (
               <tr><td colSpan="6" style={{ textAlign: 'center' }}>Chưa có bài tập nào</td></tr>
             ) : (
-              exercises.map(exercise => (
+              visibleExercises.map(exercise => (
                 <tr key={exercise.id}>
                   <td>{exercise.id}</td>
                   <td style={{ fontWeight: 'bold', color: '#f1f5f9' }}>{exercise.name}</td>
@@ -175,6 +178,7 @@ const ExercisesManagement = () => {
             )}
           </tbody>
         </table>
+        <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
       {/* Modal Thêm/Sửa */}

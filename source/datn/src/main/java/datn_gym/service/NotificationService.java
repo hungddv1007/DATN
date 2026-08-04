@@ -1,10 +1,12 @@
 package datn_gym.service;
 
+import datn_gym.dto.request.NotificationBulkCreateRequest;
 import datn_gym.dto.request.NotificationCreateRequest;
 import datn_gym.dto.response.NotificationResponse;
 import datn_gym.dto.response.UnreadCountResponse;
 import datn_gym.entity.Notification;
 import datn_gym.entity.User;
+import datn_gym.repository.MembershipRepository;
 import datn_gym.repository.NotificationRepository;
 import datn_gym.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +30,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final UserService userService;
+    private final MembershipRepository membershipRepository;
 
     // ================================================================
     // USER: Xem thông báo của chính mình (mọi role: Admin/PT/Member)
@@ -108,8 +114,9 @@ public class NotificationService {
     @Transactional
     public NotificationResponse sendNotification(String senderEmail,
                                                   NotificationCreateRequest request) {
-        User sender = userService.getUserByEmail(senderEmail);
+        User sender = getAuthorizedSender(senderEmail);
         User receiver = getUserById(request.getUserId());
+        validateReceiverPermission(sender, receiver);
 
         Notification notification = Notification.builder()
                 .user(receiver)
@@ -120,6 +127,42 @@ public class NotificationService {
                 .build();
 
         return toResponse(notificationRepository.save(notification));
+    }
+
+    @Transactional
+    public int sendNotifications(String senderEmail,
+                                 NotificationBulkCreateRequest request) {
+        User sender = getAuthorizedSender(senderEmail);
+        LinkedHashSet<Integer> uniqueReceiverIds =
+                new LinkedHashSet<>(request.getUserIds());
+
+        List<User> foundReceivers = userRepository.findAllById(uniqueReceiverIds);
+        if (foundReceivers.size() != uniqueReceiverIds.size()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Có người nhận không tồn tại");
+        }
+
+        Map<Integer, User> receiverById = foundReceivers.stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        List<User> receivers = uniqueReceiverIds.stream()
+                .map(receiverById::get)
+                .toList();
+
+        receivers.forEach(receiver ->
+                validateReceiverPermission(sender, receiver));
+
+        List<Notification> notifications = receivers.stream()
+                .map(receiver -> Notification.builder()
+                        .user(receiver)
+                        .sender(sender)
+                        .title(request.getTitle())
+                        .message(request.getMessage())
+                        .isRead(false)
+                        .build())
+                .toList();
+
+        notificationRepository.saveAll(notifications);
+        return notifications.size();
     }
 
     // ================================================================
@@ -147,12 +190,38 @@ public class NotificationService {
     // HELPER METHODS
     // ================================================================
 
-
-
     private User getUserById(Integer id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy người nhận"));
+    }
+
+    private User getAuthorizedSender(String senderEmail) {
+        User sender = userService.getUserByEmail(senderEmail);
+        if (sender.getRole() == null
+                || !("ADMIN".equals(sender.getRole().getName())
+                || "PT".equals(sender.getRole().getName()))) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Tài khoản không có quyền gửi thông báo");
+        }
+        return sender;
+    }
+
+    private void validateReceiverPermission(User sender, User receiver) {
+        if (!"PT".equals(sender.getRole().getName())) {
+            return;
+        }
+
+        boolean managesReceiver = receiver.getRole() != null
+                && "MEMBER".equals(receiver.getRole().getName())
+                && membershipRepository.existsActiveMembershipByPtAndMember(
+                        sender.getId(), receiver.getId());
+        if (!managesReceiver) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Bạn chỉ có thể gửi thông báo cho hội viên đang được phân công");
+        }
     }
 
     // FIX N+1: @EntityGraph đã load user + sender sẵn trong Repository

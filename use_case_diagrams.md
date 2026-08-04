@@ -95,8 +95,6 @@ flowchart LR
     end
     
     subgraph TapLuyen [Tập luyện & Dịch vụ]
-        XemLoTrinh(Xem lộ trình & bài tập)
-        DiemDanh(Điểm danh buổi tập)
         XemCheDoAn(Xem thực đơn - VIP)
         DanhGiaPT(Đánh giá PT)
     end
@@ -124,7 +122,6 @@ flowchart LR
     subgraph QuanLyHoiVien [Quản lý Hội viên]
         XemDanhSachHV(Xem danh sách HV được giao)
         GhiChu(Ghi chú về Hội viên)
-        LenLoTrinh(Tạo lộ trình tập luyện)
         NhanXet(Nhận xét buổi tập)
         LenThucDon(Lên chế độ ăn - VIP)
     end

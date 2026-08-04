@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Star, Award, ShieldCheck } from 'lucide-react';
 import MainLayout from '../../components/layout/MainLayout';
 import ptService from '../../services/ptService';
@@ -39,7 +40,7 @@ const PtListPage = () => {
           ) : (
             <div className="pt-grid">
               {pts.map((pt) => (
-                <div key={pt.id} className="pt-card">
+                <Link key={pt.id} to={`/pts/${pt.id}`} className="pt-card" style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div className="pt-avatar">
                     {pt.avatar ? (
                       <img src={resolveFileUrl(pt.avatar)} alt={pt.fullName} />
@@ -73,7 +74,7 @@ const PtListPage = () => {
                       <span>{pt.certificates || 'Chứng nhận chuyên nghiệp'}</span>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

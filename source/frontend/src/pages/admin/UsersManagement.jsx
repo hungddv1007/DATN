@@ -3,6 +3,8 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import userService from '../../services/userService';
 import { resolveFileUrl } from '../../utils/fileUrl';
 import { Lock, Unlock, ShieldAlert, CheckCircle, Search, Filter } from 'lucide-react';
+import AdminPagination from '../../components/admin/AdminPagination';
+import useClientPagination from '../../hooks/useClientPagination';
 import './AdminManagement.css';
 
 const UsersManagement = () => {
@@ -63,6 +65,7 @@ const UsersManagement = () => {
     const matchRole = roleFilter === 'ALL' || user.role === roleFilter;
     return matchSearch && matchRole;
   });
+  const { page, setPage, totalPages, pageItems: visibleUsers } = useClientPagination(filteredUsers);
 
   return (
     <AdminLayout>
@@ -81,7 +84,7 @@ const UsersManagement = () => {
             type="text" 
             placeholder="Tìm kiếm theo Tên hoặc Email..." 
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
             style={{ 
               width: '100%', padding: '10px 10px 10px 40px', 
               background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', 
@@ -94,7 +97,7 @@ const UsersManagement = () => {
           <Filter size={18} color="#64748b" />
           <select 
             value={roleFilter} 
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}
             style={{ 
               padding: '10px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', 
               color: 'white', borderRadius: '8px', outline: 'none', cursor: 'pointer'
@@ -127,7 +130,7 @@ const UsersManagement = () => {
             ) : filteredUsers.length === 0 ? (
               <tr><td colSpan="7" style={{ textAlign: 'center' }}>Không tìm thấy người dùng</td></tr>
             ) : (
-              filteredUsers.map(user => (
+              visibleUsers.map(user => (
                 <tr key={user.id} style={{ opacity: user.status ? 1 : 0.6 }}>
                   <td>{user.id}</td>
                   <td>
@@ -193,6 +196,7 @@ const UsersManagement = () => {
             )}
           </tbody>
         </table>
+        <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
     </AdminLayout>
   );

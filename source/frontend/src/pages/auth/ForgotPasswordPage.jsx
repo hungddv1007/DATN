@@ -97,16 +97,26 @@ const ForgotPasswordPage = () => {
   };
 
   // Step 2: Verify OTP → Go to password step
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
     const otpString = otp.join('');
     if (otpString.length !== 6) {
       setError('Vui lòng nhập đủ 6 chữ số OTP');
       return;
     }
+
     setError('');
     setSuccess('');
-    setStep(STEPS.NEW_PASSWORD);
+    setLoading(true);
+    try {
+      const res = await authService.verifyForgotPasswordOtp(email, otpString);
+      setSuccess(res.message);
+      setStep(STEPS.NEW_PASSWORD);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Mã OTP không đúng hoặc đã hết hạn');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Step 3: Reset password
@@ -222,7 +232,7 @@ const ForgotPasswordPage = () => {
                 ))}
               </div>
               <button type="submit" className="btn-auth-submit" disabled={loading}>
-                XÁC NHẬN
+                {loading ? 'Đang xác minh...' : 'XÁC NHẬN'}
               </button>
               <div style={{ textAlign: 'center', marginTop: '12px' }}>
                 {countdown > 0 ? (

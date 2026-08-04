@@ -20,6 +20,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Intege
 
        List<Transaction> findByStatus(String status);
 
+       List<Transaction> findByStatusAndCreatedAtBefore(
+                     String status,
+                     LocalDateTime createdBefore);
+
        Page<Transaction> findByStatus(String status, Pageable pageable);
 
        Page<Transaction> findAllByOrderByCreatedAtDesc(Pageable pageable);

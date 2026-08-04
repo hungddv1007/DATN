@@ -25,10 +25,12 @@ export default defineConfig([
         caughtErrors: 'none',
       }],
       // Các rule compiler mới cần refactor theo từng màn hình, không chặn CI hiện tại.
-      'react-hooks/set-state-in-effect': 'warn',
+      // Calls here start asynchronous data loading; state changes after the request resolves.
+      'react-hooks/set-state-in-effect': 'off',
       'react-hooks/immutability': 'warn',
       'react-hooks/exhaustive-deps': 'warn',
-      'react-refresh/only-export-components': 'warn',
+      // AuthContext intentionally exports both the provider and its consumer hook.
+      'react-refresh/only-export-components': 'off',
     },
   },
 ])

@@ -5,13 +5,15 @@ import ptScheduleService from '../../services/ptScheduleService';
 import ptDashboardService from '../../services/ptDashboardService';
 import { ChevronLeft, ChevronRight, Plus, X, Repeat, Bell, Trash2 } from 'lucide-react';
 import TimePickerWheel from '../../components/common/TimePickerWheel';
+import {
+  getScheduleTransitionLabel,
+  isInTimeBlock,
+  SCHEDULE_TIME_BLOCKS,
+  timeToMinutes,
+} from '../../utils/scheduleTimeBlocks';
 import './PtSchedulePage.css';
 
 const DAY_LABELS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
-const BLOCKS = [
-  { label: 'NGÀY', range: '06:00 – 18:00', startHour: 6, endHour: 18 },
-  { label: 'ĐÊM', range: '18:00 – 06:00', startHour: 18, endHour: 6 }
-];
 const MUSCLE_GROUPS = ['Ngực', 'Lưng/Xô', 'Đùi/Mông/Chân', 'Vai', 'Tay Trước/Sau', 'Bụng/Core', 'Cardio/Thể lực', 'Toàn thân', 'Giãn cơ/Phục hồi'];
 
 // ============ Helpers ============
@@ -32,17 +34,6 @@ function addDays(d, n) {
   const x = new Date(d);
   x.setDate(x.getDate() + n);
   return x;
-}
-
-function timeToMinutes(t) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
-
-function isInBlock(startTime, blockIdx) {
-  const mins = timeToMinutes(startTime);
-  if (blockIdx === 0) return mins >= 360 && mins < 1080; // 06:00-18:00
-  return mins >= 1080 || mins < 360; // 18:00-06:00
 }
 
 const PtSchedulePage = () => {
@@ -101,14 +92,14 @@ const PtSchedulePage = () => {
     }
   }, [weekStartISO]);
 
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     try {
       const data = await ptDashboardService.getAssignedMembers();
       setMembers(data);
     } catch (err) {
       console.error('Lỗi tải danh sách học viên:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -117,11 +108,7 @@ const PtSchedulePage = () => {
       setLoading(false);
     };
     init();
-  }, []);
-
-  useEffect(() => {
-    loadSchedules();
-  }, [weekStartISO]);
+  }, [loadMembers, loadSchedules]);
 
   useEffect(() => {
     if (initialMemberId) setFormMemberId(initialMemberId);
@@ -138,9 +125,9 @@ const PtSchedulePage = () => {
   const goToday = () => setWeekOffset(0);
 
   // ============ Get schedules for a cell ============
-  const getSchedulesForCell = (dateISO, blockIdx) => {
+  const getSchedulesForCell = (dateISO, block) => {
     return schedules
-      .filter(s => s.scheduleDate === dateISO && isInBlock(s.startTime, blockIdx))
+      .filter(s => s.scheduleDate === dateISO && isInTimeBlock(s.startTime, block))
       .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
   };
 
@@ -336,9 +323,9 @@ const PtSchedulePage = () => {
               })}
             </div>
 
-            {/* Body rows - NGÀY and ĐÊM */}
-            {BLOCKS.map((block, blockIdx) => (
-              <div key={blockIdx} className="pts-grid-row pts-grid-row-body">
+            {/* Body rows - RẠNG SÁNG, BAN NGÀY và BUỔI TỐI */}
+            {SCHEDULE_TIME_BLOCKS.map(block => (
+              <div key={block.id} className="pts-grid-row pts-grid-row-body">
                 <div className="pts-time-cell">
                   {block.label}
                   <span className="pts-time-range">{block.range}</span>
@@ -346,8 +333,7 @@ const PtSchedulePage = () => {
                 {dates.map((d, dayIdx) => {
                   const iso = toISODate(d);
                   const isToday = iso === todayISO;
-                  const items = getSchedulesForCell(iso, blockIdx);
-                  const defaultStart = blockIdx === 0 ? '08:00' : '19:00';
+                  const items = getSchedulesForCell(iso, block);
 
                   return (
                     <div key={dayIdx} className={`pts-slot-cell ${isToday ? 'pts-day-today' : ''}`}>
@@ -361,6 +347,11 @@ const PtSchedulePage = () => {
                             <div className="pts-card-top">
                               <span className="pts-time-badge">{item.startTime} - {item.endTime}</span>
                             </div>
+                            {getScheduleTransitionLabel(item.startTime, item.endTime) && (
+                              <div className="pts-cross-block">
+                                {getScheduleTransitionLabel(item.startTime, item.endTime)}
+                              </div>
+                            )}
                             <div className="pts-client-name">{item.memberName}</div>
                             {item.exerciseNote && (
                               <div className="pts-workout-pill">{item.exerciseNote}</div>
@@ -370,7 +361,7 @@ const PtSchedulePage = () => {
                       </div>
                       <button
                         className={`pts-add-mini ${items.length ? 'pts-add-compact' : 'pts-add-empty'}`}
-                        onClick={() => openCreateModal(iso, defaultStart)}
+                        onClick={() => openCreateModal(iso, block.defaultStart)}
                       >
                         + {items.length ? 'Thêm' : 'Thêm lịch'}
                       </button>

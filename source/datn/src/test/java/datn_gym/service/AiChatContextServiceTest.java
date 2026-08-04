@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -82,12 +83,26 @@ class AiChatContextServiceTest {
         when(profileRepository.findByUser_Id(member.getId()))
                 .thenReturn(Optional.of(MemberProfile.builder()
                         .user(member)
-                        .physicalCondition("Đau đầu gối trái")
+                        .heightCm(new BigDecimal("172"))
+                        .weightKg(new BigDecimal("70"))
+                        .dateOfBirth(LocalDate.now().minusYears(26))
+                        .biologicalSex("MALE")
+                        .bodyFatPercentage(new BigDecimal("18.4"))
+                        .bodyFatSource("ESTIMATED")
+                        .fitnessGoal("MUSCLE_GAIN")
+                        .injuryHistory("Đau đầu gối trái")
                         .build()));
 
         String context = service.buildMemberContext(member.getEmail(), true);
 
-        assertThat(context).contains("Đau đầu gối trái");
+        assertThat(context)
+                .contains("chiều cao: 172 cm")
+                .contains("cân nặng: 70 kg")
+                .contains("tuổi: 26")
+                .contains("giới tính sinh học: nam")
+                .contains("tỷ lệ mỡ ước tính: 18.4 %")
+                .contains("mục tiêu: tăng cơ")
+                .contains("Đau đầu gối trái");
     }
 
     @Test

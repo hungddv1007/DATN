@@ -5,6 +5,15 @@ export const analyzeNutrition = async (mealsData) => {
   return response.data;
 };
 
+export const generateDietFromPhysicalProfile = async (memberId, dayType) => {
+  const response = await api.post('/nutrition/generate-diet', {
+    memberId: Number(memberId),
+    dayType,
+  });
+  return response.data;
+};
+
 export default {
   analyzeNutrition,
+  generateDietFromPhysicalProfile,
 };

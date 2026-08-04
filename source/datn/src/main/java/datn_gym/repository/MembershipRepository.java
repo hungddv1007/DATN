@@ -67,7 +67,7 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
            "WHERE m.status = 'ACTIVE' AND m.endDate < :today")
     int expireActiveMembershipsBefore(@Param("today") LocalDate today);
 
-    // Dùng cho: PtNote, PtComment, TrainingRoute, Review
+    // Dùng cho: PtNote, PtComment, Review và quyền xem hồ sơ thể chất
     @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
            "m.pt.id = :ptId AND m.user.id = :memberId AND m.status = 'ACTIVE' " +
            "AND m.endDate >= CURRENT_DATE")

@@ -33,6 +33,8 @@ build/
 .vscode/
 docs/
 uploads/
+source/frontend/test-results/
+source/frontend/playwright-report/
 
 ### Environment variables / secrets ###
 .env

@@ -4,6 +4,7 @@ import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
 import packageService from '../../services/packageService';
 import ptService from '../../services/ptService';
+import { getMembershipPriceDisplay } from '../../utils/membershipPriceDisplay';
 import { Calendar, RefreshCw, ChevronUp, Pause, Play, AlertTriangle, ShieldCheck } from 'lucide-react';
 import './MembershipManagePage.css';
 
@@ -223,6 +224,7 @@ const MembershipManagePage = () => {
   }
 
   const upgradeOptions = packages.filter(p => membership && p.dailyPrice > membership.dailyPrice && p.isActive);
+  const priceDisplay = getMembershipPriceDisplay(membership, history);
 
   return (
     <MainLayout>
@@ -256,7 +258,13 @@ const MembershipManagePage = () => {
               <div className="membership-card-body">
                 <div className="pkg-title-row">
                   <h3>Gói {membership.packageName}</h3>
-                  <span className="pkg-price-badge">{formatCurrency(membership.dailyPrice)}/ngày</span>
+                  <div className="pkg-price-badge">
+                    <span className="pkg-price-value">
+                      {formatCurrency(priceDisplay.amount)}
+                      <small>/{priceDisplay.unit}</small>
+                    </span>
+                    <span className="pkg-price-caption">{priceDisplay.caption}</span>
+                  </div>
                 </div>
 
                 <div className="info-list">

@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import PtLayout from '../../components/layout/PtLayout';
+import { PtSummaryCard, PtSummaryGrid } from '../../components/pt/PtSummaryCards';
 import api from '../../services/api';
-import { analyzeNutrition } from '../../services/nutritionAIService';
-import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus } from 'lucide-react';
+import memberProfileService from '../../services/memberProfileService';
+import { analyzeNutrition, generateDietFromPhysicalProfile } from '../../services/nutritionAIService';
+import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus, Activity, Sparkles } from 'lucide-react';
+import PhysicalProfileView from '../../components/member/PhysicalProfileView';
 import '../admin/AdminManagement.css';
+import './PtMemberDetail.css';
 
 const TABS = [
+  { key: 'physical', label: 'Hồ sơ thể chất', icon: Activity },
   { key: 'notes', label: 'Ghi chú', icon: StickyNote },
   { key: 'diet', label: 'Khẩu phần ăn', icon: Utensils },
 ];
@@ -22,7 +27,7 @@ const PtMemberDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryTab = new URLSearchParams(location.search).get('tab');
-  const initialTab = location.state?.tab || queryTab || 'notes';
+  const initialTab = location.state?.tab || queryTab || 'physical';
 
   const [member, setMember] = useState(null);
   const [notes, setNotes] = useState([]);
@@ -30,6 +35,9 @@ const PtMemberDetail = () => {
   const [noteText, setNoteText] = useState('');
   const [editingNote, setEditingNote] = useState(null);
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [physicalProfile, setPhysicalProfile] = useState(null);
+  const [physicalProfileLoading, setPhysicalProfileLoading] = useState(false);
+  const [physicalProfileError, setPhysicalProfileError] = useState('');
 
   // Diet state
   const [trainingDiet, setTrainingDiet] = useState(null);
@@ -43,16 +51,11 @@ const PtMemberDetail = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [analysisError, setAnalysisError] = useState(null);
+  const [isGeneratingDiet, setIsGeneratingDiet] = useState(false);
+  const [dietGenerationError, setDietGenerationError] = useState('');
+  const [dietGenerationSuccess, setDietGenerationSuccess] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, [memberId]);
-
-  useEffect(() => {
-    if (activeTab === 'diet') fetchDiets();
-  }, [activeTab]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [membersRes, notesRes] = await Promise.all([
         api.get('/pt/members'),
@@ -66,10 +69,10 @@ const PtMemberDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [memberId]);
 
   // ===== DIETS =====
-  const fetchDiets = async () => {
+  const fetchDiets = useCallback(async () => {
     setDietLoading(true);
     try {
       const res = await api.get(`/pt/diets/member/${memberId}`);
@@ -81,11 +84,38 @@ const PtMemberDetail = () => {
     } finally {
       setDietLoading(false);
     }
-  };
+  }, [memberId]);
+
+  const fetchPhysicalProfile = useCallback(async () => {
+    setPhysicalProfileLoading(true);
+    setPhysicalProfileError('');
+    try {
+      const profile = await memberProfileService
+        .getAssignedMemberPhysicalProfile(memberId);
+      setPhysicalProfile(profile);
+    } catch (err) {
+      setPhysicalProfileError(
+        err.response?.data?.message || 'Không thể tải hồ sơ thể chất.',
+      );
+    } finally {
+      setPhysicalProfileLoading(false);
+    }
+  }, [memberId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (activeTab === 'diet') fetchDiets();
+    if (activeTab === 'physical') fetchPhysicalProfile();
+  }, [activeTab, fetchDiets, fetchPhysicalProfile]);
 
   const startEditDiet = (type) => {
     setAnalysisResult(null);
     setAnalysisError(null);
+    setDietGenerationError('');
+    setDietGenerationSuccess('');
     const existing = type === 'TRAINING_DAY' ? trainingDiet : restDiet;
     if (existing) {
       setDietForm({
@@ -115,6 +145,47 @@ const PtMemberDetail = () => {
     setDietForm({ ...emptyDiet });
     setAnalysisResult(null);
     setAnalysisError(null);
+    setDietGenerationError('');
+    setDietGenerationSuccess('');
+  };
+
+  const handleAIGenerateDiet = async () => {
+    if (!editingDiet) return;
+
+    setIsGeneratingDiet(true);
+    setDietGenerationError('');
+    setDietGenerationSuccess('');
+    setAnalysisResult(null);
+    setAnalysisError(null);
+
+    try {
+      const generatedDiet = await generateDietFromPhysicalProfile(memberId, editingDiet);
+      setDietForm(prev => ({
+        ...prev,
+        title: generatedDiet.title || prev.title,
+        breakfast: generatedDiet.breakfast || '',
+        snackMorning: generatedDiet.snackMorning || '',
+        lunch: generatedDiet.lunch || '',
+        snackAfternoon: generatedDiet.snackAfternoon || '',
+        dinner: generatedDiet.dinner || '',
+        note: generatedDiet.note || '',
+        // Thực đơn mới chưa được phân tích dinh dưỡng.
+        calories: 0,
+        proteinG: 0,
+        carbsG: 0,
+        fatG: 0,
+      }));
+      setDietGenerationSuccess(
+        'AI đã tạo thực đơn từ hồ sơ thể chất. Vui lòng kiểm tra và điều chỉnh trước khi lưu.',
+      );
+    } catch (err) {
+      setDietGenerationError(
+        err.response?.data?.message
+          || 'Không thể tạo thực đơn bằng AI. Vui lòng thử lại.',
+      );
+    } finally {
+      setIsGeneratingDiet(false);
+    }
   };
 
   const handleAIAnalyze = async () => {
@@ -319,6 +390,36 @@ const PtMemberDetail = () => {
           {isEditing ? (
             // EDIT MODE
             <>
+              <div className="ai-diet-generator">
+                <div className="ai-diet-generator-copy">
+                  <span className="ai-diet-generator-icon"><Sparkles size={20} /></span>
+                  <div>
+                    <strong>Tạo thực đơn từ hồ sơ thể chất</strong>
+                    <span>Gemini sẽ điền các bữa ăn để PT kiểm tra trước khi lưu.</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="ai-diet-generate-button"
+                  onClick={handleAIGenerateDiet}
+                  disabled={isGeneratingDiet || isAnalyzing}
+                >
+                  <Sparkles size={16} />
+                  {isGeneratingDiet ? 'Đang tạo...' : 'Tạo bằng AI'}
+                </button>
+              </div>
+
+              {dietGenerationError && (
+                <div className="ai-diet-message ai-diet-message--error">
+                  ⚠️ {dietGenerationError}
+                </div>
+              )}
+              {dietGenerationSuccess && (
+                <div className="ai-diet-message ai-diet-message--success">
+                  ✓ {dietGenerationSuccess}
+                </div>
+              )}
+
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
                   Tiêu đề thực đơn
@@ -345,7 +446,7 @@ const PtMemberDetail = () => {
               <button
                 type="button"
                 onClick={handleAIAnalyze}
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || isGeneratingDiet}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -357,7 +458,7 @@ const PtMemberDetail = () => {
                   borderRadius: '8px',
                   fontSize: '14px',
                   fontWeight: '600',
-                  cursor: isAnalyzing ? 'not-allowed' : 'pointer',
+                  cursor: (isAnalyzing || isGeneratingDiet) ? 'not-allowed' : 'pointer',
                   margin: '14px 0 10px 0',
                   boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
                   transition: 'all 0.2s ease'
@@ -442,7 +543,7 @@ const PtMemberDetail = () => {
                 <button className="btn-cancel" onClick={cancelEditDiet} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <X size={14} /> Hủy
                 </button>
-                <button className="btn-submit" onClick={() => handleSaveDiet(type)} disabled={dietSaving}
+                <button className="btn-submit" onClick={() => handleSaveDiet(type)} disabled={dietSaving || isGeneratingDiet}
                   style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Save size={14} /> {dietSaving ? 'Đang lưu...' : 'Lưu thực đơn'}
                 </button>
@@ -545,30 +646,24 @@ const PtMemberDetail = () => {
       <p>Thông tin và quản lý cho học viên <strong style={{ color: '#f97316' }}>{member.memberName}</strong>.</p>
 
       {/* Member Info Cards */}
-      <div className="admin-stats" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-        <div className="stat-card">
-          <User size={24} className="stat-icon" style={{ color: '#3b82f6' }} />
-          <div className="stat-label">Họ tên</div>
-          <div className="stat-value" style={{ fontSize: '1.2rem' }}>{member.memberName}</div>
-        </div>
-        <div className="stat-card">
-          <Package size={24} className="stat-icon" style={{ color: '#10b981' }} />
-          <div className="stat-label">Gói tập</div>
-          <div className="stat-value" style={{ fontSize: '1.2rem' }}>{member.packageName}</div>
-        </div>
-        <div className="stat-card">
-          <Calendar size={24} className="stat-icon" style={{ color: '#eab308' }} />
-          <div className="stat-label">Hết hạn</div>
-          <div className="stat-value" style={{ fontSize: '1.2rem' }}>{new Date(member.endDate).toLocaleDateString('vi-VN')}</div>
-        </div>
-        <div className="stat-card">
-          <Utensils size={24} className="stat-icon" style={{ color: '#10b981' }} />
-          <div className="stat-label">Khẩu phần ăn</div>
-          <div className="stat-value" style={{ fontSize: '1.2rem' }}>
-            {(trainingDiet ? 1 : 0) + (restDiet ? 1 : 0)} / 2 mẫu
-          </div>
-        </div>
-      </div>
+      <PtSummaryGrid columns={4} ariaLabel="Thông tin tổng quan học viên">
+        <PtSummaryCard icon={User} label="Họ tên" value={member.memberName} tone="blue" compact />
+        <PtSummaryCard icon={Package} label="Gói tập" value={member.packageName} tone="green" compact />
+        <PtSummaryCard
+          icon={Calendar}
+          label="Hết hạn"
+          value={new Date(member.endDate).toLocaleDateString('vi-VN')}
+          tone="yellow"
+          compact
+        />
+        <PtSummaryCard
+          icon={Utensils}
+          label="Khẩu phần ăn"
+          value={`${(trainingDiet ? 1 : 0) + (restDiet ? 1 : 0)} / 2 mẫu`}
+          tone="teal"
+          compact
+        />
+      </PtSummaryGrid>
 
       {/* Contact info */}
       <div className="admin-table-container" style={{ marginTop: 0, marginBottom: '20px' }}>
@@ -611,6 +706,14 @@ const PtMemberDetail = () => {
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'physical' && (
+        <PhysicalProfileView
+          profile={physicalProfile}
+          loading={physicalProfileLoading}
+          error={physicalProfileError}
+        />
+      )}
+
       {activeTab === 'notes' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
           <div className="admin-table-container" style={{ marginTop: 0, display: 'flex', flexDirection: 'column' }}>

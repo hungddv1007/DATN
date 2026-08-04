@@ -4,6 +4,7 @@ import MainLayout from '../../components/layout/MainLayout';
 import packageService from '../../services/packageService';
 import ptService from '../../services/ptService';
 import membershipService from '../../services/membershipService';
+import paymentService from '../../services/paymentService';
 import { CreditCard, Banknote, CheckCircle, Clock, Tag } from 'lucide-react';
 import './BuyPackagePage.css';
 
@@ -35,6 +36,7 @@ const BuyPackagePage = () => {
   const [selectedPtId, setSelectedPtId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successData, setSuccessData] = useState(null);
+  const [paymentInfo, setPaymentInfo] = useState(null);
 
   useEffect(() => {
     if (!pkgId) {
@@ -60,8 +62,12 @@ const BuyPackagePage = () => {
           setPts(ptsData);
         }
 
-        const discountData = await packageService.getPublicDiscounts();
+        const [discountData, publicPaymentInfo] = await Promise.all([
+          packageService.getPublicDiscounts(),
+          paymentService.getPublicPaymentInfo(),
+        ]);
         setDiscounts(discountData);
+        setPaymentInfo(publicPaymentInfo);
       } catch (err) {
         setError('Lỗi tải thông tin gói tập. Có thể gói tập không tồn tại.');
       } finally {
@@ -150,16 +156,28 @@ const BuyPackagePage = () => {
               Tổng tiền: <strong>{formatCurrency(successData.finalAmount)}</strong>
             </p>
             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '8px', marginBottom: '30px', textAlign: 'left' }}>
-              <p style={{ margin: 0, color: '#f1f5f9' }}>
-                Vui lòng thanh toán tại quầy lễ tân hoặc chuyển khoản theo thông tin sau:<br/><br/>
-                Ngân hàng: <strong>Vietcombank</strong><br/>
-                STK: <strong>1234567890</strong><br/>
-                Chủ TK: <strong>GYMPRO VN</strong><br/>
-                Nội dung: <strong>GYMPRO {successData.transactionId}</strong>
-              </p>
+              {paymentMethod === 'BANK' ? (
+                paymentInfo?.bankAccountNumber ? (
+                  <p style={{ margin: 0, color: '#f1f5f9' }}>
+                    Vui lòng chuyển khoản theo thông tin sau:<br/><br/>
+                    Ngân hàng: <strong>{paymentInfo.bankName}</strong><br/>
+                    STK: <strong>{paymentInfo.bankAccountNumber}</strong><br/>
+                    Chủ TK: <strong>{paymentInfo.bankAccountHolder}</strong><br/>
+                    Nội dung: <strong>{paymentInfo.transferPrefix || 'GYMPRO'} {successData.transactionId}</strong>
+                  </p>
+                ) : (
+                  <p style={{ margin: 0, color: '#f1f5f9' }}>
+                    Thông tin chuyển khoản chưa được cấu hình. Vui lòng liên hệ quầy lễ tân.
+                  </p>
+                )
+              ) : (
+                <p style={{ margin: 0, color: '#f1f5f9' }}>
+                  Vui lòng thanh toán tiền mặt tại quầy lễ tân và cung cấp mã giao dịch <strong>#{successData.transactionId}</strong>.
+                </p>
+              )}
             </div>
             <p style={{ color: '#f97316', fontSize: '0.9rem' }}>
-              Gói tập của bạn sẽ được kích hoạt ngay sau khi Admin xác nhận thanh toán.
+              Gói tập sẽ được kích hoạt sau khi Admin xác nhận. Giao dịch chờ quá {paymentInfo?.pendingExpirationHours || 24} giờ sẽ tự động hủy.
             </p>
             <Link to="/member/dashboard" className="btn-dashboard">Về Dashboard</Link>
           </div>

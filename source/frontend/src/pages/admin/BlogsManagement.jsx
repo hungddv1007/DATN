@@ -4,12 +4,15 @@ import blogService from '../../services/blogService';
 import { resolveFileUrl } from '../../utils/fileUrl';
 import fileService from '../../services/fileService';
 import { Edit, Trash2, Plus, Eye, EyeOff, Image as ImageIcon, Upload } from 'lucide-react';
+import AdminPagination from '../../components/admin/AdminPagination';
+import useClientPagination from '../../hooks/useClientPagination';
 import './AdminManagement.css';
 
 const BlogsManagement = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const { page, setPage, totalPages, pageItems: visibleBlogs } = useClientPagination(blogs);
   
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -148,7 +151,7 @@ const BlogsManagement = () => {
             ) : blogs.length === 0 ? (
               <tr><td colSpan="6" style={{ textAlign: 'center' }}>Chưa có bài viết nào</td></tr>
             ) : (
-              blogs.map(blog => (
+              visibleBlogs.map(blog => (
                 <tr key={blog.id} style={{ opacity: blog.status === 'PUBLISHED' ? 1 : 0.6 }}>
                   <td>
                     <div style={{ 
@@ -189,6 +192,7 @@ const BlogsManagement = () => {
             )}
           </tbody>
         </table>
+        <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
       {/* Modal Thêm/Sửa */}

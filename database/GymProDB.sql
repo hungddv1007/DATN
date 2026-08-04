@@ -52,9 +52,23 @@ CREATE TABLE pt_profiles (
 -- 4. MEMBER_PROFILES
 -- ============================================================
 CREATE TABLE member_profiles (
-    id                  INT IDENTITY(1,1) PRIMARY KEY,
-    user_id             INT NOT NULL UNIQUE,
-    physical_condition  NVARCHAR(MAX),     -- PT ghi khi danh gia ban dau
+    id                    INT IDENTITY(1,1) PRIMARY KEY,
+    user_id               INT NOT NULL UNIQUE,
+    height_cm             DECIMAL(5,2) NULL,
+    weight_kg             DECIMAL(6,2) NULL,
+    date_of_birth         DATE NULL,
+    biological_sex       VARCHAR(10) NULL CHECK (biological_sex IS NULL OR biological_sex IN ('MALE', 'FEMALE')),
+    chest_cm              DECIMAL(5,2) NULL,
+    waist_cm              DECIMAL(5,2) NULL,
+    hip_cm                DECIMAL(5,2) NULL,
+    body_fat_percentage   DECIMAL(5,2) NULL,
+    body_fat_source       VARCHAR(10) NULL CHECK (body_fat_source IS NULL OR body_fat_source IN ('MANUAL', 'ESTIMATED')),
+    activity_level        VARCHAR(30) NULL,
+    fitness_goal          VARCHAR(30) NULL,
+    target_weight_kg      DECIMAL(6,2) NULL,
+    training_experience   NVARCHAR(500) NULL,
+    injury_history        NVARCHAR(2000) NULL,
+    medical_conditions    NVARCHAR(2000) NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
@@ -171,18 +185,7 @@ CREATE TABLE exercises (
 );
 
 -- ============================================================
--- 10. ATTENDANCES
--- ============================================================
-CREATE TABLE attendances (
-    id              INT IDENTITY(1,1) PRIMARY KEY,
-    member_id       INT NOT NULL,
-    check_in_time   DATETIME2 DEFAULT GETDATE(),
-    status          BIT DEFAULT 1,         -- 1 = co mat, 0 = vang
-    FOREIGN KEY (member_id) REFERENCES users(id)
-);
-
--- ============================================================
--- 11. PT_NOTES
+-- 10. PT_NOTES
 -- ============================================================
 CREATE TABLE pt_notes (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -195,20 +198,7 @@ CREATE TABLE pt_notes (
 );
 
 -- ============================================================
--- 12. PT_COMMENTS  (da bo cot plan_id vi training_plans khong con)
--- ============================================================
-CREATE TABLE pt_comments (
-    id              INT IDENTITY(1,1) PRIMARY KEY,
-    pt_id           INT NOT NULL,
-    member_id       INT NOT NULL,
-    content         NVARCHAR(MAX) NOT NULL,
-    created_at      DATETIME2 DEFAULT GETDATE(),
-    FOREIGN KEY (pt_id) REFERENCES users(id),
-    FOREIGN KEY (member_id) REFERENCES users(id)
-);
-
--- ============================================================
--- 13. DIETS  (Khau phan an: mau Ngay Tap / Ngay Nghi / Ngay cu the)
+-- 11. DIETS  (Khau phan an: mau Ngay Tap / Ngay Nghi / Ngay cu the)
 -- ============================================================
 CREATE TABLE diets (
     id                  INT IDENTITY(1,1) PRIMARY KEY,
@@ -234,7 +224,7 @@ CREATE TABLE diets (
 );
 
 -- ============================================================
--- 14. REVIEWS
+-- 12. REVIEWS
 -- ============================================================
 CREATE TABLE reviews (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -248,7 +238,7 @@ CREATE TABLE reviews (
 );
 
 -- ============================================================
--- 15. BLOGS
+-- 13. BLOGS
 -- ============================================================
 CREATE TABLE blogs (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -263,7 +253,7 @@ CREATE TABLE blogs (
 );
 
 -- ============================================================
--- 16. PT_SCHEDULES  (Lich tap linh hoat: ngay cu the + gio bat dau/ket thuc tu do)
+-- 14. PT_SCHEDULES  (Lich tap linh hoat: ngay cu the + gio bat dau/ket thuc tu do)
 -- ============================================================
 CREATE TABLE pt_schedules (
     id                  INT IDENTITY(1,1) PRIMARY KEY,
@@ -281,7 +271,7 @@ CREATE TABLE pt_schedules (
 );
 
 -- ============================================================
--- 17. NOTIFICATIONS
+-- 15. NOTIFICATIONS
 -- ============================================================
 CREATE TABLE notifications (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -296,7 +286,7 @@ CREATE TABLE notifications (
 );
 
 -- ============================================================
--- 18. OTPS
+-- 16. OTPS
 -- ============================================================
 CREATE TABLE otps (
     id               INT IDENTITY(1,1) PRIMARY KEY,
@@ -309,7 +299,7 @@ CREATE TABLE otps (
 );
 
 -- ============================================================
--- 19. AI CONVERSATIONS
+-- 17. AI CONVERSATIONS
 -- ============================================================
 CREATE TABLE ai_conversations (
     id                      INT IDENTITY(1,1) PRIMARY KEY,
@@ -322,7 +312,7 @@ CREATE TABLE ai_conversations (
 );
 
 -- ============================================================
--- 20. AI MESSAGES
+-- 18. AI MESSAGES
 -- ============================================================
 CREATE TABLE ai_messages (
     id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
@@ -355,7 +345,6 @@ CREATE INDEX IX_diets_date ON diets(diet_date);
 CREATE INDEX IX_pt_schedules_pt_date ON pt_schedules(pt_id, schedule_date, start_time);
 CREATE INDEX IX_pt_schedules_member_date ON pt_schedules(member_id, schedule_date);
 CREATE INDEX IX_pt_schedules_recurring ON pt_schedules(recurring_group_id);
-CREATE INDEX IX_attendances_member ON attendances(member_id);
 CREATE INDEX IX_otps_email_expiration ON otps(email, expiration_time DESC);
 CREATE INDEX IX_ai_conversations_user_updated ON ai_conversations(user_id, updated_at DESC);
 CREATE INDEX IX_ai_messages_conversation_created ON ai_messages(conversation_id, created_at ASC);

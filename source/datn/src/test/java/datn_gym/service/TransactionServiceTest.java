@@ -1,5 +1,6 @@
 package datn_gym.service;
 
+import datn_gym.config.PaymentProperties;
 import datn_gym.entity.GymPackage;
 import datn_gym.entity.Membership;
 import datn_gym.entity.Promotion;
@@ -17,6 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,13 +47,14 @@ class TransactionServiceTest {
                 transactionRepository,
                 membershipRepository,
                 promotionRepository,
-                userRepository);
+                userRepository,
+                new PaymentProperties("", "", "", "GYMPRO", 24));
         admin = User.builder().id(99).email("admin@gym.local").fullName("Admin").build();
-        when(userRepository.findByEmail(admin.getEmail())).thenReturn(Optional.of(admin));
     }
 
     @Test
     void confirmRenewAppliesDaysOnlyAfterApproval() {
+        givenAdmin();
         Membership membership = activeMembership();
         Transaction transaction = pendingTransaction("RENEW", membership);
         transaction.setRequestedDurationDays(30);
@@ -69,6 +73,7 @@ class TransactionServiceTest {
 
     @Test
     void cancelUpgradeKeepsActiveMembershipUnchanged() {
+        givenAdmin();
         Membership membership = activeMembership();
         GymPackage originalPackage = membership.getGymPackage();
         Transaction transaction = pendingTransaction("UPGRADE", membership);
@@ -86,6 +91,7 @@ class TransactionServiceTest {
 
     @Test
     void cancelNewCancelsPendingMembershipAndReleasesPromotion() {
+        givenAdmin();
         Membership membership = activeMembership();
         membership.setStatus("PENDING");
         Promotion promotion = Promotion.builder().id(7).currentUsage(2).build();
@@ -99,6 +105,31 @@ class TransactionServiceTest {
         assertThat(promotion.getCurrentUsage()).isEqualTo(1);
         verify(membershipRepository).save(membership);
         verify(promotionRepository).save(promotion);
+    }
+
+    @Test
+    void expiresOldPendingTransactionAndReleasesReservedPromotion() {
+        Membership membership = activeMembership();
+        membership.setStatus("PENDING");
+        Promotion promotion = Promotion.builder().id(7).currentUsage(1).build();
+        Transaction transaction = pendingTransaction("NEW", membership);
+        transaction.setPromotion(promotion);
+        transaction.setCreatedAt(LocalDateTime.now().minusHours(25));
+        when(transactionRepository.findByStatusAndCreatedAtBefore(
+                org.mockito.ArgumentMatchers.eq("PENDING"),
+                org.mockito.ArgumentMatchers.any(LocalDateTime.class)))
+                .thenReturn(List.of(transaction));
+
+        int cancelled = service.expirePendingTransactions();
+
+        assertThat(cancelled).isEqualTo(1);
+        assertThat(transaction.getStatus()).isEqualTo("CANCELLED");
+        assertThat(membership.getStatus()).isEqualTo("CANCELLED");
+        assertThat(promotion.getCurrentUsage()).isZero();
+    }
+
+    private void givenAdmin() {
+        when(userRepository.findByEmail(admin.getEmail())).thenReturn(Optional.of(admin));
     }
 
     private Membership activeMembership() {

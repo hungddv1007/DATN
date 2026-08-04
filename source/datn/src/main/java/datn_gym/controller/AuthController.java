@@ -1,9 +1,7 @@
 package datn_gym.controller;
 
-import datn_gym.dto.request.ForgotPasswordRequest;
 import datn_gym.dto.request.LoginRequest;
 import datn_gym.dto.request.RegisterRequest;
-import datn_gym.dto.request.ResetPasswordRequest;
 import datn_gym.dto.request.SendOtpRequest;
 import datn_gym.dto.response.JwtResponse;
 import datn_gym.dto.response.MessageResponse;
@@ -71,19 +69,4 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("GymPro API is running!"));
     }
 
-    // POST /api/auth/forgot-password — Gửi OTP đặt lại mật khẩu
-    @PostMapping("/forgot-password")
-    public ResponseEntity<MessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        MessageResponse response = authService.forgotPassword(request.getEmail().trim());
-        return ResponseEntity.ok(response);
-    }
-
-    // POST /api/auth/reset-password — Xác thực OTP + Đổi mật khẩu
-    @PostMapping("/reset-password")
-    public ResponseEntity<MessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        MessageResponse response = authService.resetPassword(
-                request.getEmail(), request.getOtp(),
-                request.getNewPassword(), request.getConfirmPassword());
-        return ResponseEntity.ok(response);
-    }
-}
+}

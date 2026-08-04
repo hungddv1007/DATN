@@ -298,6 +298,13 @@
   width: fit-content;
 }
 
+.msp-cross-block {
+  width: fit-content;
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: #fbbf24;
+}
+
 .msp-card-note {
   font-size: 0.72rem;
   font-weight: 600;

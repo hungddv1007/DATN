@@ -4,6 +4,7 @@ import datn_gym.security.JwtAuthenticationFilter;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -32,6 +33,14 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(
+            JwtAuthenticationFilter filter) {
+        var registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -86,7 +95,7 @@ public class SecurityConfig {
                 // 5. API User profile - cần đăng nhập (bất kỳ role nào)
                 .requestMatchers("/api/users/**").authenticated()
 
-                // 5b. API Exercises - xem danh sách (PT cần dùng khi tạo lộ trình)
+                // 5b. API Exercises - người dùng đã đăng nhập có thể xem thư viện bài tập
                 .requestMatchers(HttpMethod.GET, "/api/exercises/**").authenticated()
 
                 // 6. Các GET công khai (đặt SAU các rule role cụ thể)

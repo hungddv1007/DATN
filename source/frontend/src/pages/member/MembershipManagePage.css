@@ -117,13 +117,45 @@
 }
 
 .pkg-price-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   background: rgba(249, 115, 22, 0.1);
   border: 1px solid rgba(249, 115, 22, 0.2);
   color: #f97316;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
+}
+
+.pkg-price-value {
+  white-space: nowrap;
+}
+
+.pkg-price-value small {
+  font-size: 0.82em;
+  font-weight: 700;
+}
+
+.pkg-price-caption {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+@media (max-width: 520px) {
+  .pkg-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pkg-price-badge {
+    align-items: flex-start;
+  }
 }
 
 .info-list {
