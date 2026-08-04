@@ -1,0 +1,120 @@
+.pt-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--pt-summary-columns, 3), minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.pt-summary-card {
+  --summary-accent: #f97316;
+  --summary-tint: rgba(249, 115, 22, 0.12);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  min-height: 94px;
+  padding: 22px;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.92));
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.16);
+}
+
+.pt-summary-card::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  content: '';
+  background: var(--summary-accent);
+}
+
+.pt-summary-card--yellow {
+  --summary-accent: #facc15;
+  --summary-tint: rgba(250, 204, 21, 0.12);
+}
+
+.pt-summary-card--orange {
+  --summary-accent: #f97316;
+  --summary-tint: rgba(249, 115, 22, 0.12);
+}
+
+.pt-summary-card--green {
+  --summary-accent: #22c55e;
+  --summary-tint: rgba(34, 197, 94, 0.12);
+}
+
+.pt-summary-card--blue {
+  --summary-accent: #3b82f6;
+  --summary-tint: rgba(59, 130, 246, 0.12);
+}
+
+.pt-summary-card--teal {
+  --summary-accent: #14b8a6;
+  --summary-tint: rgba(20, 184, 166, 0.12);
+}
+
+.pt-summary-card-icon {
+  display: inline-flex;
+  flex: 0 0 48px;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  color: var(--summary-accent);
+  background: var(--summary-tint);
+  border: 1px solid color-mix(in srgb, var(--summary-accent) 28%, transparent);
+  border-radius: 13px;
+}
+
+.pt-summary-card-content {
+  min-width: 0;
+}
+
+.pt-summary-card-label,
+.pt-summary-card-value {
+  display: block;
+}
+
+.pt-summary-card-label {
+  margin-bottom: 4px;
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pt-summary-card-value {
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 1.85rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pt-summary-card--compact .pt-summary-card-value {
+  font-size: 1.12rem;
+}
+
+@media (max-width: 1100px) {
+  .pt-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .pt-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pt-summary-card {
+    min-height: 86px;
+    padding: 18px;
+  }
+}

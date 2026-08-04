@@ -3,12 +3,15 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import promotionService from '../../services/promotionService';
 import packageService from '../../services/packageService';
 import { Edit, Trash2, Plus, Eye, EyeOff, Tag } from 'lucide-react';
+import AdminPagination from '../../components/admin/AdminPagination';
+import useClientPagination from '../../hooks/useClientPagination';
 import './AdminManagement.css';
 
 const PromotionsManagement = () => {
   const [promotions, setPromotions] = useState([]);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { page, setPage, totalPages, pageItems: visiblePromotions } = useClientPagination(promotions);
   
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -159,7 +162,7 @@ const PromotionsManagement = () => {
             ) : promotions.length === 0 ? (
               <tr><td colSpan="7" style={{ textAlign: 'center' }}>Không có khuyến mãi nào</td></tr>
             ) : (
-              promotions.map(promo => (
+              visiblePromotions.map(promo => (
                 <tr key={promo.id} style={{ opacity: promo.isActive ? 1 : 0.5 }}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -206,6 +209,7 @@ const PromotionsManagement = () => {
             )}
           </tbody>
         </table>
+        <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
       {/* Modal Thêm/Sửa */}

@@ -148,7 +148,7 @@ const AiChatWidget = () => {
     if (
       consent &&
       !window.confirm(
-        'Cho phép GymPro gửi tình trạng thể chất do PT ghi nhận tới Gemini để cá nhân hóa câu trả lời? Không gửi email, số điện thoại hoặc thông tin đăng nhập.',
+        'Cho phép GymPro gửi các chỉ số trong hồ sơ thể chất của bạn tới Gemini để cá nhân hóa câu trả lời khi có liên quan? Không gửi email, số điện thoại hoặc thông tin đăng nhập.',
       )
     ) {
       return;

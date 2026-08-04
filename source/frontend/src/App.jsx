@@ -10,6 +10,7 @@ const BlogListPage = lazy(() => import('./pages/public/BlogListPage'));
 const BlogDetailPage = lazy(() => import('./pages/public/BlogDetailPage'));
 const AboutPage = lazy(() => import('./pages/public/AboutPage'));
 const PtListPage = lazy(() => import('./pages/public/PtListPage'));
+const PtDetailPage = lazy(() => import('./pages/public/PtDetailPage'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
@@ -19,6 +20,7 @@ const MemberTransactions = lazy(() => import('./pages/member/MemberTransactions'
 const MembershipManagePage = lazy(() => import('./pages/member/MembershipManagePage'));
 const MemberSchedulePage = lazy(() => import('./pages/member/MemberSchedulePage'));
 const MemberDietPage = lazy(() => import('./pages/member/MemberDietPage'));
+const MemberPhysicalProfilePage = lazy(() => import('./pages/member/MemberPhysicalProfilePage'));
 const PtDashboard = lazy(() => import('./pages/pt/PtDashboard'));
 const PtMembersList = lazy(() => import('./pages/pt/PtMembersList'));
 const PtMemberDetail = lazy(() => import('./pages/pt/PtMemberDetail'));
@@ -34,6 +36,7 @@ const BlogsManagement = lazy(() => import('./pages/admin/BlogsManagement'));
 const ExercisesManagement = lazy(() => import('./pages/admin/ExercisesManagement'));
 const DiscountsManagement = lazy(() => import('./pages/admin/DiscountsManagement'));
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
+const NotificationComposePage = lazy(() => import('./pages/common/NotificationComposePage'));
 
 import './index.css';
 
@@ -51,6 +54,7 @@ function App() {
           <Route path="/blog/:id" element={<BlogDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/pts" element={<PtListPage />} />
+          <Route path="/pts/:ptId" element={<PtDetailPage />} />
 
           {/* === Auth === */}
           <Route path="/login" element={<LoginPage />} />
@@ -95,6 +99,11 @@ function App() {
               <MemberDietPage />
             </ProtectedRoute>
           } />
+          <Route path="/member/physical-profile" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MemberPhysicalProfilePage />
+            </ProtectedRoute>
+          } />
 
           {/* === PT (cần đăng nhập + role PT) === */}
           <Route path="/pt/dashboard" element={
@@ -127,7 +136,11 @@ function App() {
               <PtReviewsPage />
             </ProtectedRoute>
           } />
-
+          <Route path="/pt/notifications" element={
+            <ProtectedRoute allowedRoles={['PT']}>
+              <NotificationComposePage />
+            </ProtectedRoute>
+          } />
           {/* === Admin (cần đăng nhập + role ADMIN) === */}
           <Route path="/admin" element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
@@ -167,6 +180,11 @@ function App() {
           <Route path="/admin/discounts" element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <DiscountsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/notifications" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <NotificationComposePage />
             </ProtectedRoute>
           } />
           </Routes>

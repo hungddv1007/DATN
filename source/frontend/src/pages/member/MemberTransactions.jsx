@@ -35,9 +35,8 @@ const MemberTransactions = () => {
 
   const getStatusIcon = (status) => {
     switch(status) {
-      case 'SUCCESS': return <CheckCircle size={20} color="#22c55e" />;
+      case 'CONFIRMED': return <CheckCircle size={20} color="#22c55e" />;
       case 'PENDING': return <Clock size={20} color="#f59e0b" />;
-      case 'FAILED': return <XCircle size={20} color="#ef4444" />;
       case 'CANCELLED': return <XCircle size={20} color="#64748b" />;
       default: return null;
     }
@@ -45,9 +44,8 @@ const MemberTransactions = () => {
 
   const getStatusText = (status) => {
     switch(status) {
-      case 'SUCCESS': return <span style={{ color: '#22c55e', fontWeight: 600 }}>Thành công</span>;
+      case 'CONFIRMED': return <span style={{ color: '#22c55e', fontWeight: 600 }}>Đã xác nhận</span>;
       case 'PENDING': return <span style={{ color: '#f59e0b', fontWeight: 600 }}>Chờ duyệt</span>;
-      case 'FAILED': return <span style={{ color: '#ef4444', fontWeight: 600 }}>Thất bại</span>;
       case 'CANCELLED': return <span style={{ color: '#64748b', fontWeight: 600 }}>Đã hủy</span>;
       default: return <span>{status}</span>;
     }
@@ -102,7 +100,7 @@ const MemberTransactions = () => {
                         <div className="tx-final">{formatCurrency(item.finalAmount)}</div>
                       )}
                       <div className="tx-method">
-                        Phương thức: <strong>{item.paymentMethod === 'BANK' ? 'Chuyển khoản' : 'Tiền mặt'}</strong>
+                        Phương thức: <strong>{item.paymentMethod === 'BANK' ? 'Chuyển khoản' : item.paymentMethod === 'CASH' ? 'Tiền mặt' : item.paymentMethod}</strong>
                       </div>
                     </div>
                   </div>

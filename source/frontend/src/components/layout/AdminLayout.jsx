@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Package, CreditCard, FileText, Dumbbell, Tag, LayoutDashboard, LogOut, Percent } from 'lucide-react';
+import { Users, Package, CreditCard, FileText, Dumbbell, Tag, LayoutDashboard, LogOut, Percent, Bell } from 'lucide-react';
 import '../../pages/member/DashboardPage.css';
 
 const AdminLayout = ({ children }) => {
@@ -36,6 +36,7 @@ const AdminLayout = ({ children }) => {
           <li><Link to="/admin/users" className={isActive('/admin/users')}><Users size={18} /> Quản lý Users</Link></li>
           <li><Link to="/admin/blogs" className={isActive('/admin/blogs')}><FileText size={18} /> Bài viết</Link></li>
           <li><Link to="/admin/exercises" className={isActive('/admin/exercises')}><Dumbbell size={18} /> Bài tập</Link></li>
+          <li><Link to="/admin/notifications" className={isActive('/admin/notifications')}><Bell size={18} /> Gửi thông báo</Link></li>
           <li style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
             <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}><LogOut size={18} /> Đăng xuất</a>
           </li>

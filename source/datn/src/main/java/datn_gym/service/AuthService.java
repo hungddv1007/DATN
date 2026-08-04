@@ -194,36 +194,4 @@ public class AuthService {
         return new MessageResponse("Đăng ký tài khoản thành công!");
     }
 
-    // Quên mật khẩu — Gửi OTP
-    public MessageResponse forgotPassword(String email) {
-        if (!userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Email này chưa được đăng ký trong hệ thống!");
-        }
-        otpService.generateAndSendResetOtp(email);
-        return new MessageResponse("Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn. Mã có hiệu lực trong 5 phút.");
-    }
-
-    // Đặt lại mật khẩu — Xác thực OTP + Đổi mật khẩu
-    @Transactional
-    public MessageResponse resetPassword(String email, String otp, String newPassword, String confirmPassword) {
-        if (!newPassword.equals(confirmPassword)) {
-            throw new IllegalArgumentException("Mật khẩu xác nhận không khớp!");
-        }
-
-        if (newPassword.length() < 6) {
-            throw new IllegalArgumentException("Mật khẩu mới phải có ít nhất 6 ký tự!");
-        }
-
-        if (!otpService.validateOtp(email, otp)) {
-            throw new IllegalArgumentException("Mã OTP không hợp lệ hoặc đã hết hạn!");
-        }
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Email không tồn tại trong hệ thống!"));
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-
-        return new MessageResponse("Đặt lại mật khẩu thành công! Bạn có thể đăng nhập với mật khẩu mới.");
-    }
 }

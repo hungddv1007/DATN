@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import notificationService from '../../services/notificationService';
@@ -20,7 +20,7 @@ const Header = () => {
   const notifRef = useRef(null);
 
   // Lấy số lượng chưa đọc khi component mount & khi đăng nhập
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     if (!isLoggedIn) return;
     try {
       const data = await notificationService.getUnreadCount();
@@ -28,13 +28,13 @@ const Header = () => {
     } catch (err) {
       console.log('Chưa thể lấy số lượng thông báo');
     }
-  };
+  }, [isLoggedIn]);
 
   useEffect(() => {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 30000); // Polling mỗi 30s
     return () => clearInterval(interval);
-  }, [isLoggedIn]);
+  }, [fetchUnreadCount]);
 
   // Click ngoài dropdown thì tự đóng
   useEffect(() => {
@@ -211,6 +211,9 @@ const Header = () => {
                   <div className="user-dropdown">
                     <Link to={getDashboardLink()} className="dropdown-item">Dashboard</Link>
                     <Link to="/profile" className="dropdown-item">Hồ sơ cá nhân</Link>
+                    {user.role === 'MEMBER' && (
+                      <Link to="/member/physical-profile" className="dropdown-item">Hồ sơ thể chất</Link>
+                    )}
                     <div className="dropdown-divider"></div>
                     <div className="dropdown-item text-danger" onClick={handleLogout}>Đăng xuất</div>
                   </div>

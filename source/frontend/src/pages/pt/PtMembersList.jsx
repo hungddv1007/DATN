@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PtLayout from '../../components/layout/PtLayout';
 import ptDashboardService from '../../services/ptDashboardService';
@@ -11,11 +11,7 @@ const PtMembersList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchMembers();
-  }, []);
-
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
       const data = await ptDashboardService.getAssignedMembers();
       setMembers(data);
@@ -24,7 +20,11 @@ const PtMembersList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   const filteredMembers = members.filter(member =>
     member.memberName?.toLowerCase().includes(searchTerm.toLowerCase()) ||

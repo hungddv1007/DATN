@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PtLayout from '../../components/layout/PtLayout';
+import { PtSummaryCard, PtSummaryGrid } from '../../components/pt/PtSummaryCards';
 import api from '../../services/api';
 import { Star, Award, UserCircle, Briefcase, FileText, Phone, Save, X } from 'lucide-react';
 import '../admin/AdminManagement.css';
@@ -18,11 +19,7 @@ const PtProfilePage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const res = await api.get('/pt/profile');
       setProfile(res.data);
@@ -39,7 +36,11 @@ const PtProfilePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -116,23 +117,11 @@ const PtProfilePage = () => {
       )}
 
       {/* Quick Stats */}
-      <div className="admin-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        <div className="stat-card">
-          <Star size={28} className="stat-icon" style={{ color: '#eab308' }} />
-          <div className="stat-label">Đánh giá trung bình</div>
-          <div className="stat-value">{profile?.ratingScore || '—'}</div>
-        </div>
-        <div className="stat-card">
-          <UserCircle size={28} className="stat-icon" style={{ color: '#3b82f6' }} />
-          <div className="stat-label">Học viên</div>
-          <div className="stat-value">{profile?.totalMembers || 0}</div>
-        </div>
-        <div className="stat-card">
-          <Award size={28} className="stat-icon" style={{ color: '#10b981' }} />
-          <div className="stat-label">Lượt đánh giá</div>
-          <div className="stat-value">{profile?.totalReviews || 0}</div>
-        </div>
-      </div>
+      <PtSummaryGrid columns={3} ariaLabel="Thống kê hồ sơ">
+        <PtSummaryCard icon={Star} label="Đánh giá trung bình" value={profile?.ratingScore || '—'} tone="yellow" />
+        <PtSummaryCard icon={UserCircle} label="Học viên" value={profile?.totalMembers || 0} tone="blue" />
+        <PtSummaryCard icon={Award} label="Lượt đánh giá" value={profile?.totalReviews || 0} tone="green" />
+      </PtSummaryGrid>
 
       {/* Profile Info */}
       <div className="admin-table-container" style={{ marginTop: '0' }}>

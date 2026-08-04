@@ -37,6 +37,18 @@ const notificationService = {
   deleteNotification: async (id) => {
     const response = await api.delete(`/notifications/${id}`);
     return response.data;
+  },
+
+  // ADMIN/PT gửi thông báo tới người dùng hợp lệ theo phân quyền backend
+  sendNotification: async (userId, title, message) => {
+    const response = await api.post('/notifications/send', { userId, title, message });
+    return response.data;
+  },
+
+  // ADMIN/PT gửi cùng một thông báo tới nhiều người trong một request
+  sendNotifications: async (userIds, title, message) => {
+    const response = await api.post('/notifications/send-bulk', { userIds, title, message });
+    return response.data;
   }
 };
 

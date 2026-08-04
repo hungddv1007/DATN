@@ -5,12 +5,13 @@ import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
 import ptScheduleService from '../../services/ptScheduleService';
 import notificationService from '../../services/notificationService';
-import { Package, CreditCard, Bell, User, Calendar, Star, Utensils, X, CheckCheck, Trash2 } from 'lucide-react';
+import { Package, CreditCard, Bell, User, Calendar, Star, Utensils, X, CheckCheck, Trash2, HeartPulse } from 'lucide-react';
 import './DashboardPage.css';
 
 const MemberDashboard = () => {
   const { user } = useAuth();
   const [membership, setMembership] = useState(null);
+  const [latestTransaction, setLatestTransaction] = useState(null);
   const [schedule, setSchedule] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -26,6 +27,12 @@ const MemberDashboard = () => {
       setMembership(currentData);
     } catch (error) {
       console.log('User has no active membership or error occurred');
+    }
+    try {
+      const history = await membershipService.getMembershipHistory();
+      setLatestTransaction(history.find((item) => item.transactionId) || null);
+    } catch (error) {
+      console.log('User has no transaction history');
     }
     try {
       const now = new Date();
@@ -129,9 +136,17 @@ const MemberDashboard = () => {
             <CreditCard size={32} className="dash-icon" />
             <h3>Giao dịch</h3>
             <p className="dash-value">
-              {membership && membership.transactionStatus === 'PENDING' 
-                ? 'Đang chờ duyệt' 
-                : 'Đã thanh toán'}
+              {loading
+                ? 'Đang tải...'
+                : !latestTransaction
+                  ? 'Chưa có giao dịch'
+                  : latestTransaction.transactionStatus === 'PENDING'
+                    ? 'Đang chờ duyệt'
+                    : latestTransaction.transactionStatus === 'CONFIRMED'
+                      ? 'Đã xác nhận'
+                      : latestTransaction.transactionStatus === 'CANCELLED'
+                        ? 'Đã hủy'
+                        : 'Chưa xác định'}
             </p>
             <Link to="/member/transactions" className="dash-link">Xem lịch sử →</Link>
           </div>
@@ -159,7 +174,11 @@ const MemberDashboard = () => {
             ) : (
               <p className="dash-value">Chưa được gán</p>
             )}
-            <span className="dash-link">Xem hồ sơ PT →</span>
+            {membership?.ptId ? (
+              <Link to={`/pts/${membership.ptId}`} className="dash-link">Xem hồ sơ PT →</Link>
+            ) : (
+              <span className="dash-link" style={{ opacity: 0.55, cursor: 'default' }}>Chưa có hồ sơ PT</span>
+            )}
           </div>
 
           <div className="dash-card">
@@ -180,6 +199,13 @@ const MemberDashboard = () => {
               </p>
             )}
             <span className="dash-link" onClick={openNotifModal}>Xem tất cả →</span>
+          </div>
+
+          <div className="dash-card">
+            <HeartPulse size={32} className="dash-icon" />
+            <h3>Hồ sơ thể chất</h3>
+            <p className="dash-value" style={{ color: '#38bdf8' }}>Chỉ số và mục tiêu</p>
+            <Link to="/member/physical-profile" className="dash-link">Xem và cập nhật →</Link>
           </div>
 
           <div className="dash-card">

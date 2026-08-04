@@ -26,40 +26,27 @@ public class ForgotPasswordService {
     // BƯỚC 1: Nhập email → Gửi OTP
     // ================================================================
     public MessageResponse sendOtp(ForgotPasswordRequest request) {
-        // Kiểm tra email có tồn tại không
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Không tìm thấy tài khoản với email này"));
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        userRepository.findByEmail(normalizedEmail)
+                .filter(user -> Boolean.TRUE.equals(user.getStatus()))
+                .ifPresent(user -> {
+                    String otp = otpService.generateOtp(normalizedEmail);
+                    emailService.sendResetPasswordEmail(normalizedEmail, otp);
+                });
 
-        // Kiểm tra tài khoản có bị khóa không
-        if (Boolean.FALSE.equals(user.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Tài khoản đã bị khóa, không thể đặt lại mật khẩu");
-        }
-
-        // Tạo OTP và lưu vào memory
-        String otp = otpService.generateOtp(request.getEmail());
-
-        // Gửi email bất đồng bộ (@Async) — không block response
-        emailService.sendOtpEmail(request.getEmail(), otp);
-
+        // Luôn trả cùng một phản hồi để không tiết lộ email có tồn tại hay
+        // tài khoản đang bị khóa hay không.
         return new MessageResponse(
-                "Mã OTP đã được gửi đến email " + request.getEmail()
-                + ". Vui lòng kiểm tra hộp thư (kể cả spam).");
+                "Nếu email tồn tại và đang hoạt động, mã OTP sẽ được gửi trong ít phút. "
+                + "Vui lòng kiểm tra cả hộp thư spam.");
     }
 
     // ================================================================
     // BƯỚC 2: Xác minh OTP
     // ================================================================
     public MessageResponse verifyOtp(VerifyOtpRequest request) {
-        // Kiểm tra email có tồn tại không (tránh verify OTP cho email giả)
-        if (!userRepository.existsByEmail(request.getEmail())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Không tìm thấy tài khoản với email này");
-        }
-
-        if (!otpService.isOtpValid(request.getEmail(), request.getOtp())) {
+        String email = normalizeEmail(request.getEmail());
+        if (!otpService.isOtpValid(email, request.getOtp())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Mã OTP không đúng hoặc đã hết hạn");
         }
@@ -75,6 +62,7 @@ public class ForgotPasswordService {
     // ================================================================
     @Transactional
     public MessageResponse resetPassword(ResetPasswordRequest request) {
+        String email = normalizeEmail(request.getEmail());
         // Kiểm tra mật khẩu mới và xác nhận có khớp không
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -82,7 +70,7 @@ public class ForgotPasswordService {
         }
 
         // Kiểm tra email tồn tại
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy tài khoản với email này"));
 
@@ -94,7 +82,7 @@ public class ForgotPasswordService {
 
         // Xác minh OTP lần cuối trước khi đổi mật khẩu
         // (đảm bảo người dùng không bỏ qua bước 2)
-        if (!otpService.isOtpValid(request.getEmail(), request.getOtp())) {
+        if (!otpService.isOtpValid(email, request.getOtp())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Mã OTP không đúng hoặc đã hết hạn. Vui lòng gửi lại OTP.");
         }
@@ -104,8 +92,12 @@ public class ForgotPasswordService {
         userRepository.save(user);
 
         // Xóa OTP sau khi đổi mật khẩu thành công — tránh dùng lại
-        otpService.clearOtp(request.getEmail());
+        otpService.clearOtp(email);
 
         return new MessageResponse("Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.");
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
     }
 }

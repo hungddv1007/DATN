@@ -35,11 +35,7 @@ const MemberDietPage = () => {
     return addDays(getMonday(new Date()), weekOffset * 7);
   }, [weekOffset]);
 
-  useEffect(() => {
-    fetchWeekDiets();
-  }, [weekOffset]);
-
-  const fetchWeekDiets = async () => {
+  const fetchWeekDiets = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -65,7 +61,11 @@ const MemberDietPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getDisplayedMonday]);
+
+  useEffect(() => {
+    fetchWeekDiets();
+  }, [fetchWeekDiets]);
 
   const monday = getDisplayedMonday();
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));

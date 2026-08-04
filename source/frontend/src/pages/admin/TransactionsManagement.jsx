@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import transactionService from '../../services/transactionService';
 import { Check, X } from 'lucide-react';
+import AdminPagination from '../../components/admin/AdminPagination';
+import { ADMIN_PAGE_SIZE } from '../../hooks/useClientPagination';
 import './AdminManagement.css';
 
 const TransactionsManagement = () => {
@@ -11,14 +13,14 @@ const TransactionsManagement = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
       let data;
       if (filter === 'PENDING') {
-        data = await transactionService.getPendingTransactions(page, 10);
+        data = await transactionService.getPendingTransactions(page, ADMIN_PAGE_SIZE);
       } else {
-        data = await transactionService.getAllTransactions(page, 10);
+        data = await transactionService.getAllTransactions(page, ADMIN_PAGE_SIZE);
       }
       setTransactions(data.content || []);
       setTotalPages(data.totalPages || 0);
@@ -27,11 +29,11 @@ const TransactionsManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, page]);
 
   useEffect(() => {
     fetchTransactions();
-  }, [filter, page]);
+  }, [fetchTransactions]);
 
   const handleConfirm = async (id) => {
     if (!window.confirm('Bạn chắc chắn muốn DUYỆT giao dịch này?')) return;
@@ -147,13 +149,7 @@ const TransactionsManagement = () => {
           </tbody>
         </table>
         
-        {totalPages > 1 && (
-          <div className="pagination">
-            <button disabled={page === 0} onClick={() => setPage(page - 1)}>Trước</button>
-            <span>Trang {page + 1} / {totalPages}</span>
-            <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Sau</button>
-          </div>
-        )}
+        <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
     </AdminLayout>
   );

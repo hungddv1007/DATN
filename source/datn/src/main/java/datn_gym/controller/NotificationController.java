@@ -1,6 +1,7 @@
 package datn_gym.controller;
 
 import datn_gym.dto.request.NotificationCreateRequest;
+import datn_gym.dto.request.NotificationBulkCreateRequest;
 import datn_gym.dto.response.MessageResponse;
 import datn_gym.dto.response.NotificationResponse;
 import datn_gym.dto.response.UnreadCountResponse;
@@ -94,5 +95,18 @@ public class NotificationController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(notificationService.sendNotification(
                         userDetails.getUsername(), request));
+    }
+
+    // POST /api/notifications/send-bulk
+    @PostMapping("/send-bulk")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PT')")
+    public ResponseEntity<MessageResponse> sendBulkNotification(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody NotificationBulkCreateRequest request) {
+        int sentCount = notificationService.sendNotifications(
+                userDetails.getUsername(), request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new MessageResponse(
+                        "Đã gửi thông báo tới " + sentCount + " người nhận."));
     }
 }

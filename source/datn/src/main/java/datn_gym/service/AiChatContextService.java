@@ -13,10 +13,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.StringJoiner;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +43,7 @@ public class AiChatContextService {
         appendMembership(context, member.getId(), today);
         appendSchedule(context, member.getId(), today);
         appendDiet(context, member.getId());
-        appendPhysicalCondition(context, member.getId(), includePhysicalData);
+        appendPhysicalProfile(context, member.getId(), includePhysicalData);
 
         return context.toString().trim();
     }
@@ -123,11 +125,12 @@ public class AiChatContextService {
         if (!includePhysicalData) {
             response.append("- **Hồ sơ thể chất:** Chưa được chia sẻ theo lựa chọn của bạn.");
         } else {
-            String condition = memberProfileRepository.findByUser_Id(member.getId())
-                    .map(MemberProfile::getPhysicalCondition)
-                    .filter(value -> !value.isBlank())
+            String physicalProfile = memberProfileRepository.findByUser_Id(member.getId())
+                    .map(this::formatPhysicalProfile)
                     .orElse("Chưa có thông tin");
-            response.append("- **Hồ sơ thể chất:** ").append(condition).append('.');
+            response.append("- **Hồ sơ thể chất:** ")
+                    .append(physicalProfile)
+                    .append('.');
         }
 
         return response.toString();
@@ -205,7 +208,7 @@ public class AiChatContextService {
                 .append(diet.getFatG()).append("g fat.\n"));
     }
 
-    private void appendPhysicalCondition(
+    private void appendPhysicalProfile(
             StringBuilder context,
             Integer memberId,
             boolean includePhysicalData) {
@@ -214,13 +217,83 @@ public class AiChatContextService {
             return;
         }
 
-        String condition = memberProfileRepository.findByUser_Id(memberId)
-                .map(MemberProfile::getPhysicalCondition)
-                .filter(value -> !value.isBlank())
+        String physicalProfile = memberProfileRepository.findByUser_Id(memberId)
+                .map(this::formatPhysicalProfile)
                 .orElse("chưa có thông tin");
-        context.append("Hồ sơ thể chất do PT ghi nhận: ")
-                .append(condition)
+        context.append("Hồ sơ thể chất do hội viên cung cấp: ")
+                .append(physicalProfile)
                 .append('\n');
+    }
+
+    private String formatPhysicalProfile(MemberProfile profile) {
+        StringJoiner details = new StringJoiner("; ");
+        addMetric(details, "chiều cao", profile.getHeightCm(), "cm");
+        addMetric(details, "cân nặng", profile.getWeightKg(), "kg");
+        if (profile.getDateOfBirth() != null) {
+            addText(details, "tuổi", String.valueOf(
+                    datn_gym.util.BodyFatEstimator.ageOn(
+                            profile.getDateOfBirth(), LocalDate.now())));
+        }
+        addText(details, "giới tính sinh học", switch (
+                profile.getBiologicalSex() == null ? "" : profile.getBiologicalSex()) {
+            case "MALE" -> "nam";
+            case "FEMALE" -> "nữ";
+            default -> null;
+        });
+        addMetric(details, "vòng ngực", profile.getChestCm(), "cm");
+        addMetric(details, "vòng eo", profile.getWaistCm(), "cm");
+        addMetric(details, "vòng hông", profile.getHipCm(), "cm");
+        addMetric(details,
+                "tỷ lệ mỡ" + ("ESTIMATED".equals(profile.getBodyFatSource())
+                        ? " ước tính"
+                        : ""),
+                profile.getBodyFatPercentage(), "%");
+        addText(details, "mức vận động", activityLevelLabel(profile.getActivityLevel()));
+        addText(details, "mục tiêu", fitnessGoalLabel(profile.getFitnessGoal()));
+        addMetric(details, "cân nặng mục tiêu", profile.getTargetWeightKg(), "kg");
+        addText(details, "kinh nghiệm tập luyện", profile.getTrainingExperience());
+        addText(details, "tiền sử chấn thương", profile.getInjuryHistory());
+        addText(details, "bệnh lý hoặc hạn chế vận động", profile.getMedicalConditions());
+        return details.length() == 0 ? "chưa có thông tin" : details.toString();
+    }
+
+    private void addMetric(
+            StringJoiner details,
+            String label,
+            BigDecimal value,
+            String unit) {
+        if (value != null) {
+            details.add(label + ": " + value.stripTrailingZeros().toPlainString() + " " + unit);
+        }
+    }
+
+    private void addText(StringJoiner details, String label, String value) {
+        if (value != null && !value.isBlank()) {
+            details.add(label + ": " + value.trim());
+        }
+    }
+
+    private String activityLevelLabel(String value) {
+        if (value == null) return null;
+        return switch (value) {
+            case "SEDENTARY" -> "ít vận động";
+            case "LIGHT" -> "vận động nhẹ";
+            case "MODERATE" -> "vận động vừa";
+            case "HIGH" -> "vận động nhiều";
+            case "VERY_HIGH" -> "vận động cường độ rất cao";
+            default -> value;
+        };
+    }
+
+    private String fitnessGoalLabel(String value) {
+        if (value == null) return null;
+        return switch (value) {
+            case "WEIGHT_LOSS" -> "giảm cân";
+            case "MUSCLE_GAIN" -> "tăng cơ";
+            case "MAINTENANCE" -> "duy trì vóc dáng";
+            case "HEALTH_IMPROVEMENT" -> "cải thiện sức khỏe";
+            default -> value;
+        };
     }
 
     private Membership findActiveMembership(Integer memberId, LocalDate today) {

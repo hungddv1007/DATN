@@ -62,6 +62,12 @@ const authService = {
     return response.data;
   },
 
+  // Xác minh OTP trước khi cho phép nhập mật khẩu mới
+  verifyForgotPasswordOtp: async (email, otp) => {
+    const response = await api.post('/auth/verify-otp', { email, otp });
+    return response.data;
+  },
+
   // Đặt lại mật khẩu
   resetPassword: async (email, otp, newPassword, confirmPassword) => {
     const response = await api.post('/auth/reset-password', { email, otp, newPassword, confirmPassword });

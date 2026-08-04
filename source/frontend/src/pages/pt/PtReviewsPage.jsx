@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import PtLayout from '../../components/layout/PtLayout';
+import { PtSummaryCard, PtSummaryGrid } from '../../components/pt/PtSummaryCards';
 import api from '../../services/api';
 import { Star, MessageSquare } from 'lucide-react';
 import '../admin/AdminManagement.css';
+import './PtReviewsPage.css';
 
 const PtReviewsPage = () => {
   const [reviews, setReviews] = useState([]);
@@ -32,68 +34,59 @@ const PtReviewsPage = () => {
   };
 
   const avgRating = profile?.ratingScore || 0;
+  const fiveStarReviews = reviews.filter(review => review.ratingStar === 5).length;
 
   return (
     <PtLayout>
-      <h1>Đánh Giá Từ Học Viên</h1>
-      <p>Xem phản hồi và đánh giá từ học viên của bạn.</p>
+      <div className="pt-reviews-page">
+        <header className="pt-reviews-header">
+          <h1>Đánh Giá Từ Học Viên</h1>
+          <p>Xem phản hồi và đánh giá từ học viên của bạn.</p>
+        </header>
 
-      {/* Stats */}
-      <div className="admin-stats" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        <div className="stat-card">
-          <Star size={28} className="stat-icon" style={{ color: '#eab308' }} />
-          <div className="stat-label">Điểm trung bình</div>
-          <div className="stat-value">{avgRating || '—'}</div>
-        </div>
-        <div className="stat-card">
-          <MessageSquare size={28} className="stat-icon" />
-          <div className="stat-label">Tổng lượt đánh giá</div>
-          <div className="stat-value">{reviews.length}</div>
-        </div>
-        <div className="stat-card">
-          <Star size={28} className="stat-icon" style={{ color: '#22c55e' }} />
-          <div className="stat-label">Đánh giá 5 sao</div>
-          <div className="stat-value">{reviews.filter(r => r.ratingStar === 5).length}</div>
-        </div>
-      </div>
+        <PtSummaryGrid columns={3} ariaLabel="Thống kê đánh giá">
+          <PtSummaryCard icon={Star} label="Điểm trung bình" value={avgRating || '—'} tone="yellow" />
+          <PtSummaryCard icon={MessageSquare} label="Tổng lượt đánh giá" value={reviews.length} tone="orange" />
+          <PtSummaryCard icon={Star} label="Đánh giá 5 sao" value={fiveStarReviews} tone="green" />
+        </PtSummaryGrid>
 
-      {/* Reviews List */}
-      <div className="admin-table-container" style={{ marginTop: 0 }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <h3 style={{ color: '#f1f5f9', margin: 0 }}>Tất cả đánh giá</h3>
-        </div>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Đang tải...</div>
-        ) : reviews.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Chưa có đánh giá nào.</div>
-        ) : (
-          <div style={{ padding: '0' }}>
-            {reviews.map(review => (
-              <div key={review.id} style={{
-                padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                  <div>
-                    <span style={{ color: '#f1f5f9', fontWeight: '500', marginRight: '12px' }}>{review.memberName}</span>
-                    <span style={{ display: 'inline-flex', gap: '2px', verticalAlign: 'middle' }}>{renderStars(review.ratingStar)}</span>
-                  </div>
-                  <span style={{ color: '#64748b', fontSize: '0.85rem' }}>
-                    {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}
-                  </span>
-                </div>
-                {review.comment && (
-                  <p style={{ color: '#cbd5e1', margin: 0, lineHeight: '1.6', fontSize: '0.95rem' }}>
-                    {review.comment}
-                  </p>
-                )}
-              </div>
-            ))}
+        <section className="pt-review-list">
+          <div className="pt-review-list-header">
+            <div>
+              <h2>Tất cả đánh giá</h2>
+              <span>{reviews.length} phản hồi</span>
+            </div>
           </div>
-        )}
+
+          {loading ? (
+            <div className="pt-review-state">Đang tải đánh giá...</div>
+          ) : reviews.length === 0 ? (
+            <div className="pt-review-state pt-review-state--empty">
+              <MessageSquare size={32} />
+              <strong>Chưa có đánh giá nào</strong>
+              <span>Đánh giá từ học viên sẽ xuất hiện tại đây.</span>
+            </div>
+          ) : (
+            <div>
+              {reviews.map(review => (
+                <article className="pt-review-item" key={review.id}>
+                  <div className="pt-review-item-header">
+                    <div className="pt-review-member">
+                      <span>{review.memberName}</span>
+                      <span className="pt-review-stars" aria-label={`${review.ratingStar} trên 5 sao`}>
+                        {renderStars(review.ratingStar)}
+                      </span>
+                    </div>
+                    <time>
+                      {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}
+                    </time>
+                  </div>
+                  {review.comment && <p>{review.comment}</p>}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </PtLayout>
   );

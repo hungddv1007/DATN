@@ -1,6 +1,7 @@
 package datn_gym.service;
 
 import datn_gym.dto.response.TransactionResponse;
+import datn_gym.config.PaymentProperties;
 import datn_gym.entity.GymPackage;
 import datn_gym.entity.Membership;
 import datn_gym.entity.Promotion;
@@ -14,11 +15,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,7 @@ public class TransactionService {
     private final MembershipRepository membershipRepository;
     private final PromotionRepository promotionRepository;
     private final UserRepository userRepository;
+    private final PaymentProperties paymentProperties;
 
     public Page<TransactionResponse> getAllTransactions(Pageable pageable) {
         return transactionRepository.findAllByOrderByCreatedAtDesc(pageable)
@@ -67,6 +72,34 @@ public class TransactionService {
         Transaction tx = getPendingTransaction(transactionId);
         User admin = getAdmin(adminEmail);
 
+        cancelPendingTransaction(tx, admin);
+        return toResponse(tx);
+    }
+
+    @Scheduled(cron = "${app.transaction.pending-expiration-cron:0 0 * * * *}")
+    @Transactional
+    public int expirePendingTransactions() {
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(
+                paymentProperties.effectivePendingExpirationHours());
+        List<Transaction> expired = transactionRepository
+                .findByStatusAndCreatedAtBefore("PENDING", cutoff);
+
+        int cancelled = 0;
+        for (Transaction tx : expired) {
+            // Dữ liệu legacy có thể đã tác động membership trước khi duyệt.
+            // Không tự động đảo ngược loại giao dịch đó.
+            if (Boolean.TRUE.equals(tx.getOperationApplied())
+                    && !"NEW".equals(tx.getType())) {
+                continue;
+            }
+            cancelPendingTransaction(tx, null);
+            cancelled++;
+        }
+        return cancelled;
+    }
+
+    private void cancelPendingTransaction(Transaction tx, User processedBy) {
+
         if (Boolean.TRUE.equals(tx.getOperationApplied()) && !"NEW".equals(tx.getType())) {
             throw new IllegalArgumentException(
                     "Giao dịch cũ này đã được áp dụng vào gói tập nên không thể tự động hủy. "
@@ -74,7 +107,7 @@ public class TransactionService {
         }
 
         tx.setStatus("CANCELLED");
-        tx.setConfirmedBy(admin);
+        tx.setConfirmedBy(processedBy);
 
         if ("NEW".equals(tx.getType())
                 && ("PENDING".equals(tx.getMembership().getStatus())
@@ -86,12 +119,14 @@ public class TransactionService {
         // Promotion được giữ chỗ lúc tạo giao dịch; trả lại khi giao dịch bị từ chối.
         if (tx.getPromotion() != null) {
             Promotion promotion = tx.getPromotion();
-            promotion.setCurrentUsage(Math.max(0, promotion.getCurrentUsage() - 1));
+            int currentUsage = promotion.getCurrentUsage() == null
+                    ? 0
+                    : promotion.getCurrentUsage();
+            promotion.setCurrentUsage(Math.max(0, currentUsage - 1));
             promotionRepository.save(promotion);
         }
 
         transactionRepository.save(tx);
-        return toResponse(tx);
     }
 
     private Transaction getPendingTransaction(Integer transactionId) {

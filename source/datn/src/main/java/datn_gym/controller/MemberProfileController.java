@@ -31,6 +31,18 @@ public class MemberProfileController {
                 memberProfileService.getMyProfile(userDetails.getUsername()));
     }
 
+    // PUT /api/member/profile/physical
+    // Chỉ Member được tự cập nhật hồ sơ thể chất của chính mình
+    @PutMapping("/api/member/profile/physical")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<MemberProfileResponse> updateMyProfile(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody MemberProfileUpdateRequest request) {
+        return ResponseEntity.ok(
+                memberProfileService.updateMyProfile(
+                        userDetails.getUsername(), request));
+    }
+
     // ================================================================
     // PT APIs
     // ================================================================
@@ -47,16 +59,4 @@ public class MemberProfileController {
                         userDetails.getUsername(), memberId));
     }
 
-    // PUT /api/pt/member-profiles/{memberId}
-    // PT ghi nhận / cập nhật tình trạng thể chất của hội viên
-    @PutMapping("/api/pt/member-profiles/{memberId}")
-    @PreAuthorize("hasRole('PT')")
-    public ResponseEntity<MemberProfileResponse> updateMemberProfile(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Integer memberId,
-            @Valid @RequestBody MemberProfileUpdateRequest request) {
-        return ResponseEntity.ok(
-                memberProfileService.updateMemberProfile(
-                        userDetails.getUsername(), memberId, request));
-    }
 }

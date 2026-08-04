@@ -1,0 +1,108 @@
+.ai-diet-generator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.13), rgba(37, 99, 235, 0.1));
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  border-radius: 12px;
+}
+
+.ai-diet-generator-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ai-diet-generator-icon {
+  display: inline-flex;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.16);
+  border-radius: 10px;
+}
+
+.ai-diet-generator-copy strong,
+.ai-diet-generator-copy span {
+  display: block;
+}
+
+.ai-diet-generator-copy strong {
+  margin-bottom: 3px;
+  color: #ede9fe;
+  font-size: 0.91rem;
+}
+
+.ai-diet-generator-copy div > span {
+  color: #a5b4fc;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.ai-diet-generate-button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 126px;
+  padding: 9px 14px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  border: 0;
+  border-radius: 9px;
+  box-shadow: 0 5px 16px rgba(99, 102, 241, 0.24);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.ai-diet-generate-button:not(:disabled):hover {
+  box-shadow: 0 7px 20px rgba(99, 102, 241, 0.34);
+  transform: translateY(-1px);
+}
+
+.ai-diet-generate-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.ai-diet-message {
+  margin-bottom: 12px;
+  padding: 10px 13px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.ai-diet-message--error {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+.ai-diet-message--success {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.24);
+}
+
+@media (max-width: 700px) {
+  .ai-diet-generator {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ai-diet-generate-button {
+    width: 100%;
+  }
+}

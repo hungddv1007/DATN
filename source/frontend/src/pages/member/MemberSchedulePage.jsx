@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import ptScheduleService from '../../services/ptScheduleService';
 import { ChevronLeft, ChevronRight, User, Clock } from 'lucide-react';
+import {
+  getScheduleTransitionLabel,
+  isInTimeBlock,
+  SCHEDULE_TIME_BLOCKS,
+  timeToMinutes,
+} from '../../utils/scheduleTimeBlocks';
 import './MemberSchedulePage.css';
 
 const DAY_LABELS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
-const BLOCKS = [
-  { label: 'NGÀY', range: '06:00 – 18:00', startHour: 6, endHour: 18 },
-  { label: 'ĐÊM', range: '18:00 – 06:00', startHour: 18, endHour: 6 }
-];
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const toISODate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -27,17 +29,6 @@ function addDays(d, n) {
   const x = new Date(d);
   x.setDate(x.getDate() + n);
   return x;
-}
-
-function timeToMinutes(t) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
-
-function isInBlock(startTime, blockIdx) {
-  const mins = timeToMinutes(startTime);
-  if (blockIdx === 0) return mins >= 360 && mins < 1080;
-  return mins >= 1080 || mins < 360;
 }
 
 const MemberSchedulePage = () => {
@@ -78,9 +69,9 @@ const MemberSchedulePage = () => {
     loadSchedule();
   }, [loadSchedule]);
 
-  const getSchedulesForCell = (dateISO, blockIdx) => {
+  const getSchedulesForCell = (dateISO, block) => {
     return schedule
-      .filter(s => s.scheduleDate === dateISO && isInBlock(s.startTime, blockIdx))
+      .filter(s => s.scheduleDate === dateISO && isInTimeBlock(s.startTime, block))
       .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
   };
 
@@ -168,8 +159,8 @@ const MemberSchedulePage = () => {
                   })}
                 </div>
 
-                {BLOCKS.map((block, blockIdx) => (
-                  <div key={blockIdx} className="msp-grid-row msp-grid-row-body">
+                {SCHEDULE_TIME_BLOCKS.map(block => (
+                  <div key={block.id} className="msp-grid-row msp-grid-row-body">
                     <div className="msp-time-cell">
                       {block.label}
                       <span className="msp-time-range">{block.range}</span>
@@ -177,13 +168,18 @@ const MemberSchedulePage = () => {
                     {dates.map((d, dayIdx) => {
                       const iso = toISODate(d);
                       const isToday = iso === todayISO;
-                      const items = getSchedulesForCell(iso, blockIdx);
+                      const items = getSchedulesForCell(iso, block);
 
                       return (
                         <div key={dayIdx} className={`msp-slot-cell ${isToday ? 'msp-day-today' : ''}`}>
                           {items.map(item => (
                             <div key={item.id} className="msp-card">
                               <div className="msp-card-time">{item.startTime} - {item.endTime}</div>
+                              {getScheduleTransitionLabel(item.startTime, item.endTime) && (
+                                <div className="msp-cross-block">
+                                  {getScheduleTransitionLabel(item.startTime, item.endTime)}
+                                </div>
+                              )}
                               {item.exerciseNote && (
                                 <div className="msp-card-note">{item.exerciseNote}</div>
                               )}
