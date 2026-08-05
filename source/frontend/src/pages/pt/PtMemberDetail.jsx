@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import PtLayout from '../../components/layout/PtLayout';
-import { PtSummaryCard, PtSummaryGrid } from '../../components/pt/PtSummaryCards';
+import { SummaryCard, SummaryGrid } from '../../components/common/SummaryCards';
 import api from '../../services/api';
 import memberProfileService from '../../services/memberProfileService';
 import { analyzeNutrition, generateDietFromPhysicalProfile } from '../../services/nutritionAIService';
@@ -646,24 +646,24 @@ const PtMemberDetail = () => {
       <p>Thông tin và quản lý cho học viên <strong style={{ color: '#f97316' }}>{member.memberName}</strong>.</p>
 
       {/* Member Info Cards */}
-      <PtSummaryGrid columns={4} ariaLabel="Thông tin tổng quan học viên">
-        <PtSummaryCard icon={User} label="Họ tên" value={member.memberName} tone="blue" compact />
-        <PtSummaryCard icon={Package} label="Gói tập" value={member.packageName} tone="green" compact />
-        <PtSummaryCard
+      <SummaryGrid columns={4} ariaLabel="Thông tin tổng quan học viên">
+        <SummaryCard icon={User} label="Họ tên" value={member.memberName} tone="blue" compact />
+        <SummaryCard icon={Package} label="Gói tập" value={member.packageName} tone="green" compact />
+        <SummaryCard
           icon={Calendar}
           label="Hết hạn"
           value={new Date(member.endDate).toLocaleDateString('vi-VN')}
           tone="yellow"
           compact
         />
-        <PtSummaryCard
+        <SummaryCard
           icon={Utensils}
           label="Khẩu phần ăn"
           value={`${(trainingDiet ? 1 : 0) + (restDiet ? 1 : 0)} / 2 mẫu`}
           tone="teal"
           compact
         />
-      </PtSummaryGrid>
+      </SummaryGrid>
 
       {/* Contact info */}
       <div className="admin-table-container" style={{ marginTop: 0, marginBottom: '20px' }}>
