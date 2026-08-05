@@ -1,0 +1,242 @@
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+img,
+video,
+iframe {
+  max-width: 100%;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+@media (max-width: 900px) {
+  .admin-table-container,
+  .discounts-table-container,
+  .table-responsive {
+    max-width: 100%;
+    overflow-x: auto !important;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-table,
+  .data-table {
+    min-width: 760px;
+  }
+
+  .admin-header-row,
+  .tab-buttons,
+  .action-buttons,
+  .modal-footer,
+  .table-actions {
+    flex-wrap: wrap;
+  }
+
+  .tab-buttons {
+    max-width: 100%;
+    padding-bottom: 4px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+  }
+
+  .tab-btn {
+    min-height: 42px;
+    flex: 0 0 auto;
+  }
+
+  .admin-table th,
+  .admin-table td,
+  .data-table th,
+  .data-table td {
+    padding: 13px 14px;
+  }
+
+  .action-btns,
+  .table-actions {
+    min-width: max-content;
+  }
+
+  .btn-icon,
+  .table-actions button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
+  .dashboard-header {
+    padding: 46px 16px 24px;
+  }
+
+  .dashboard-header h1,
+  .pt-hero h1 {
+    font-size: clamp(1.8rem, 8vw, 2.35rem);
+  }
+
+  .dashboard-cards {
+    width: 100%;
+    padding: 14px 16px 48px;
+  }
+
+  .admin-page-header {
+    align-items: stretch !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .admin-page-header > button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .admin-filter-bar {
+    align-items: stretch !important;
+    flex-direction: column;
+    gap: 12px !important;
+  }
+
+  .admin-filter-bar > div {
+    width: 100%;
+  }
+
+  .admin-filter-bar select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pt-members-list-page {
+    padding: 0 !important;
+  }
+
+  .pt-members-list-page .admin-table-container {
+    overflow-x: auto !important;
+  }
+
+  .pt-members-list-page input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .pt-hero {
+    padding: 54px 16px;
+  }
+
+  .pt-hero p {
+    font-size: 1rem;
+  }
+
+  .pt-container {
+    margin-top: 24px;
+    padding-inline: 14px;
+  }
+
+  .pt-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .modal-overlay,
+  .modal-backdrop,
+  .admin-modal-overlay,
+  .manage-modal-overlay,
+  .notif-modal-backdrop,
+  .pts-modal-backdrop {
+    align-items: flex-end;
+    padding: 10px;
+    z-index: 1200 !important;
+  }
+
+  .modal-content,
+  .admin-modal,
+  .manage-modal,
+  .notif-modal-card {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - 20px);
+    border-radius: 18px 18px 12px 12px;
+  }
+
+  .modal-content,
+  .admin-modal {
+    padding: 20px 16px;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer,
+  .notif-modal-header,
+  .notif-modal-body {
+    padding-inline: 16px;
+  }
+
+  .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    gap: 10px;
+  }
+
+  .modal-footer > button,
+  .modal-footer .btn-cancel,
+  .modal-footer .btn-submit,
+  .modal-footer .btn-save,
+  .modal-footer .btn-confirm-modal,
+  .modal-footer .btn-cancel-modal {
+    min-height: 44px;
+    flex: 1 1 140px;
+  }
+
+  .pagination {
+    gap: 8px;
+    padding: 16px 10px;
+    flex-wrap: wrap;
+  }
+
+  .pagination button {
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-table,
+  .data-table {
+    min-width: 680px;
+  }
+
+  .modal-footer > button {
+    flex-basis: 100%;
+  }
+
+  .notif-modal-header {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .notif-item {
+    padding: 12px;
+  }
+}

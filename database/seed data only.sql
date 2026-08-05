@@ -213,6 +213,56 @@ INSERT INTO member_profiles (user_id, medical_conditions) VALUES (98, NULL);
 INSERT INTO member_profiles (user_id, medical_conditions) VALUES (99, N'Huyết áp hơi cao, cần theo dõi cường độ cardio.');
 INSERT INTO member_profiles (user_id, medical_conditions) VALUES (100, N'Có tiền sử đau lưng dưới, cần tránh deadlift nặng.');
 
+-- Bo sung du lieu ho so the chat de co the kiem thu AI chat va AI tao thuc don.
+-- Cac gia tri duoc tao co dinh theo user_id, nam trong pham vi hop le va de tai lap.
+UPDATE member_profiles
+SET height_cm = 155 + (user_id % 31),
+    weight_kg = 50 + (user_id % 36),
+    date_of_birth = DATEFROMPARTS(1985 + (user_id % 18), 1 + (user_id % 12), 1 + (user_id % 27)),
+    biological_sex = CASE WHEN user_id % 2 = 0 THEN 'MALE' ELSE 'FEMALE' END,
+    chest_cm = 78 + (user_id % 24),
+    waist_cm = 65 + (user_id % 27),
+    hip_cm = 82 + (user_id % 23),
+    activity_level = CASE user_id % 5
+        WHEN 0 THEN 'SEDENTARY'
+        WHEN 1 THEN 'LIGHT'
+        WHEN 2 THEN 'MODERATE'
+        WHEN 3 THEN 'HIGH'
+        ELSE 'VERY_HIGH'
+    END,
+    fitness_goal = CASE user_id % 4
+        WHEN 0 THEN 'WEIGHT_LOSS'
+        WHEN 1 THEN 'MUSCLE_GAIN'
+        WHEN 2 THEN 'MAINTENANCE'
+        ELSE 'HEALTH_IMPROVEMENT'
+    END,
+    target_weight_kg = CASE user_id % 4
+        WHEN 0 THEN 45 + (user_id % 36)
+        WHEN 1 THEN 55 + (user_id % 36)
+        ELSE 50 + (user_id % 36)
+    END,
+    training_experience = CASE user_id % 4
+        WHEN 0 THEN N'Chưa từng tập luyện có hệ thống.'
+        WHEN 1 THEN N'Đã tập dưới 6 tháng, đang làm quen kỹ thuật cơ bản.'
+        WHEN 2 THEN N'Đã tập đều từ 6 đến 18 tháng.'
+        ELSE N'Đã tập trên 2 năm và có thể tự thực hiện các bài tập cơ bản.'
+    END,
+    injury_history = CASE user_id % 7
+        WHEN 0 THEN N'Từng đau khớp gối, cần hạn chế động tác tác động mạnh.'
+        WHEN 1 THEN N'Từng đau lưng dưới, cần chú ý kỹ thuật nâng tạ.'
+        ELSE NULL
+    END;
+
+-- Cong thuc Deurenberg dung cung cach voi backend/frontend cua du an.
+UPDATE member_profiles
+SET body_fat_percentage = CAST(ROUND(
+        1.20 * (weight_kg / POWER(height_cm / 100.0, 2))
+        + 0.23 * DATEDIFF(YEAR, date_of_birth, CAST(GETDATE() AS DATE))
+        - 10.8 * CASE WHEN biological_sex = 'MALE' THEN 1 ELSE 0 END
+        - 5.4,
+        2) AS DECIMAL(5,2)),
+    body_fat_source = 'ESTIMATED';
+
 -- 5. Insert Packages
 INSERT INTO packages (name, daily_price, description, has_pt, can_choose_pt, has_meal_plan, min_days, max_hold_times, hold_return_percent, is_active) VALUES 
 ('BASIC', 16000, N'Gói tập cơ bản sử dụng thiết bị phòng gym tự do', 0, 0, 0, 30, 0, 0, 1),
@@ -467,6 +517,74 @@ INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, 
 INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (110, NULL, 7470000, 7470000, 'BANK', 'CONFIRMED', 'NEW', 1);
 INSERT INTO transactions (membership_id, promotion_id, amount, original_amount, payment_method, status, type, confirmed_by) VALUES (110, NULL, 7431544, 7470000, 'ONLINE', 'CONFIRMED', 'RENEW', 1);
 
+-- Chuyen cac giao dich mau cu sang cau truc snapshot hien tai.
+-- Du lieu snapshot giup lich su khong bi thay doi khi gia goi/PT thay doi ve sau.
+WITH transaction_order AS (
+    SELECT id,
+           ROW_NUMBER() OVER (PARTITION BY membership_id ORDER BY id) AS transaction_number
+    FROM transactions
+)
+UPDATE transaction_record
+SET requested_duration_days = CAST(ROUND(
+        transaction_record.original_amount / NULLIF(membership.daily_price, 0), 0) AS INT),
+    requested_package_id = membership.package_id,
+    requested_pt_id = membership.pt_id,
+    operation_applied = CASE WHEN transaction_record.status = 'CONFIRMED' THEN 1 ELSE 0 END,
+    confirmed_by = CASE WHEN transaction_record.status = 'CONFIRMED'
+                        THEN COALESCE(transaction_record.confirmed_by, 1)
+                        ELSE NULL END,
+    created_at = DATEADD(DAY, (transaction_order.transaction_number - 1) * 30,
+                         membership.created_at)
+FROM transactions AS transaction_record
+INNER JOIN memberships AS membership ON membership.id = transaction_record.membership_id
+INNER JOIN transaction_order ON transaction_order.id = transaction_record.id;
+
+-- Loai ma khuyen mai khong dung pham vi goi hoac khong hieu luc tai thoi diem giao dich.
+UPDATE transaction_record
+SET promotion_id = NULL
+FROM transactions AS transaction_record
+INNER JOIN promotions AS promotion ON promotion.id = transaction_record.promotion_id
+WHERE CAST(transaction_record.created_at AS DATE) NOT BETWEEN promotion.start_date AND promotion.end_date
+   OR (promotion.package_id IS NOT NULL
+       AND promotion.package_id <> transaction_record.requested_package_id);
+
+-- Tinh lai so tien theo dung thu tu: gia goc -> chiet khau thoi han -> ma khuyen mai.
+UPDATE transaction_record
+SET amount = CAST(ROUND(
+        transaction_record.original_amount
+        * (100 - COALESCE(long_term_discount.discount_percent, 0)) / 100.0
+        * (100 - COALESCE(promotion.discount_percent, 0)) / 100.0,
+        0) AS DECIMAL(12,0))
+FROM transactions AS transaction_record
+LEFT JOIN promotions AS promotion ON promotion.id = transaction_record.promotion_id
+OUTER APPLY (
+    SELECT TOP (1) package_discount.discount_percent
+    FROM package_discounts AS package_discount
+    WHERE (package_discount.package_id IS NULL
+           OR package_discount.package_id = transaction_record.requested_package_id)
+      AND package_discount.min_days <= transaction_record.requested_duration_days
+    ORDER BY package_discount.min_days DESC,
+             CASE WHEN package_discount.package_id IS NULL THEN 1 ELSE 0 END
+) AS long_term_discount;
+
+-- current_usage phai phan anh dung so giao dich da xac nhan su dung ma.
+UPDATE promotion
+SET current_usage = (
+    SELECT COUNT(*)
+    FROM transactions AS transaction_record
+    WHERE transaction_record.promotion_id = promotion.id
+      AND transaction_record.status = 'CONFIRMED'
+)
+FROM promotions AS promotion;
+
+-- Khong de goi ACTIVE/PAUSED qua ngay het han khi seed duoc chay lai.
+UPDATE memberships
+SET status = 'EXPIRED',
+    pause_reason = NULL,
+    paused_at = NULL
+WHERE status IN ('ACTIVE', 'PAUSED')
+  AND end_date < CAST(GETDATE() AS DATE);
+
 -- 9. Insert Exercises
 INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Bench Press', N'Ngực', N'Bài tập bench press tập trung nhóm cơ ngực, thực hiện đúng kỹ thuật để tránh chấn thương.', 16, 1);
 INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Incline Dumbbell Press', N'Ngực', N'Bài tập incline dumbbell press tập trung nhóm cơ ngực, thực hiện đúng kỹ thuật để tránh chấn thương.', 4, 1);
@@ -544,79 +662,64 @@ INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (2, 62, N'Đ
 -- 11. PT Comments: de trong theo yeu cau cua nguoi dung (khong insert du lieu)
 
 -- 12. Insert Diets (chi ap dung cho hoi vien goi VIP co has_meal_plan)
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-05-31', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-02', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-06-14', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-05', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-06', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-03', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-03', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-07-04', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-05-15', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-01', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (77, 13, '2026-07-07', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-08', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-07-02', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-05', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-06', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-05-19', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-05', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-04', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-06-28', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-07-06', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-06-28', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (96, 15, '2026-06-23', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-02', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-06-30', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-02', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-04', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-06', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-05', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-06-25', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-25', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (77, 13, '2026-07-09', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-01', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-06-30', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-09', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (64, 16, '2026-07-09', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (37, 6, '2026-07-07', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-02', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (64, 16, '2026-07-09', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-04', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-02', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-06-29', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (77, 13, '2026-07-05', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-07-08', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-04', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-06-24', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-07-01', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-06-16', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-03', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-07-01', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-25', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (86, 13, '2026-07-01', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-09', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-07', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-07', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (83, 14, '2026-07-07', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (27, 2, '2026-06-14', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (59, 2, '2026-07-09', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (24, 15, '2026-06-30', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (77, 13, '2026-07-04', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
-INSERT INTO diets (member_id, pt_id, date, breakfast, lunch, dinner) VALUES (42, 11, '2026-06-17', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (96, 15, 'SPECIFIC_DATE', '2026-05-31', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (59, 2, 'SPECIFIC_DATE', '2026-07-02', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (96, 15, 'SPECIFIC_DATE', '2026-06-14', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (37, 6, 'SPECIFIC_DATE', '2026-07-05', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (37, 6, 'SPECIFIC_DATE', '2026-07-06', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (37, 6, 'SPECIFIC_DATE', '2026-07-03', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (86, 13, 'SPECIFIC_DATE', '2026-07-03', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (24, 15, 'SPECIFIC_DATE', '2026-07-04', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (96, 15, 'SPECIFIC_DATE', '2026-05-15', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (27, 2, 'SPECIFIC_DATE', '2026-06-01', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (77, 13, 'SPECIFIC_DATE', '2026-07-07', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (59, 2, 'SPECIFIC_DATE', '2026-07-08', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (24, 15, 'SPECIFIC_DATE', '2026-07-02', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (86, 13, 'SPECIFIC_DATE', '2026-07-05', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (96, 15, 'SPECIFIC_DATE', '2026-05-19', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (83, 14, 'SPECIFIC_DATE', '2026-07-05', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (86, 13, 'SPECIFIC_DATE', '2026-07-04', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (59, 2, 'SPECIFIC_DATE', '2026-06-28', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (42, 11, 'SPECIFIC_DATE', '2026-07-06', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (24, 15, 'SPECIFIC_DATE', '2026-06-28', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (96, 15, 'SPECIFIC_DATE', '2026-06-23', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (86, 13, 'SPECIFIC_DATE', '2026-07-02', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (59, 2, 'SPECIFIC_DATE', '2026-06-30', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (83, 14, 'SPECIFIC_DATE', '2026-07-02', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (59, 2, 'SPECIFIC_DATE', '2026-07-04', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (27, 2, 'SPECIFIC_DATE', '2026-06-06', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (59, 2, 'SPECIFIC_DATE', '2026-06-25', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (27, 2, 'SPECIFIC_DATE', '2026-06-25', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (77, 13, 'SPECIFIC_DATE', '2026-07-09', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (37, 6, 'SPECIFIC_DATE', '2026-07-01', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (24, 15, 'SPECIFIC_DATE', '2026-06-30', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (83, 14, 'SPECIFIC_DATE', '2026-07-09', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (64, 16, 'SPECIFIC_DATE', '2026-07-09', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (37, 6, 'SPECIFIC_DATE', '2026-07-07', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (42, 11, 'SPECIFIC_DATE', '2026-06-29', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (77, 13, 'SPECIFIC_DATE', '2026-07-05', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (24, 15, 'SPECIFIC_DATE', '2026-07-08', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (83, 14, 'SPECIFIC_DATE', '2026-07-04', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (42, 11, 'SPECIFIC_DATE', '2026-06-24', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (42, 11, 'SPECIFIC_DATE', '2026-07-01', N'Sinh tố protein + hạt óc chó', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (42, 11, 'SPECIFIC_DATE', '2026-06-16', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (83, 14, 'SPECIFIC_DATE', '2026-07-03', N'3 quả trứng luộc + bánh mì nguyên cám', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (27, 2, 'SPECIFIC_DATE', '2026-07-01', N'Sinh tố protein + hạt óc chó', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (86, 13, 'SPECIFIC_DATE', '2026-07-01', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (59, 2, 'SPECIFIC_DATE', '2026-07-09', N'Sinh tố protein + hạt óc chó', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Cá diêu hồng hấp + rau muống luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (83, 14, 'SPECIFIC_DATE', '2026-07-07', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (27, 2, 'SPECIFIC_DATE', '2026-06-14', N'Yến mạch + sữa tươi không đường + 1 quả chuối', N'Cá hồi nướng + khoai lang + salad', N'Súp rau củ + trứng luộc');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (77, 13, 'SPECIFIC_DATE', '2026-07-04', N'3 quả trứng luộc + bánh mì nguyên cám', N'Thịt bò xào + cơm gạo lứt + bông cải xanh', N'Ức gà luộc + rau củ hấp');
+INSERT INTO diets (member_id, pt_id, day_type, diet_date, breakfast, lunch, dinner) VALUES (42, 11, 'SPECIFIC_DATE', '2026-06-17', N'3 quả trứng luộc + bánh mì nguyên cám', N'Ức gà áp chảo 200g + cơm gạo lứt + rau xanh luộc', N'Súp rau củ + trứng luộc');
 
 -- 13. Insert Reviews
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (44, 10, 4, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-06-22 07:59:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (35, 3, 3, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-06-14 17:37:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (88, 3, 5, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2025-10-06 15:47:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (23, 10, 4, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2025-11-16 14:59:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (90, 5, 3, N'Giáo án phù hợp với thể trạng, cảm thấy tiến bộ rõ rệt.', '2026-05-21 16:11:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (36, 13, 5, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-02-17 16:56:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (63, 14, 4, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-02-01 16:58:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (50, 13, 5, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-06-15 14:51:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (36, 10, 5, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-07-09 11:53:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (97, 16, 3, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-06-19 10:13:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (59, 2, 4, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-06-27 18:41:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (42, 11, 4, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-07-04 12:45:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (34, 6, 3, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-01-21 16:36:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (78, 3, 4, NULL, '2026-07-06 11:56:00');
@@ -626,16 +729,10 @@ INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES 
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (24, 13, 4, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-02-21 19:34:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (21, 12, 5, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-07-01 16:55:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (100, 2, 3, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-07-08 13:15:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (90, 5, 3, NULL, '2026-05-21 11:44:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (23, 10, 2, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2025-08-22 19:43:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (62, 7, 2, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-07-04 18:16:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (44, 9, 4, NULL, '2026-07-08 20:28:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (47, 6, 2, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-04-21 17:23:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (96, 15, 4, N'Giáo án phù hợp với thể trạng, cảm thấy tiến bộ rõ rệt.', '2026-06-30 18:12:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (59, 2, 5, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-06-25 09:11:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (90, 5, 5, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-05-12 11:35:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (53, 4, 5, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-01-24 11:00:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (64, 16, 4, N'Giáo án phù hợp với thể trạng, cảm thấy tiến bộ rõ rệt.', '2026-07-09 07:09:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (63, 14, 4, NULL, '2026-02-17 17:39:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (60, 15, 4, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-04-19 08:50:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (62, 7, 4, N'Giáo án phù hợp với thể trạng, cảm thấy tiến bộ rõ rệt.', '2026-07-08 08:50:00');
@@ -644,18 +741,24 @@ INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES 
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (59, 2, 5, NULL, '2026-07-09 14:35:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (18, 8, 5, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-07-08 10:57:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (50, 13, 2, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-06-17 13:58:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (34, 6, 5, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2025-12-02 07:58:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (92, 6, 3, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-07-08 19:32:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (82, 15, 4, N'PT đúng giờ, chuyên nghiệp, sẽ tiếp tục đăng ký buổi sau.', '2026-06-23 17:12:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (63, 14, 4, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-01-24 19:34:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (95, 12, 5, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2025-10-13 17:40:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (46, 12, 3, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-06-05 10:34:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (80, 12, 4, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-03-30 07:29:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (64, 16, 5, N'PT rất tận tâm và nhiệt tình hướng dẫn kỹ thuật.', '2026-07-09 07:11:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (52, 4, 4, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-05-22 10:58:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (53, 4, 5, N'Cần cải thiện thêm về việc theo dõi chế độ ăn.', '2026-01-17 13:27:00');
-INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (62, 7, 5, N'PT giải thích kỹ nguyên lý từng bài tập, dễ hiểu.', '2026-07-04 15:00:00');
 INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at) VALUES (24, 15, 3, N'Rất hài lòng, đã đạt được mục tiêu giảm cân đề ra.', '2026-06-28 18:54:00');
+
+-- Dong bo diem trung binh trong ho so PT voi cac danh gia mau vua chen.
+UPDATE profile
+SET rating_score = review_summary.average_rating
+FROM pt_profiles AS profile
+INNER JOIN (
+    SELECT pt_id, CAST(ROUND(AVG(CAST(rating_star AS DECIMAL(5,2))), 1) AS DECIMAL(3,1)) AS average_rating
+    FROM reviews
+    GROUP BY pt_id
+) AS review_summary ON review_summary.pt_id = profile.user_id;
 
 -- 14. Insert Blogs
 INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (4, N'5 bài tập ngực hiệu quả nhất cho người mới', N'Bài viết chia sẻ kiến thức về chủ đề: 5 bài tập ngực hiệu quả nhất cho người mới. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-03-03 00:00:00');
@@ -675,20 +778,20 @@ INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (6, N'V
 INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (10, N'Tổng quan các gói tập tại GymPro và quyền lợi', N'Bài viết chia sẻ kiến thức về chủ đề: tổng quan các gói tập tại gympro và quyền lợi. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-05-24 00:00:00');
 -- 15. Insert PT Schedules (lich tap linh hoat: schedule_date, start_time, end_time)
 -- recurring_group_id: cac buoi cung nhom co cung UUID
--- PT id=2 (pt1) voi member id=17
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (2, 17, '2026-07-21', '08:00', '09:30', N'Ngực', 'rg-001-aaaa', 'ACTIVE', '2026-07-10 08:00:00');
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (2, 17, '2026-07-28', '08:00', '09:30', N'Ngực', 'rg-001-aaaa', 'ACTIVE', '2026-07-10 08:00:00');
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (2, 17, '2026-07-23', '14:00', '15:30', N'Lưng/Xô', NULL, 'ACTIVE', '2026-07-10 08:05:00');
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (2, 17, '2026-07-25', '19:00', '20:15', N'Đùi/Mông/Chân', NULL, 'ACTIVE', '2026-07-10 08:10:00');
--- PT id=3 (pt2) voi member id=18
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (3, 18, '2026-07-22', '09:00', '10:30', N'Toàn thân', 'rg-002-bbbb', 'ACTIVE', '2026-07-11 09:00:00');
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (3, 18, '2026-07-29', '09:00', '10:30', N'Toàn thân', 'rg-002-bbbb', 'ACTIVE', '2026-07-11 09:00:00');
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (3, 18, '2026-07-24', '16:00', '17:00', N'Cardio/Thể lực', NULL, 'ACTIVE', '2026-07-11 09:05:00');
--- PT id=4 (pt3) voi member id=19, 20
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (4, 19, '2026-07-21', '10:00', '11:30', N'Vai', NULL, 'ACTIVE', '2026-07-12 10:00:00');
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (4, 19, '2026-07-23', '10:00', '11:30', N'Tay Trước/Sau', NULL, 'ACTIVE', '2026-07-12 10:05:00');
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (4, 20, '2026-07-22', '15:00', '16:30', N'Bụng/Core', NULL, 'ACTIVE', '2026-07-12 10:10:00');
-INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (4, 20, '2026-07-25', '08:00', '09:00', N'Giãn cơ/Phục hồi', NULL, 'ACTIVE', '2026-07-12 10:15:00');
+-- PT id=2 (pt1) voi member id=59
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (2, 59, '2026-07-21', '08:00', '09:30', N'Ngực', 'rg-001-aaaa', 'ACTIVE', '2026-07-10 08:00:00');
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (2, 59, '2026-07-28', '08:00', '09:30', N'Ngực', 'rg-001-aaaa', 'ACTIVE', '2026-07-10 08:00:00');
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (2, 59, '2026-07-23', '14:00', '15:30', N'Lưng/Xô', NULL, 'ACTIVE', '2026-07-10 08:05:00');
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (2, 59, '2026-07-25', '19:00', '20:15', N'Đùi/Mông/Chân', NULL, 'ACTIVE', '2026-07-10 08:10:00');
+-- PT id=3 (pt2) voi member id=35
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (3, 35, '2026-07-22', '09:00', '10:30', N'Toàn thân', 'rg-002-bbbb', 'ACTIVE', '2026-07-11 09:00:00');
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (3, 35, '2026-07-29', '09:00', '10:30', N'Toàn thân', 'rg-002-bbbb', 'ACTIVE', '2026-07-11 09:00:00');
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (3, 35, '2026-07-24', '16:00', '17:00', N'Cardio/Thể lực', NULL, 'ACTIVE', '2026-07-11 09:05:00');
+-- PT id=6 (pt5) voi member id=37
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (6, 37, '2026-07-21', '10:00', '11:30', N'Vai', NULL, 'ACTIVE', '2026-07-12 10:00:00');
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (6, 37, '2026-07-23', '10:00', '11:30', N'Tay Trước/Sau', NULL, 'ACTIVE', '2026-07-12 10:05:00');
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (6, 37, '2026-07-22', '15:00', '16:30', N'Bụng/Core', NULL, 'ACTIVE', '2026-07-12 10:10:00');
+INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (6, 37, '2026-07-25', '08:00', '09:00', N'Giãn cơ/Phục hồi', NULL, 'ACTIVE', '2026-07-12 10:15:00');
 -- PT id=5 (pt4) voi member id=65
 INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (5, 65, '2026-07-21', '13:00', '14:30', N'Tập lưng - vai', NULL, 'ACTIVE', '2026-07-07 08:28:00');
 INSERT INTO pt_schedules (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id, status, created_at) VALUES (5, 65, '2026-07-23', '18:30', '19:45', N'Tập chân', NULL, 'ACTIVE', '2026-07-07 12:22:00');

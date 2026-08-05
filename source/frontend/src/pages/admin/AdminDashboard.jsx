@@ -65,7 +65,7 @@ const AdminDashboard = () => {
 
       <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
         {/* Biểu đồ Doanh thu */}
-        <div style={{ flex: '2', minWidth: '500px', background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ flex: '2', minWidth: 'min(500px, 100%)', background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ color: '#f1f5f9', marginBottom: '20px' }}>Doanh Thu 6 Tháng Gần Nhất (VNĐ)</h3>
           <div style={{ width: '100%', height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -85,7 +85,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Biểu đồ Phân bổ Gói Tập */}
-        <div style={{ flex: '1', minWidth: '300px', background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ flex: '1', minWidth: 'min(300px, 100%)', background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ color: '#f1f5f9', marginBottom: '20px', textAlign: 'center' }}>Phân Bổ Gói Tập Hiện Tại</h3>
           <div style={{ width: '100%', height: '300px' }}>
             {stats.packageData.length > 0 ? (

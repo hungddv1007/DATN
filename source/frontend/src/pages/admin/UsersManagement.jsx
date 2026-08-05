@@ -69,12 +69,12 @@ const UsersManagement = () => {
 
   return (
     <AdminLayout>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1>Quản lý Người Dùng</h1>
       </div>
 
       {/* Thanh công cụ tìm kiếm và lọc */}
-      <div style={{ 
+      <div className="admin-filter-bar" style={{
         display: 'flex', gap: '15px', marginBottom: '20px', 
         background: 'rgba(30, 41, 59, 0.7)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)'
       }}>

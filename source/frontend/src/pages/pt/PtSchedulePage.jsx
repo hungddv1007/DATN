@@ -47,6 +47,10 @@ const PtSchedulePage = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
+    const day = new Date().getDay();
+    return day === 0 ? 6 : day - 1;
+  });
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -113,6 +117,15 @@ const PtSchedulePage = () => {
   useEffect(() => {
     if (initialMemberId) setFormMemberId(initialMemberId);
   }, [initialMemberId]);
+
+  useEffect(() => {
+    if (weekOffset === 0) {
+      const day = new Date().getDay();
+      setSelectedDayIndex(day === 0 ? 6 : day - 1);
+    } else {
+      setSelectedDayIndex(0);
+    }
+  }, [weekOffset]);
 
   // ============ Toast ============
   const showToast = (message, type = 'success') => {
@@ -257,6 +270,8 @@ const PtSchedulePage = () => {
   const mondayDisplay = getDisplayedMonday();
   const sundayDisplay = addDays(mondayDisplay, 6);
   const weekLabel = `${formatDDMM(mondayDisplay)} – ${formatDDMM(sundayDisplay)}`;
+  const selectedDate = dates[selectedDayIndex];
+  const selectedDateISO = toISODate(selectedDate);
 
   if (loading) {
     return (
@@ -305,7 +320,77 @@ const PtSchedulePage = () => {
           <div className="pts-legend-item"><span className="pts-dot pts-dot-recurring" /> Lịch lặp lại</div>
         </div>
 
-        {/* SCHEDULE GRID */}
+        <div className="pts-mobile-day-tabs" role="tablist" aria-label="Chọn ngày trong tuần">
+          {dates.map((date, index) => {
+            const iso = toISODate(date);
+            return (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedDayIndex === index}
+                key={iso}
+                className={`${selectedDayIndex === index ? 'active' : ''} ${iso === todayISO ? 'today' : ''}`}
+                onClick={() => setSelectedDayIndex(index)}
+              >
+                <span>{DAY_LABELS[index]}</span>
+                <strong>{formatDDMM(date)}</strong>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="pts-mobile-day-view" role="tabpanel">
+          <div className="pts-mobile-day-heading">
+            <div>
+              <span>{DAY_LABELS[selectedDayIndex]}</span>
+              <strong>{formatDDMM(selectedDate)}</strong>
+            </div>
+            <button type="button" onClick={() => openCreateModal(selectedDateISO)}>
+              <Plus size={16} /> Thêm lịch
+            </button>
+          </div>
+          {SCHEDULE_TIME_BLOCKS.map((block) => {
+            const items = getSchedulesForCell(selectedDateISO, block);
+            return (
+              <section key={block.id} className="pts-mobile-block">
+                <div className="pts-mobile-block-title">
+                  <span>{block.label}</span>
+                  <small>{block.range}</small>
+                </div>
+                <div className="pts-mobile-block-list">
+                  {items.map(item => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className={`pts-card ${item.recurringGroupId ? 'pts-card-recurring' : 'pts-card-confirmed'}`}
+                      onClick={() => openEditModal(item)}
+                    >
+                      <div className="pts-card-top">
+                        <span className="pts-time-badge">{item.startTime} - {item.endTime}</span>
+                      </div>
+                      {getScheduleTransitionLabel(item.startTime, item.endTime) && (
+                        <div className="pts-cross-block">
+                          {getScheduleTransitionLabel(item.startTime, item.endTime)}
+                        </div>
+                      )}
+                      <div className="pts-client-name">{item.memberName}</div>
+                      {item.exerciseNote && <div className="pts-workout-pill">{item.exerciseNote}</div>}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="pts-mobile-add-block"
+                    onClick={() => openCreateModal(selectedDateISO, block.defaultStart)}
+                  >
+                    <Plus size={15} /> {items.length ? 'Thêm buổi' : 'Thêm lịch ở khung giờ này'}
+                  </button>
+                </div>
+              </section>
+            );
+          })}
+        </div>
+
+        {/* DESKTOP SCHEDULE GRID */}
         <div className="pts-grid-container">
           <div className="pts-grid-table">
             {/* Header row */}

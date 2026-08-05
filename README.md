@@ -8,7 +8,7 @@ Hệ thống quản lý phòng gym gồm backend Spring Boot, frontend React và
 DATN/
 ├─ source/datn/        Backend Java 21, Spring Boot 4, Maven
 ├─ source/frontend/    React 19, Vite
-├─ database/           Schema, seed data và migration SQL Server
+├─ database/           Schema hoàn chỉnh và seed data SQL Server
 └─ .env.example        Danh sách biến môi trường bắt buộc
 ```
 
@@ -50,17 +50,13 @@ Không bao giờ đặt mật khẩu hoặc API key vào biến `VITE_*`.
 
 ## Database
 
-Database mới: chạy [database/GymProDB.sql](database/GymProDB.sql), sau đó chạy
-seed data nếu cần.
+`database/GymProDB.sql` là nguồn cấu trúc database duy nhất của dự án. Nếu
+`GymProDB` đã tồn tại, hãy sao lưu dữ liệu cần thiết rồi drop database trước khi
+chạy lại file này. Sau đó chạy `database/seed data only.sql` nếu cần dữ liệu mẫu.
 
-Database đang tồn tại: không chạy lại file khởi tạo. Chạy migration theo thứ tự:
-
-1. [database/migrations/V2__payment_membership_and_otp_hardening.sql](database/migrations/V2__payment_membership_and_otp_hardening.sql)
-2. [database/migrations/V3__ai_chat.sql](database/migrations/V3__ai_chat.sql)
-
-Ứng dụng mặc định dùng `ddl-auto=validate`, vì vậy schema phải được migrate trước
-khi khởi động. Có thể tạm đặt `JPA_DDL_AUTO=update` chỉ trong môi trường phát triển,
-nhưng không nên dùng ở production.
+Ứng dụng dùng `ddl-auto=validate`, vì vậy phải tạo database bằng
+`GymProDB.sql` trước khi khởi động backend. Không đặt `JPA_DDL_AUTO=update`, vì
+mọi thay đổi cấu trúc phải được cập nhật trực tiếp vào file SQL hoàn chỉnh này.
 
 ## Chạy dự án
 
@@ -122,7 +118,7 @@ nhà cung cấp không được trả nguyên văn cho client.
 
 Để thử chatbot:
 
-1. Chạy migration V2 và V3.
+1. Tạo database bằng `database/GymProDB.sql` và nạp seed data nếu cần.
 2. Khởi động backend và frontend.
 3. Đăng nhập tài khoản có role `MEMBER`.
 4. Mở một trang `/member/*`, sau đó chọn nút **GymPro AI** ở góc phải.

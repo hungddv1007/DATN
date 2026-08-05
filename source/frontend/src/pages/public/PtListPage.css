@@ -147,3 +147,29 @@
 .pt-cert svg {
   color: #8b5cf6;
 }
+
+@media (max-width: 600px) {
+  .pt-list-page {
+    padding-bottom: 40px;
+  }
+
+  .pt-hero {
+    padding: 48px 16px;
+  }
+
+  .pt-hero h1 {
+    font-size: 2rem;
+  }
+
+  .pt-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pt-avatar {
+    height: 220px;
+  }
+
+  .pt-info {
+    padding: 20px;
+  }
+}

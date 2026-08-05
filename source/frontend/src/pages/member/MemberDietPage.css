@@ -386,8 +386,13 @@
 /* Responsive */
 @media (max-width: 768px) {
   .diet-day-tabs {
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    grid-template-columns: none;
+    grid-auto-columns: minmax(72px, 1fr);
+    grid-auto-flow: column;
+    gap: 6px;
+    padding-bottom: 8px;
+    overflow-x: auto;
+    scrollbar-width: thin;
   }
 
   .diet-day-tab {
@@ -405,6 +410,15 @@
   .diet-day-badge {
     font-size: 0.6rem;
     padding: 1px 4px;
+  }
+
+  .diet-week-nav {
+    flex-wrap: wrap;
+  }
+
+  .diet-week-label {
+    flex: 1;
+    min-width: 130px;
   }
 
   .diet-macros {

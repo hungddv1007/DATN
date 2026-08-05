@@ -1,13 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Users, UserCircle, Calendar, LogOut, Dumbbell, MessageSquare, Bell } from 'lucide-react';
+import { LayoutDashboard, Users, UserCircle, Calendar, LogOut, Dumbbell, MessageSquare, Bell, Menu, X } from 'lucide-react';
 import '../../pages/member/DashboardPage.css';
 
 const PtLayout = ({ children }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
 
   const handleLogout = () => {
     logout();
@@ -22,7 +36,30 @@ const PtLayout = ({ children }) => {
 
   return (
     <div className="admin-page">
-      <aside className="admin-sidebar">
+      <header className="workspace-mobile-header">
+        <button
+          type="button"
+          className="workspace-menu-toggle"
+          aria-label={mobileMenuOpen ? 'Đóng menu PT' : 'Mở menu PT'}
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((current) => !current)}
+        >
+          {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+        <Link to="/pt/dashboard" className="workspace-mobile-brand">GymPro</Link>
+        <span className="workspace-mobile-role">PT</span>
+      </header>
+
+      {mobileMenuOpen && (
+        <button
+          type="button"
+          className="workspace-sidebar-backdrop"
+          aria-label="Đóng menu PT"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      <aside className={`admin-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="admin-sidebar-logo">
           <h2>
             <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>

@@ -126,3 +126,28 @@
 .slick-dots li.slick-active button:before {
   color: #ea580c !important;
 }
+
+@media (max-width: 600px) {
+  .pt-section {
+    padding: 56px 0 72px;
+  }
+
+  .pt-section .section-title {
+    margin-bottom: 34px;
+    font-size: 2rem;
+  }
+
+  .carousel-wrapper {
+    margin: 0;
+    padding: 0 10px;
+  }
+
+  .pt-slide {
+    padding: 8px;
+  }
+
+  .slick-prev,
+  .slick-next {
+    display: none !important;
+  }
+}

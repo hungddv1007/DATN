@@ -338,12 +338,16 @@
 
 @media (max-width: 540px) {
   .ai-chat-root {
-    right: 12px;
-    bottom: 12px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
   }
 
   .ai-chat-panel {
-    height: calc(100vh - 92px);
+    width: 100%;
+    height: calc(100dvh - 84px - env(safe-area-inset-bottom));
+    max-height: none;
+    border-radius: 16px;
   }
 
   .ai-chat-launcher span {
@@ -353,5 +357,9 @@
   .ai-chat-launcher {
     min-width: 58px;
     padding: 0;
+  }
+
+  .ai-chat-input textarea {
+    font-size: 16px;
   }
 }

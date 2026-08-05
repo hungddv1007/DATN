@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import notificationService from '../../services/notificationService';
 import { resolveFileUrl } from '../../utils/fileUrl';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck, Menu, Trash2, X } from 'lucide-react';
 import './Header.css';
 
 const Header = () => {
@@ -13,11 +13,13 @@ const Header = () => {
 
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [notifLoading, setNotifLoading] = useState(false);
 
   const notifRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   // Lấy số lượng chưa đọc khi component mount & khi đăng nhập
   const fetchUnreadCount = useCallback(async () => {
@@ -42,10 +44,28 @@ const Header = () => {
       if (notifRef.current && !notifRef.current.contains(e.target)) {
         setShowNotifDropdown(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    setShowMobileMenu(false);
+    setShowDropdown(false);
+    setShowNotifDropdown(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!showMobileMenu) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showMobileMenu]);
 
   const handleToggleNotif = async () => {
     const nextState = !showNotifDropdown;
@@ -95,6 +115,8 @@ const Header = () => {
   };
 
   const handleLogout = () => {
+    setShowMobileMenu(false);
+    setShowDropdown(false);
     logout();
     navigate('/');
   };
@@ -187,25 +209,34 @@ const Header = () => {
               </div>
 
               {/* USER PROFILE DROPDOWN */}
-              <div 
+              <div
                 className="user-menu"
+                ref={userMenuRef}
                 onMouseEnter={() => setShowDropdown(true)}
                 onMouseLeave={() => setShowDropdown(false)}
               >
-                {user.avatar ? (
-                  <img 
-                    src={resolveFileUrl(user.avatar)}
-                    alt="Avatar" 
-                    className="header-avatar"
-                  />
-                ) : (
-                  <div className="header-avatar header-avatar-fallback">
-                    {user.fullName?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
-                )}
-                <span className="user-greeting">
-                  Xin chào, <strong>{user.fullName}</strong> ▾
-                </span>
+                <button
+                  type="button"
+                  className="user-menu-trigger"
+                  aria-label="Mở menu tài khoản"
+                  aria-expanded={showDropdown}
+                  onClick={() => setShowDropdown((current) => !current)}
+                >
+                  {user.avatar ? (
+                    <img
+                      src={resolveFileUrl(user.avatar)}
+                      alt="Avatar"
+                      className="header-avatar"
+                    />
+                  ) : (
+                    <span className="header-avatar header-avatar-fallback">
+                      {user.fullName?.charAt(0)?.toUpperCase() || '?'}
+                    </span>
+                  )}
+                  <span className="user-greeting">
+                    Xin chào, <strong>{user.fullName}</strong> ▾
+                  </span>
+                </button>
                 
                 {showDropdown && (
                   <div className="user-dropdown">
@@ -229,7 +260,52 @@ const Header = () => {
             </div>
           )}
         </div>
+        <button
+          type="button"
+          className="mobile-menu-toggle"
+          aria-label={showMobileMenu ? 'Đóng menu' : 'Mở menu'}
+          aria-expanded={showMobileMenu}
+          onClick={() => setShowMobileMenu((current) => !current)}
+        >
+          {showMobileMenu ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
+
+      {showMobileMenu && (
+        <>
+          <button
+            type="button"
+            className="mobile-menu-backdrop"
+            aria-label="Đóng menu"
+            onClick={() => setShowMobileMenu(false)}
+          />
+          <nav className="mobile-nav-drawer" aria-label="Điều hướng trên điện thoại">
+            <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Trang chủ</Link>
+            <Link to="/about" className={location.pathname === '/about' ? 'active' : ''}>Giới thiệu</Link>
+            <Link to="/services" className={location.pathname === '/services' ? 'active' : ''}>Gói tập</Link>
+            <Link to="/pts" className={location.pathname === '/pts' ? 'active' : ''}>Huấn luyện viên</Link>
+            <Link to="/blog" className={location.pathname.startsWith('/blog') ? 'active' : ''}>Bài viết</Link>
+            <div className="mobile-nav-divider" />
+            {isLoggedIn ? (
+              <>
+                <Link to={getDashboardLink()}>Dashboard</Link>
+                <Link to="/profile">Hồ sơ cá nhân</Link>
+                {user.role === 'MEMBER' && (
+                  <Link to="/member/physical-profile">Hồ sơ thể chất</Link>
+                )}
+                <button type="button" className="mobile-nav-logout" onClick={handleLogout}>
+                  Đăng xuất
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login">Đăng nhập</Link>
+                <Link to="/register" className="mobile-nav-primary">Đăng ký</Link>
+              </>
+            )}
+          </nav>
+        </>
+      )}
     </header>
   );
 };
