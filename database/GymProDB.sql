@@ -181,9 +181,6 @@ CREATE TABLE memberships (
     total_hold_days INT NOT NULL CONSTRAINT DF_memberships_total_hold_days DEFAULT 0,
     version         BIGINT NOT NULL CONSTRAINT DF_memberships_version DEFAULT 0,
     created_at      DATETIME2 NOT NULL CONSTRAINT DF_memberships_created_at DEFAULT GETDATE(),
-    current_membership_user_id AS (
-        CASE WHEN status IN ('PENDING', 'ACTIVE', 'PAUSED') THEN user_id ELSE NULL END
-    ) PERSISTED,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (package_id) REFERENCES packages(id),
     FOREIGN KEY (pt_id) REFERENCES users(id),
@@ -215,9 +212,6 @@ CREATE TABLE transactions (
     confirmed_by            INT,
     version                 BIGINT NOT NULL CONSTRAINT DF_transactions_version DEFAULT 0,
     created_at              DATETIME2 NOT NULL CONSTRAINT DF_transactions_created_at DEFAULT GETDATE(),
-    pending_membership_id AS (
-        CASE WHEN status = 'PENDING' THEN membership_id ELSE NULL END
-    ) PERSISTED,
     FOREIGN KEY (membership_id) REFERENCES memberships(id),
     FOREIGN KEY (promotion_id) REFERENCES promotions(id),
     FOREIGN KEY (requested_package_id) REFERENCES packages(id),
@@ -409,14 +403,14 @@ CREATE TABLE ai_messages (
 CREATE INDEX IX_users_role ON users(role_id);
 CREATE INDEX IX_memberships_user_status ON memberships(user_id, status);
 CREATE UNIQUE INDEX UX_memberships_one_current_per_user
-    ON memberships(current_membership_user_id)
-    WHERE current_membership_user_id IS NOT NULL;
+    ON memberships(user_id)
+    WHERE status IN ('PENDING', 'ACTIVE', 'PAUSED');
 CREATE INDEX IX_memberships_pt_status ON memberships(pt_id, status);
 CREATE INDEX IX_memberships_status ON memberships(status);
 CREATE INDEX IX_transactions_status ON transactions(status);
 CREATE UNIQUE INDEX UX_transactions_one_pending_per_membership
-    ON transactions(pending_membership_id)
-    WHERE pending_membership_id IS NOT NULL;
+    ON transactions(membership_id)
+    WHERE status = 'PENDING';
 CREATE INDEX IX_transactions_membership_created ON transactions(membership_id, created_at DESC);
 CREATE INDEX IX_transactions_status_created ON transactions(status, created_at);
 CREATE INDEX IX_notifications_user_created ON notifications(user_id, created_at DESC);
