@@ -98,12 +98,14 @@ class TransactionServiceTest {
         Transaction transaction = pendingTransaction("NEW", membership);
         transaction.setPromotion(promotion);
         when(transactionRepository.findById(1)).thenReturn(Optional.of(transaction));
+        when(promotionRepository.findByIdForUpdate(7)).thenReturn(Optional.of(promotion));
 
         service.cancelTransaction(1, admin.getEmail());
 
         assertThat(membership.getStatus()).isEqualTo("CANCELLED");
         assertThat(promotion.getCurrentUsage()).isEqualTo(1);
         verify(membershipRepository).save(membership);
+        verify(promotionRepository).findByIdForUpdate(7);
         verify(promotionRepository).save(promotion);
     }
 
@@ -115,6 +117,7 @@ class TransactionServiceTest {
         Transaction transaction = pendingTransaction("NEW", membership);
         transaction.setPromotion(promotion);
         transaction.setCreatedAt(LocalDateTime.now().minusHours(25));
+        when(promotionRepository.findByIdForUpdate(7)).thenReturn(Optional.of(promotion));
         when(transactionRepository.findByStatusAndCreatedAtBefore(
                 org.mockito.ArgumentMatchers.eq("PENDING"),
                 org.mockito.ArgumentMatchers.any(LocalDateTime.class)))

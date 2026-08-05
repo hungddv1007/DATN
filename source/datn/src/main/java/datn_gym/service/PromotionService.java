@@ -8,6 +8,7 @@ import datn_gym.repository.GymPackageRepository;
 import datn_gym.repository.PromotionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -120,7 +121,14 @@ public class PromotionService {
         if (promotion.getCurrentUsage() != null && promotion.getCurrentUsage() > 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khuyến mãi này đã có người sử dụng, không thể xóa. Hãy dùng chức năng Ẩn.");
         }
-        promotionRepository.delete(promotion);
+        try {
+            promotionRepository.delete(promotion);
+            promotionRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Khuyến mãi này đã từng được dùng trong giao dịch nên không thể xóa. Hãy dùng chức năng Ẩn.");
+        }
     }
 
     // ----------------------------------------------------------------

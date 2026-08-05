@@ -41,4 +41,9 @@ public class Promotion {
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Long version = 0L;
 }

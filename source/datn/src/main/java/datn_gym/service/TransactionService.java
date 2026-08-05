@@ -118,7 +118,10 @@ public class TransactionService {
 
         // Promotion được giữ chỗ lúc tạo giao dịch; trả lại khi giao dịch bị từ chối.
         if (tx.getPromotion() != null) {
-            Promotion promotion = tx.getPromotion();
+            Promotion promotion = promotionRepository
+                    .findByIdForUpdate(tx.getPromotion().getId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Không tìm thấy khuyến mãi của giao dịch"));
             int currentUsage = promotion.getCurrentUsage() == null
                     ? 0
                     : promotion.getCurrentUsage();

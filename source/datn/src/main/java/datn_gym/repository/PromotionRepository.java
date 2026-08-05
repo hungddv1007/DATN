@@ -16,6 +16,14 @@ public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
     List<Promotion> findByIsActiveTrue();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Promotion p WHERE p.id = :id")
+    Optional<Promotion> findByIdForUpdate(@Param("id") Integer id);
+
+    /**
+     * Giữ khóa ghi từ lúc kiểm tra số lượt đến khi transaction tạo giao dịch
+     * hoàn tất, tránh hai request cùng giữ một lượt khuyến mãi cuối cùng.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Promotion p WHERE p.code = :code " +
            "AND p.isActive = true " +
            "AND p.startDate <= :currentDate " +

@@ -38,7 +38,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse registerPackage(String memberEmail, MembershipRequest request) {
-        User member = userService.getUserByEmail(memberEmail);
+        User member = getMemberForMembershipUpdate(memberEmail);
 
         expireOverdueMemberships();
 
@@ -96,7 +96,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse renewMembership(String memberEmail, RenewRequest request) {
-        User member = userService.getUserByEmail(memberEmail);
+        User member = getMemberForMembershipUpdate(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         assertNoPendingTransaction(membership.getId());
         GymPackage gymPackage = membership.getGymPackage();
@@ -122,7 +122,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse upgradeMembership(String memberEmail, UpgradeRequest request) {
-        User member = userService.getUserByEmail(memberEmail);
+        User member = getMemberForMembershipUpdate(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         assertNoPendingTransaction(membership.getId());
         GymPackage oldPackage = membership.getGymPackage();
@@ -172,7 +172,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse pauseMembership(String memberEmail) {
-        User member = userService.getUserByEmail(memberEmail);
+        User member = getMemberForMembershipUpdate(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         assertNoPendingTransaction(membership.getId());
         GymPackage gymPackage = membership.getGymPackage();
@@ -199,7 +199,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse resumeMembership(String memberEmail) {
-        User member = userService.getUserByEmail(memberEmail);
+        User member = getMemberForMembershipUpdate(memberEmail);
         Membership membership = membershipRepository.findByUser_IdAndStatus(member.getId(), "PAUSED")
                 .orElseThrow(() -> new IllegalArgumentException("Bạn không có gói đang bảo lưu!"));
 
@@ -225,7 +225,7 @@ public class MembershipService {
     // ================================================================
     @Transactional
     public MembershipResponse cancelMembership(String memberEmail) {
-        User member = userService.getUserByEmail(memberEmail);
+        User member = getMemberForMembershipUpdate(memberEmail);
         Membership membership = membershipRepository.findByUser_IdAndStatusIn(
                 member.getId(), List.of("ACTIVE", "PAUSED"))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói tập để hủy!"));
@@ -326,6 +326,11 @@ public class MembershipService {
     // HELPERS
     // ================================================================
 
+    private User getMemberForMembershipUpdate(String email) {
+        return userRepository.findByEmailForMembershipUpdate(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"));
+    }
 
     private GymPackage getActivePackage(Integer packageId) {
         GymPackage pkg = gymPackageRepository.findById(packageId)
