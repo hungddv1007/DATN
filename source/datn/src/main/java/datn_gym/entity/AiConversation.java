@@ -31,6 +31,24 @@ public class AiConversation {
     @Builder.Default
     private Boolean physicalDataConsent = false;
 
+    @Column(name = "sale_data_consent", nullable = false)
+    @Builder.Default
+    private Boolean saleDataConsent = false;
+
+    @Column(name = "handoff_status", nullable = false, length = 20)
+    @Builder.Default
+    private String handoffStatus = "AI_ACTIVE";
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_sale_id")
+    private User assignedSale;
+
+    @Column(name = "handoff_at")
+    private LocalDateTime handoffAt;
+
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -59,6 +77,12 @@ public class AiConversation {
         }
         if (physicalDataConsent == null) {
             physicalDataConsent = false;
+        }
+        if (saleDataConsent == null) {
+            saleDataConsent = false;
+        }
+        if (handoffStatus == null || handoffStatus.isBlank()) {
+            handoffStatus = "AI_ACTIVE";
         }
     }
 }

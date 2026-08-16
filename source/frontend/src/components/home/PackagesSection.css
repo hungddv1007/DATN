@@ -64,7 +64,14 @@
 }
 
 .package-features li.disabled {
-  color: #64748b;
+  color: #94a3b8;
+}
+
+.package-min-days {
+  margin-bottom: 15px;
+  color: #fb923c;
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
 .check-icon { color: #22c55e; } /* Xanh lá */
@@ -149,6 +156,27 @@
 }
 .btn-vip:hover {
   background: #f8fafc;
+}
+
+/* Contrast overrides for colored pricing cards. */
+.premium-card .package-min-days {
+  color: #fff7ed;
+}
+
+.premium-card .package-features li.disabled {
+  color: #fed7aa;
+}
+
+.premium-card .package-features li.disabled .x-icon {
+  color: #7f1d1d;
+}
+
+.vip-card .package-min-days {
+  color: #7c2d12;
+}
+
+.vip-card .package-features li.disabled {
+  color: #713f12;
 }
 
 @media (max-width: 1024px) {

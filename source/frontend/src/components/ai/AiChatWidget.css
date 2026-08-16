@@ -338,12 +338,16 @@
 
 @media (max-width: 540px) {
   .ai-chat-root {
-    right: 12px;
-    bottom: 12px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
   }
 
   .ai-chat-panel {
-    height: calc(100vh - 92px);
+    width: 100%;
+    height: calc(100dvh - 84px - env(safe-area-inset-bottom));
+    max-height: none;
+    border-radius: 16px;
   }
 
   .ai-chat-launcher span {
@@ -354,4 +358,9 @@
     min-width: 58px;
     padding: 0;
   }
+
+  .ai-chat-input textarea {
+    font-size: 16px;
+  }
 }
+.ai-sale-handoff{border:1px solid #f97316;background:#7c2d1222;color:#fdba74;border-radius:7px;padding:6px 8px;cursor:pointer;font-size:.72rem}.ai-sale-handoff:disabled{opacity:.7}.ai-chat-message.sale .ai-message-bubble{background:#134e4a;color:#ecfeff}.ai-chat-message.sale .ai-message-avatar{background:#0f766e}

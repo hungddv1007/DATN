@@ -65,13 +65,27 @@ public class Membership {
     @Builder.Default
     private Integer totalHoldDays = 0;
 
+    @Column(name = "hold_until")
+    private LocalDate holdUntil;
+
+    @Column(name = "hold_max_times", nullable = false)
+    @Builder.Default
+    private Integer holdMaxTimes = 0;
+
+    @Column(name = "hold_max_days_per_time", nullable = false)
+    @Builder.Default
+    private Integer holdMaxDaysPerTime = 0;
+
+    @Column(name = "hold_max_total_days", nullable = false)
+    @Builder.Default
+    private Integer holdMaxTotalDays = 0;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Version
     @Column(name = "version", nullable = false)
-    @Builder.Default
-    private Long version = 0L;
+    private Long version;
 
     @PrePersist
     protected void onCreate() {

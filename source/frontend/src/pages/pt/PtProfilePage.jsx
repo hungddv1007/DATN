@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import PtLayout from '../../components/layout/PtLayout';
-import { PtSummaryCard, PtSummaryGrid } from '../../components/pt/PtSummaryCards';
+import { SummaryCard, SummaryGrid } from '../../components/common/SummaryCards';
 import api from '../../services/api';
 import { Star, Award, UserCircle, Briefcase, FileText, Phone, Save, X } from 'lucide-react';
 import '../admin/AdminManagement.css';
@@ -117,11 +117,11 @@ const PtProfilePage = () => {
       )}
 
       {/* Quick Stats */}
-      <PtSummaryGrid columns={3} ariaLabel="Thống kê hồ sơ">
-        <PtSummaryCard icon={Star} label="Đánh giá trung bình" value={profile?.ratingScore || '—'} tone="yellow" />
-        <PtSummaryCard icon={UserCircle} label="Học viên" value={profile?.totalMembers || 0} tone="blue" />
-        <PtSummaryCard icon={Award} label="Lượt đánh giá" value={profile?.totalReviews || 0} tone="green" />
-      </PtSummaryGrid>
+      <SummaryGrid columns={3} ariaLabel="Thống kê hồ sơ">
+        <SummaryCard icon={Star} label="Đánh giá trung bình" value={profile?.ratingScore || '—'} tone="yellow" />
+        <SummaryCard icon={UserCircle} label="Học viên" value={profile?.totalMembers || 0} tone="blue" />
+        <SummaryCard icon={Award} label="Lượt đánh giá" value={profile?.totalReviews || 0} tone="green" />
+      </SummaryGrid>
 
       {/* Profile Info */}
       <div className="admin-table-container" style={{ marginTop: '0' }}>

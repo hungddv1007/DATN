@@ -1,12 +1,18 @@
 package datn_gym.service;
 
 import datn_gym.dto.request.CreateScheduleRequest;
+import datn_gym.dto.request.CompleteScheduleRequest;
 import datn_gym.dto.request.NotificationCreateRequest;
 import datn_gym.dto.request.UpdateScheduleRequest;
 import datn_gym.dto.response.ScheduleSlotResponse;
+import datn_gym.dto.response.ScheduleExerciseResponse;
+import datn_gym.dto.response.TrainingStatsResponse;
+import datn_gym.entity.Exercise;
 import datn_gym.entity.PtSchedule;
+import datn_gym.entity.ScheduleExercise;
 import datn_gym.entity.User;
 import datn_gym.repository.MembershipRepository;
+import datn_gym.repository.ExerciseRepository;
 import datn_gym.repository.PtScheduleRepository;
 import datn_gym.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +39,7 @@ public class PtScheduleService {
     private final UserService userService;
     private final MembershipRepository membershipRepository;
     private final NotificationService notificationService;
+    private final ExerciseRepository exerciseRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
@@ -44,8 +51,8 @@ public class PtScheduleService {
         User pt = userService.getUserByEmail(ptEmail);
         LocalDate weekEnd = weekStart.plusDays(6);
         return ptScheduleRepository
-                .findByPtIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
-                        pt.getId(), weekStart, weekEnd, "ACTIVE")
+                .findByPtIdAndScheduleDateBetweenOrderByScheduleDateAscStartTimeAsc(
+                        pt.getId(), weekStart, weekEnd)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -92,7 +99,7 @@ public class PtScheduleService {
                     .endTime(request.getEndTime())
                     .exerciseNote(request.getExerciseNote())
                     .recurringGroupId(recurringGroupId)
-                    .status("ACTIVE")
+                    .status("SCHEDULED")
                     .build();
             created.add(ptScheduleRepository.save(schedule));
         }
@@ -126,6 +133,9 @@ public class PtScheduleService {
         // Kiểm tra quyền: chỉ PT sở hữu mới được sửa
         if (!schedule.getPt().getId().equals(pt.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền sửa buổi tập này");
+        }
+        if (!"SCHEDULED".equals(schedule.getStatus())) {
+            throw new IllegalArgumentException("Chỉ buổi tập đang lên lịch mới có thể chỉnh sửa");
         }
 
         // Validate giờ
@@ -168,6 +178,9 @@ public class PtScheduleService {
         if (!schedule.getPt().getId().equals(pt.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xóa buổi tập này");
         }
+        if (!"SCHEDULED".equals(schedule.getStatus())) {
+            throw new IllegalArgumentException("Buổi tập này đã được xử lý trước đó");
+        }
 
         User member = schedule.getMember();
         String dateInfo;
@@ -175,13 +188,15 @@ public class PtScheduleService {
         if (deleteAll && schedule.getRecurringGroupId() != null) {
             // Xóa tất cả buổi cùng nhóm lặp lại
             List<PtSchedule> group = ptScheduleRepository
-                    .findByRecurringGroupIdAndStatus(schedule.getRecurringGroupId(), "ACTIVE");
+                    .findByRecurringGroupIdAndStatus(schedule.getRecurringGroupId(), "SCHEDULED");
             dateInfo = group.size() + " buổi trong nhóm lặp lại";
-            ptScheduleRepository.deleteAll(group);
+            group.forEach(item -> item.setStatus("CANCELLED"));
+            ptScheduleRepository.saveAll(group);
         } else {
             // Xóa đơn lẻ
             dateInfo = schedule.getScheduleDate().format(DATE_FMT);
-            ptScheduleRepository.delete(schedule);
+            schedule.setStatus("CANCELLED");
+            ptScheduleRepository.save(schedule);
         }
 
         // Gửi thông báo
@@ -199,8 +214,8 @@ public class PtScheduleService {
         User member = userService.getUserByEmail(memberEmail);
         LocalDate weekEnd = weekStart.plusDays(6);
         return ptScheduleRepository
-                .findByMemberIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
-                        member.getId(), weekStart, weekEnd, "ACTIVE")
+                .findByMemberIdAndScheduleDateBetweenOrderByScheduleDateAscStartTimeAsc(
+                        member.getId(), weekStart, weekEnd)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -212,6 +227,10 @@ public class PtScheduleService {
         if (!endTime.isAfter(startTime)) {
             throw new IllegalArgumentException("Giờ kết thúc phải sau giờ bắt đầu!");
         }
+        long minutes = java.time.Duration.between(startTime, endTime).toMinutes();
+        if (minutes < 30 || minutes > 120) {
+            throw new IllegalArgumentException("Mỗi buổi tập phải kéo dài từ 30 phút đến tối đa 2 giờ");
+        }
     }
 
     /**
@@ -220,7 +239,7 @@ public class PtScheduleService {
      * thì ném lỗi.
      */
     private void checkOverlap(Integer ptId, LocalDate date, LocalTime start, LocalTime end, Integer excludeId) {
-        List<PtSchedule> existing = ptScheduleRepository.findByPtIdAndScheduleDateAndStatus(ptId, date, "ACTIVE");
+        List<PtSchedule> existing = ptScheduleRepository.findByPtIdAndScheduleDateAndStatus(ptId, date, "SCHEDULED");
         for (PtSchedule s : existing) {
             if (excludeId != null && s.getId().equals(excludeId)) continue;
             // Overlap: start < existingEnd AND end > existingStart
@@ -261,7 +280,101 @@ public class PtScheduleService {
                 .exerciseNote(s.getExerciseNote())
                 .status(s.getStatus())
                 .recurringGroupId(s.getRecurringGroupId())
+                .actualNote(s.getActualNote())
+                .completedAt(s.getCompletedAt())
+                .exercises(s.getExercises().stream().map(item -> ScheduleExerciseResponse.builder()
+                        .exerciseId(item.getExercise().getId())
+                        .exerciseName(item.getExercise().getName()).muscleGroup(item.getExercise().getMuscleGroup())
+                        .setCount(item.getSetCount()).repCount(item.getRepCount()).weightKg(item.getWeightKg())
+                        .durationMinutes(item.getDurationMinutes()).note(item.getNote()).build()).toList())
                 .build();
+    }
+
+    @Transactional
+    public ScheduleSlotResponse completeSchedule(String ptEmail, Integer scheduleId,
+                                                 CompleteScheduleRequest request) {
+        User pt = userService.getUserByEmail(ptEmail);
+        PtSchedule schedule = requireOwnedSchedule(pt, scheduleId);
+        if (!"SCHEDULED".equals(schedule.getStatus())) {
+            throw new IllegalArgumentException("Chỉ buổi tập đang lên lịch mới có thể hoàn thành");
+        }
+        if (java.time.LocalDateTime.of(schedule.getScheduleDate(), schedule.getEndTime())
+                .isAfter(java.time.LocalDateTime.now())) {
+            throw new IllegalArgumentException("Chỉ có thể hoàn thành sau khi buổi tập kết thúc");
+        }
+        schedule.getExercises().clear();
+        request.getExercises().forEach(item -> {
+            Exercise exercise = exerciseRepository.findById(item.getExerciseId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bài tập #" + item.getExerciseId()));
+            schedule.getExercises().add(ScheduleExercise.builder().schedule(schedule).exercise(exercise)
+                    .setCount(item.getSetCount()).repCount(item.getRepCount()).weightKg(item.getWeightKg())
+                    .durationMinutes(item.getDurationMinutes()).note(item.getNote()).build());
+        });
+        schedule.setActualNote(request.getActualNote());
+        schedule.setStatus("COMPLETED");
+        schedule.setCompletedAt(java.time.LocalDateTime.now());
+        return toResponse(ptScheduleRepository.save(schedule));
+    }
+
+    @Transactional
+    public ScheduleSlotResponse markNoShow(String ptEmail, Integer scheduleId) {
+        User pt = userService.getUserByEmail(ptEmail);
+        PtSchedule schedule = requireOwnedSchedule(pt, scheduleId);
+        if (!"SCHEDULED".equals(schedule.getStatus())) {
+            throw new IllegalArgumentException("Chỉ buổi tập đang lên lịch mới có thể đánh dấu vắng");
+        }
+        if (java.time.LocalDateTime.of(schedule.getScheduleDate(), schedule.getStartTime())
+                .isAfter(java.time.LocalDateTime.now())) {
+            throw new IllegalArgumentException("Chỉ có thể đánh dấu vắng sau khi buổi tập bắt đầu");
+        }
+        schedule.setStatus("NO_SHOW");
+        return toResponse(ptScheduleRepository.save(schedule));
+    }
+
+    public TrainingStatsResponse getTrainingStats(String ptEmail, Integer memberId,
+                                                   LocalDate from, LocalDate to) {
+        User pt = userService.getUserByEmail(ptEmail);
+        User member = userRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy học viên"));
+        if (!membershipRepository.existsActiveMembershipByPtAndMember(pt.getId(), memberId)) {
+            throw new IllegalArgumentException("Học viên không thuộc PT này");
+        }
+        if (to.isBefore(from) || java.time.temporal.ChronoUnit.DAYS.between(from, to) > 366) {
+            throw new IllegalArgumentException("Khoảng thống kê không hợp lệ hoặc vượt quá 1 năm");
+        }
+        List<PtSchedule> sessions = ptScheduleRepository
+                .findByPt_IdAndMember_IdAndScheduleDateBetweenOrderByScheduleDateAscStartTimeAsc(
+                        pt.getId(), memberId, from, to);
+        java.util.Map<String, Long> exerciseFrequency = sessions.stream()
+                .filter(s -> "COMPLETED".equals(s.getStatus())).flatMap(s -> s.getExercises().stream())
+                .collect(java.util.stream.Collectors.groupingBy(e -> e.getExercise().getName(),
+                        java.util.LinkedHashMap::new, java.util.stream.Collectors.counting()));
+        java.util.Map<String, Long> muscleFrequency = sessions.stream()
+                .filter(s -> "COMPLETED".equals(s.getStatus())).flatMap(s -> s.getExercises().stream())
+                .filter(e -> e.getExercise().getMuscleGroup() != null)
+                .collect(java.util.stream.Collectors.groupingBy(e -> e.getExercise().getMuscleGroup(),
+                        java.util.LinkedHashMap::new, java.util.stream.Collectors.counting()));
+        long completedMinutes = sessions.stream().filter(s -> "COMPLETED".equals(s.getStatus()))
+                .mapToLong(s -> java.time.Duration.between(s.getStartTime(), s.getEndTime()).toMinutes()).sum();
+        return TrainingStatsResponse.builder().memberId(memberId).memberName(member.getFullName())
+                .fromDate(from.toString()).toDate(to.toString()).scheduledSessions(count(sessions, "SCHEDULED"))
+                .completedSessions(count(sessions, "COMPLETED")).cancelledSessions(count(sessions, "CANCELLED"))
+                .noShowSessions(count(sessions, "NO_SHOW")).completedMinutes(completedMinutes)
+                .muscleGroupFrequency(muscleFrequency).exerciseFrequency(exerciseFrequency)
+                .sessions(sessions.stream().map(this::toResponse).toList()).build();
+    }
+
+    private long count(List<PtSchedule> schedules, String status) {
+        return schedules.stream().filter(s -> status.equals(s.getStatus())).count();
+    }
+
+    private PtSchedule requireOwnedSchedule(User pt, Integer scheduleId) {
+        PtSchedule schedule = ptScheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy buổi tập"));
+        if (!schedule.getPt().getId().equals(pt.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xử lý buổi tập này");
+        }
+        return schedule;
     }
 
 }

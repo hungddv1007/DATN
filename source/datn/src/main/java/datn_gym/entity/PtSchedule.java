@@ -5,6 +5,8 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "pt_schedules")
@@ -42,10 +44,20 @@ public class PtSchedule {
     @Column(name = "recurring_group_id", length = 36)
     private String recurringGroupId;
 
-    // ACTIVE | CANCELLED
+    // SCHEDULED | COMPLETED | CANCELLED | NO_SHOW
     @Column(name = "status", length = 20)
     @Builder.Default
-    private String status = "ACTIVE";
+    private String status = "SCHEDULED";
+
+    @Column(name = "actual_note", length = 1000)
+    private String actualNote;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ScheduleExercise> exercises = new ArrayList<>();
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

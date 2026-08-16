@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import PtLayout from '../../components/layout/PtLayout';
+import { SummaryCard, SummaryGrid } from '../../components/common/SummaryCards';
 import { Users, MessageSquare, TrendingUp, Calendar, UserCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ptDashboardService from '../../services/ptDashboardService';
@@ -42,25 +43,11 @@ const PtDashboard = () => {
         </p>
 
         {/* Stat Cards */}
-        <div className="admin-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-          <div className="stat-card" style={{ background: 'rgba(30,41,59,0.7)', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px' }}>
-            <Users size={28} className="stat-icon" style={{ color: '#3b82f6', marginBottom: '10px' }} />
-            <div className="stat-label" style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '5px' }}>Học viên đang quản lý</div>
-            <div className="stat-value" style={{ fontSize: '1.8rem', fontWeight: '800', color: '#fff' }}>{stats.activeMembers}</div>
-          </div>
-
-          <div className="stat-card" style={{ background: 'rgba(30,41,59,0.7)', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px' }}>
-            <MessageSquare size={28} className="stat-icon" style={{ color: '#a855f7', marginBottom: '10px' }} />
-            <div className="stat-label" style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '5px' }}>Lượt đánh giá</div>
-            <div className="stat-value" style={{ fontSize: '1.8rem', fontWeight: '800', color: '#fff' }}>{stats.totalReviews}</div>
-          </div>
-
-          <div className="stat-card" style={{ background: 'rgba(30,41,59,0.7)', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px' }}>
-            <TrendingUp size={28} className="stat-icon" style={{ color: '#22c55e', marginBottom: '10px' }} />
-            <div className="stat-label" style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '5px' }}>Tỉ lệ hoàn thành lịch</div>
-            <div className="stat-value" style={{ fontSize: '1.8rem', fontWeight: '800', color: '#fff' }}>100%</div>
-          </div>
-        </div>
+        <SummaryGrid columns={3} ariaLabel="Tổng quan huấn luyện viên">
+          <SummaryCard icon={Users} label="Học viên đang quản lý" value={stats.activeMembers} tone="blue" />
+          <SummaryCard icon={MessageSquare} label="Lượt đánh giá" value={stats.totalReviews} tone="purple" />
+          <SummaryCard icon={TrendingUp} label="Tỉ lệ hoàn thành lịch" value="100%" tone="green" />
+        </SummaryGrid>
 
         {/* Quick Links */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>

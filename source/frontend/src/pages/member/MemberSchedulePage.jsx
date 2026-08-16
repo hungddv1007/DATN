@@ -36,6 +36,10 @@ const MemberSchedulePage = () => {
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
+    const day = new Date().getDay();
+    return day === 0 ? 6 : day - 1;
+  });
 
   const getDisplayedMonday = useCallback(() => {
     return addDays(getMonday(new Date()), weekOffset * 7);
@@ -69,6 +73,15 @@ const MemberSchedulePage = () => {
     loadSchedule();
   }, [loadSchedule]);
 
+  useEffect(() => {
+    if (weekOffset === 0) {
+      const day = new Date().getDay();
+      setSelectedDayIndex(day === 0 ? 6 : day - 1);
+    } else {
+      setSelectedDayIndex(0);
+    }
+  }, [weekOffset]);
+
   const getSchedulesForCell = (dateISO, block) => {
     return schedule
       .filter(s => s.scheduleDate === dateISO && isInTimeBlock(s.startTime, block))
@@ -80,6 +93,11 @@ const MemberSchedulePage = () => {
   const mondayDisplay = getDisplayedMonday();
   const sundayDisplay = addDays(mondayDisplay, 6);
   const weekLabel = `${formatDDMM(mondayDisplay)} – ${formatDDMM(sundayDisplay)}`;
+  const selectedDate = dates[selectedDayIndex];
+  const selectedDateISO = toISODate(selectedDate);
+  const selectedDaySchedules = schedule
+    .filter(item => item.scheduleDate === selectedDateISO)
+    .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 
   // Lấy thông tin PT từ schedule đầu tiên
   const ptName = schedule.length > 0 ? schedule[0].ptName : null;
@@ -142,7 +160,62 @@ const MemberSchedulePage = () => {
               </div>
             )}
 
-            {/* Grid */}
+            <div className="msp-mobile-day-tabs" role="tablist" aria-label="Chọn ngày trong tuần">
+              {dates.map((date, index) => {
+                const iso = toISODate(date);
+                return (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={selectedDayIndex === index}
+                    key={iso}
+                    className={`${selectedDayIndex === index ? 'active' : ''} ${iso === todayISO ? 'today' : ''}`}
+                    onClick={() => setSelectedDayIndex(index)}
+                  >
+                    <span>{DAY_LABELS[index]}</span>
+                    <strong>{formatDDMM(date)}</strong>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="msp-mobile-day-view" role="tabpanel">
+              <div className="msp-mobile-day-heading">
+                <span>{DAY_LABELS[selectedDayIndex]}</span>
+                <strong>{formatDDMM(selectedDate)}</strong>
+              </div>
+              {selectedDaySchedules.length === 0 ? (
+                <div className="msp-mobile-empty">Không có buổi tập trong ngày này.</div>
+              ) : (
+                SCHEDULE_TIME_BLOCKS.map((block) => {
+                  const items = selectedDaySchedules.filter(item => isInTimeBlock(item.startTime, block));
+                  if (items.length === 0) return null;
+                  return (
+                    <section key={block.id} className="msp-mobile-block">
+                      <div className="msp-mobile-block-title">
+                        <span>{block.label}</span>
+                        <small>{block.range}</small>
+                      </div>
+                      <div className="msp-mobile-block-list">
+                        {items.map(item => (
+                          <div key={item.id} className="msp-card">
+                            <div className="msp-card-time">{item.startTime} - {item.endTime}</div>
+                            {getScheduleTransitionLabel(item.startTime, item.endTime) && (
+                              <div className="msp-cross-block">
+                                {getScheduleTransitionLabel(item.startTime, item.endTime)}
+                              </div>
+                            )}
+                            {item.exerciseNote && <div className="msp-card-note">{item.exerciseNote}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Desktop week grid */}
             <div className="msp-grid-container">
               <div className="msp-grid-table">
                 <div className="msp-grid-row msp-grid-header">

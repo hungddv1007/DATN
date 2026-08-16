@@ -12,5 +12,7 @@ public class AiMessageResponse {
     private String role;
     private String content;
     private String model;
+    private Integer senderUserId;
+    private String senderName;
     private LocalDateTime createdAt;
 }

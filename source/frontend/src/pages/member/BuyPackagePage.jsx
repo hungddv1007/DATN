@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
+import PolicyDialog from '../../components/common/PolicyDialog';
 import packageService from '../../services/packageService';
 import ptService from '../../services/ptService';
 import membershipService from '../../services/membershipService';
 import paymentService from '../../services/paymentService';
+import { getPolicy } from '../../services/policyService';
 import { CreditCard, Banknote, CheckCircle, Clock, Tag } from 'lucide-react';
 import './BuyPackagePage.css';
 
@@ -31,12 +33,18 @@ const BuyPackagePage = () => {
   const [error, setError] = useState('');
   
   const [selectedMilestone, setSelectedMilestone] = useState('1M'); // mặc định 1 tháng
-  const [promoCode, setPromoCode] = useState('');
+  const [discountCode, setDiscountCode] = useState('');
+  const [resolvedCodeType, setResolvedCodeType] = useState(null);
+  const [terms, setTerms] = useState(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('BANK');
   const [selectedPtId, setSelectedPtId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successData, setSuccessData] = useState(null);
   const [paymentInfo, setPaymentInfo] = useState(null);
+  const [purchasePreview, setPurchasePreview] = useState(null);
 
   useEffect(() => {
     if (!pkgId) {
@@ -62,12 +70,14 @@ const BuyPackagePage = () => {
           setPts(ptsData);
         }
 
-        const [discountData, publicPaymentInfo] = await Promise.all([
+        const [discountData, publicPaymentInfo, termsData] = await Promise.all([
           packageService.getPublicDiscounts(),
           paymentService.getPublicPaymentInfo(),
+          getPolicy('MEMBERSHIP_TERMS'),
         ]);
         setDiscounts(discountData);
         setPaymentInfo(publicPaymentInfo);
+        setTerms(termsData);
       } catch (err) {
         setError('Lỗi tải thông tin gói tập. Có thể gói tập không tồn tại.');
       } finally {
@@ -90,9 +100,7 @@ const BuyPackagePage = () => {
     return applicable.length > 0 ? Math.max(...applicable.map(d => d.discountPercent)) : 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const submitPurchase = async () => {
     if (gymPackage?.canChoosePt && !selectedPtId) {
       setError('Vui lòng chọn một Huấn luyện viên cá nhân!');
       return;
@@ -105,7 +113,10 @@ const BuyPackagePage = () => {
       const data = await membershipService.registerPackage({
         packageId: parseInt(pkgId),
         durationDays: getDurationDays(),
-        promotionCode: promoCode || null,
+        promotionCode: resolvedCodeType === 'PROMOTION' ? discountCode.trim() : null,
+        referralCode: resolvedCodeType === 'SALE_REFERRAL' ? discountCode.trim() : null,
+        acceptedTerms,
+        termsVersionId: terms.id,
         paymentMethod: paymentMethod,
         ptId: selectedPtId ? parseInt(selectedPtId) : null
       });
@@ -118,6 +129,46 @@ const BuyPackagePage = () => {
       } else {
         setError('Lỗi kết nối máy chủ!');
       }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const reviewPurchase = async (e) => {
+    e.preventDefault();
+    if (!acceptedTerms) { setError('Bạn phải đọc và đồng ý Điều khoản thành viên.'); return; }
+    if (gymPackage?.canChoosePt && !selectedPtId) { setError('Vui lòng chọn một Huấn luyện viên cá nhân!'); return; }
+    setError('');
+    setSubmitting(true);
+    try {
+      let preview;
+      const normalizedCode = discountCode.trim().toUpperCase();
+      if (!normalizedCode) {
+        preview = await membershipService.previewPurchase(parseInt(pkgId), getDurationDays());
+        setResolvedCodeType(null);
+      } else {
+        try {
+          preview = await membershipService.previewPurchase(
+            parseInt(pkgId), getDurationDays(), normalizedCode, null,
+          );
+          setResolvedCodeType('PROMOTION');
+        } catch (promotionError) {
+          try {
+            preview = await membershipService.previewPurchase(
+              parseInt(pkgId), getDurationDays(), null, normalizedCode,
+            );
+            setResolvedCodeType('SALE_REFERRAL');
+          } catch {
+            const invalidCodeError = new Error('Mã giảm giá không hợp lệ, đã hết hạn hoặc không áp dụng cho gói này.');
+            invalidCodeError.cause = promotionError;
+            throw invalidCodeError;
+          }
+        }
+      }
+      setPurchasePreview(preview);
+      setShowConfirmation(true);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Không thể kiểm tra mã và giá thanh toán.');
     } finally {
       setSubmitting(false);
     }
@@ -149,9 +200,9 @@ const BuyPackagePage = () => {
         <div className="buy-package-page">
           <div className="buy-package-container success-container">
             <CheckCircle size={80} color="#22c55e" style={{ margin: '0 auto 20px' }} />
-            <h2>Đăng ký thành công!</h2>
+            <h2>Đã tạo yêu cầu đăng ký!</h2>
             <p>
-              Bạn đã đăng ký gói <strong>{successData.packageName}</strong> với thời hạn <strong>{successData.durationDays} ngày</strong>.<br/>
+              Yêu cầu mua gói <strong>{successData.packageName}</strong> thời hạn <strong>{successData.durationDays} ngày</strong> đã được ghi nhận.<br/>
               Mã giao dịch của bạn là: <strong>#{successData.transactionId}</strong><br/>
               Tổng tiền: <strong>{formatCurrency(successData.finalAmount)}</strong>
             </p>
@@ -211,7 +262,7 @@ const BuyPackagePage = () => {
           )}
 
           {gymPackage && (
-            <form className="buy-form" onSubmit={handleSubmit}>
+            <form className="buy-form" onSubmit={reviewPurchase}>
               {/* Chọn mốc thời gian */}
               <div className="form-group">
                 <label><Clock size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} />Chọn thời hạn đăng ký</label>
@@ -271,13 +322,18 @@ const BuyPackagePage = () => {
               )}
 
               <div className="form-group">
-                <label>Mã khuyến mãi (Nếu có)</label>
-                <input 
-                  type="text" 
-                  placeholder="Nhập mã giảm giá..." 
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
+                <label>Mã giảm giá (Nếu có)</label>
+                <input
+                  type="text"
+                  placeholder="Nhập mã khuyến mãi hoặc mã được nhân viên giới thiệu..."
+                  value={discountCode}
+                  onChange={(e) => {
+                    setDiscountCode(e.target.value.toUpperCase());
+                    setResolvedCodeType(null);
+                    setPurchasePreview(null);
+                  }}
                 />
+                <small className="discount-code-hint">Hệ thống sẽ tự nhận diện loại mã và kiểm tra mức giảm trước khi tạo giao dịch.</small>
               </div>
 
               <div className="form-group">
@@ -327,11 +383,40 @@ const BuyPackagePage = () => {
                 <span className="total-amount">{formatCurrency(afterDiscount)}</span>
               </div>
 
+              <label className="terms-acceptance">
+                <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} />
+                <span>Tôi đã đọc và đồng ý <button type="button" onClick={() => setShowTerms(true)}>Điều khoản thành viên hiện hành</button>.</span>
+              </label>
+
               <button type="submit" className="btn-submit-buy" disabled={submitting}>
-                {submitting ? 'Đang xử lý...' : 'XÁC NHẬN ĐĂNG KÝ'}
+                {submitting ? 'Đang xử lý...' : 'XEM LẠI ĐĂNG KÝ'}
               </button>
             </form>
           )}
+
+          {showConfirmation && <div className="purchase-confirm-overlay"><div className="purchase-confirm">
+            <h2>Xác nhận đăng ký và thanh toán</h2>
+            <p>Gói <b>{gymPackage.name}</b> · {durationDays} ngày</p>
+            <p>Phương thức: <b>{paymentMethod === 'BANK' ? 'Chuyển khoản' : 'Tiền mặt tại quầy'}</b></p>
+            <p>Mã áp dụng: <b>{discountCode.trim() || 'Không có'}</b></p>
+            {purchasePreview?.codeDiscount > 0 && <p>
+              {purchasePreview.codeType === 'SALE_REFERRAL' ? 'Ưu đãi mã giới thiệu' : 'Ưu đãi mã khuyến mãi'}:
+              <b> -{purchasePreview.codeDiscount}%</b>
+            </p>}
+            <p className="confirm-total">Tổng thanh toán: {formatCurrency(purchasePreview?.finalAmount ?? afterDiscount)}</p>
+            <p className="confirm-note">Sau bước này hệ thống tạo giao dịch chờ duyệt. Gói chỉ kích hoạt khi Admin xác nhận đã thanh toán.</p>
+            <div><button className="btn-dashboard" onClick={() => setShowConfirmation(false)}>Quay lại</button>
+              <button className="btn-submit-buy" disabled={submitting} onClick={submitPurchase}>XÁC NHẬN TẠO GIAO DỊCH</button></div>
+          </div></div>}
+
+          {showTerms && <PolicyDialog
+            policy={terms}
+            onClose={() => setShowTerms(false)}
+            onAgree={() => {
+              setAcceptedTerms(true);
+              setShowTerms(false);
+            }}
+          />}
 
           {!gymPackage && !error && (
             <div style={{ textAlign: 'center' }}>

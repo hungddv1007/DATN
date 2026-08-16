@@ -1,9 +1,11 @@
 package datn_gym.controller;
 
 import datn_gym.dto.request.CreateScheduleRequest;
+import datn_gym.dto.request.CompleteScheduleRequest;
 import datn_gym.dto.request.UpdateScheduleRequest;
 import datn_gym.dto.response.MessageResponse;
 import datn_gym.dto.response.ScheduleSlotResponse;
+import datn_gym.dto.response.TrainingStatsResponse;
 import datn_gym.service.PtScheduleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +55,28 @@ public class PtScheduleController {
             @PathVariable Integer id,
             @Valid @RequestBody UpdateScheduleRequest request) {
         return ResponseEntity.ok(ptScheduleService.updateSchedule(auth.getName(), id, request));
+    }
+
+    @PostMapping("/api/pt/schedules/{id}/complete")
+    @PreAuthorize("hasRole('PT')")
+    public ScheduleSlotResponse complete(Authentication auth, @PathVariable Integer id,
+                                         @Valid @RequestBody CompleteScheduleRequest request) {
+        return ptScheduleService.completeSchedule(auth.getName(), id, request);
+    }
+
+    @PostMapping("/api/pt/schedules/{id}/no-show")
+    @PreAuthorize("hasRole('PT')")
+    public ScheduleSlotResponse noShow(Authentication auth, @PathVariable Integer id) {
+        return ptScheduleService.markNoShow(auth.getName(), id);
+    }
+
+    @GetMapping("/api/pt/members/{memberId}/training-stats")
+    @PreAuthorize("hasRole('PT')")
+    public TrainingStatsResponse stats(
+            Authentication auth, @PathVariable Integer memberId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ptScheduleService.getTrainingStats(auth.getName(), memberId, from, to);
     }
 
     // DELETE /api/pt/schedules/{id}?deleteAll=false&notify=false — Xóa buổi tập

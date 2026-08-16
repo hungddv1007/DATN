@@ -1,6 +1,7 @@
 package datn_gym.service;
 
 import datn_gym.repository.MembershipRepository;
+import datn_gym.entity.Membership;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,7 +24,20 @@ public class MembershipExpirationService {
     @Scheduled(cron = "${app.membership.expiration-cron:0 0 * * * *}")
     @Transactional
     public void expireOverdueMemberships() {
-        int updated = membershipRepository.expireActiveMembershipsBefore(LocalDate.now());
+        LocalDate today = LocalDate.now();
+        for (Membership membership : membershipRepository
+                .findByStatusAndHoldUntilLessThanEqual("PAUSED", today)) {
+            int usedDays = (int) java.time.temporal.ChronoUnit.DAYS.between(
+                    membership.getPausedAt(), membership.getHoldUntil());
+            membership.setStatus("ACTIVE");
+            membership.setTotalHoldDays(membership.getTotalHoldDays() + Math.max(usedDays, 0));
+            membership.setPausedAt(null);
+            membership.setHoldUntil(null);
+            membership.setPauseReason(null);
+            membershipRepository.save(membership);
+        }
+
+        int updated = membershipRepository.expireActiveMembershipsBefore(today);
         if (updated > 0) {
             log.info("Đã chuyển {} membership quá hạn sang EXPIRED", updated);
         }

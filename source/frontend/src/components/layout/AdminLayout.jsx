@@ -1,13 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Package, CreditCard, FileText, Dumbbell, Tag, LayoutDashboard, LogOut, Percent, Bell } from 'lucide-react';
+import { Users, Package, CreditCard, FileText, Dumbbell, Tag, LayoutDashboard, LogOut, Percent, Bell, BriefcaseBusiness, MessageSquareText, Menu, X } from 'lucide-react';
 import '../../pages/member/DashboardPage.css';
 
 const AdminLayout = ({ children }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
 
   const handleLogout = () => {
     logout();
@@ -22,7 +36,30 @@ const AdminLayout = ({ children }) => {
 
   return (
     <div className="admin-page">
-      <aside className="admin-sidebar">
+      <header className="workspace-mobile-header">
+        <button
+          type="button"
+          className="workspace-menu-toggle"
+          aria-label={mobileMenuOpen ? 'Đóng menu quản trị' : 'Mở menu quản trị'}
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((current) => !current)}
+        >
+          {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+        <Link to="/admin" className="workspace-mobile-brand">GymPro</Link>
+        <span className="workspace-mobile-role">Admin</span>
+      </header>
+
+      {mobileMenuOpen && (
+        <button
+          type="button"
+          className="workspace-sidebar-backdrop"
+          aria-label="Đóng menu quản trị"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      <aside className={`admin-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="admin-sidebar-logo">
           <h2><Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>GymPro</Link></h2>
           <span>Admin Panel</span>
@@ -37,6 +74,8 @@ const AdminLayout = ({ children }) => {
           <li><Link to="/admin/blogs" className={isActive('/admin/blogs')}><FileText size={18} /> Bài viết</Link></li>
           <li><Link to="/admin/exercises" className={isActive('/admin/exercises')}><Dumbbell size={18} /> Bài tập</Link></li>
           <li><Link to="/admin/notifications" className={isActive('/admin/notifications')}><Bell size={18} /> Gửi thông báo</Link></li>
+          <li><Link to="/admin/business" className={isActive('/admin/business')}><BriefcaseBusiness size={18} /> Kinh doanh</Link></li>
+          <li><Link to="/admin/service-reviews" className={isActive('/admin/service-reviews')}><MessageSquareText size={18} /> Đánh giá dịch vụ</Link></li>
           <li style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
             <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}><LogOut size={18} /> Đăng xuất</a>
           </li>

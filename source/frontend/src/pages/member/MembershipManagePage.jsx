@@ -5,7 +5,8 @@ import membershipService from '../../services/membershipService';
 import packageService from '../../services/packageService';
 import ptService from '../../services/ptService';
 import { getMembershipPriceDisplay } from '../../utils/membershipPriceDisplay';
-import { Calendar, RefreshCw, ChevronUp, Pause, Play, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { confirmDialog, promptDialog } from '../../utils/dialog';
+import { Calendar, RefreshCw, ChevronUp, Pause, Play, ArrowRightLeft, ShieldCheck } from 'lucide-react';
 import './MembershipManagePage.css';
 
 // Các mốc thời gian cố định
@@ -117,11 +118,31 @@ const MembershipManagePage = () => {
   }, [upgradePkgId, upgradeExtraDays, showUpgradeModal]);
 
   const handlePause = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn bảo lưu gói tập không? Lịch tập của bạn sẽ được tạm dừng tính ngày.")) return;
+    const days = Number(await promptDialog(
+      `Tối đa ${membership.maxHoldDaysPerTime} ngày/lần, hạn mức còn lại ${membership.remainingHoldDays} ngày.`,
+      {
+        title: 'Số ngày muốn bảo lưu',
+        inputType: 'number',
+        inputMode: 'numeric',
+        min: 1,
+        max: Math.min(membership.maxHoldDaysPerTime, membership.remainingHoldDays),
+        defaultValue: Math.min(membership.maxHoldDaysPerTime, membership.remainingHoldDays),
+        confirmText: 'Tiếp tục',
+        required: true,
+      },
+    ));
+    if (!Number.isInteger(days) || days <= 0) return;
+    const reason = await promptDialog('Thông tin này giúp phòng tập hỗ trợ bạn tốt hơn.', {
+      title: 'Lý do bảo lưu (không bắt buộc)',
+      placeholder: 'Nhập lý do bảo lưu...',
+      multiline: true,
+      confirmText: 'Xác nhận bảo lưu',
+    });
+    if (reason === null) return;
     setActionLoading(true);
     setError('');
     try {
-      await membershipService.pauseMembership();
+      await membershipService.pauseMembership({ days, reason });
       alert("Bảo lưu gói tập thành công!");
       fetchMembershipData();
     } catch (err) {
@@ -132,7 +153,7 @@ const MembershipManagePage = () => {
   };
 
   const handleResume = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn kích hoạt lại gói tập không?")) return;
+    if (!await confirmDialog('Bạn có chắc chắn muốn kích hoạt lại gói tập không?', { confirmText: 'Kích hoạt lại' })) return;
     setActionLoading(true);
     setError('');
     try {
@@ -141,21 +162,6 @@ const MembershipManagePage = () => {
       fetchMembershipData();
     } catch (err) {
       setError(err.response?.data?.message || 'Kích hoạt lại thất bại');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleCancel = async () => {
-    if (!window.confirm("CẢNH BÁO: Hủy gói tập sẽ không được hoàn tiền và không thể khôi phục. Bạn có chắc chắn muốn hủy gói không?")) return;
-    setActionLoading(true);
-    setError('');
-    try {
-      await membershipService.cancelMembership();
-      alert("Hủy gói tập thành công!");
-      fetchMembershipData();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Hủy gói thất bại');
     } finally {
       setActionLoading(false);
     }
@@ -304,6 +310,7 @@ const MembershipManagePage = () => {
                       <div>
                         <span className="label">Bảo lưu bắt đầu từ:</span>
                         <span className="value" style={{ color: '#f97316' }}>{membership.pausedAt}</span>
+                        <span className="value">Tự kích hoạt lại: {membership.holdUntil}</span>
                       </div>
                     </div>
                   )}
@@ -312,6 +319,7 @@ const MembershipManagePage = () => {
                     <div>
                       <span className="label">Số lượt bảo lưu đã dùng:</span>
                       <span className="value">{membership.holdCount} / {membership.maxHoldTimes} lần</span>
+                      <span className="value">Tối đa {membership.maxHoldDaysPerTime} ngày/lần · còn {membership.remainingHoldDays}/{membership.maxHoldTotalDays} ngày</span>
                     </div>
                   </div>
                   {membership.totalHoldDays > 0 && (
@@ -342,9 +350,9 @@ const MembershipManagePage = () => {
                           <Pause size={16} /> Bảo lưu gói
                         </button>
                       )}
-                      <button className="btn-manage-action btn-cancel" onClick={handleCancel} disabled={actionLoading}>
-                        <AlertTriangle size={16} /> Hủy gói tập
-                      </button>
+                      <Link className="btn-manage-action btn-cancel" to="/member/membership-transfer">
+                        <ArrowRightLeft size={16} /> Chuyển nhượng gói
+                      </Link>
                     </>
                   )}
 
@@ -469,10 +477,18 @@ const MembershipManagePage = () => {
         {/* Modal Nâng cấp */}
         {showUpgradeModal && (
           <div className="manage-modal-overlay">
-            <div className="manage-modal">
+            <div className="manage-modal manage-modal-upgrade" role="dialog" aria-modal="true" aria-labelledby="upgrade-modal-title">
               <div className="modal-header">
-                <h2>Nâng Cấp Gói Tập (PRORATION)</h2>
-                <button className="btn-close-modal" onClick={() => setShowUpgradeModal(false)}>×</button>
+                <div className="modal-title-group">
+                  <span className="modal-title-icon" aria-hidden="true">
+                    <ChevronUp size={22} />
+                  </span>
+                  <div>
+                    <h2 id="upgrade-modal-title">Nâng cấp gói tập</h2>
+                    <p>Chỉ thanh toán phần chênh lệch sau khi trừ giá trị còn lại của gói hiện tại.</p>
+                  </div>
+                </div>
+                <button type="button" className="btn-close-modal" aria-label="Đóng" onClick={() => setShowUpgradeModal(false)}>×</button>
               </div>
               <form onSubmit={handleUpgradeSubmit}>
                 <div className="modal-body">
@@ -521,7 +537,7 @@ const MembershipManagePage = () => {
                         <option key={ms.days} value={ms.days}>{ms.label} ({ms.days} ngày)</option>
                       ))}
                     </select>
-                    <small style={{ color: '#94a3b8' }}>
+                    <small className="form-hint">
                       Chọn thời hạn muốn gia hạn thêm sau khi nâng cấp hoặc giữ "Không gia hạn" để chỉ nâng cấp số ngày còn lại.
                     </small>
                   </div>

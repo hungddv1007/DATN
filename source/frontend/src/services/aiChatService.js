@@ -29,6 +29,14 @@ const deleteConversation = async (conversationId) => {
   await api.delete(`/member/ai/conversations/${conversationId}`);
 };
 
+const requestHandoff = async (conversationId) => (await api.post(
+  `/member/ai/conversations/${conversationId}/handoff`, { consent: true },
+)).data;
+
+const sendHumanMessage = async (conversationId, message) => (await api.post(
+  `/member/ai/conversations/${conversationId}/human-messages`, { message },
+)).data;
+
 const streamMessage = async (
   conversationId,
   payload,
@@ -115,5 +123,7 @@ export default {
   getMessages,
   updateConsent,
   deleteConversation,
+  requestHandoff,
+  sendHumanMessage,
   streamMessage,
 };

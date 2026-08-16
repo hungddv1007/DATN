@@ -8,24 +8,30 @@ import datn_gym.entity.Promotion;
 import datn_gym.entity.Transaction;
 import datn_gym.entity.User;
 import datn_gym.repository.MembershipRepository;
+import datn_gym.repository.PackageHoldPolicyRepository;
 import datn_gym.repository.PromotionRepository;
 import datn_gym.repository.TransactionRepository;
 import datn_gym.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
@@ -33,6 +39,9 @@ public class TransactionService {
     private final PromotionRepository promotionRepository;
     private final UserRepository userRepository;
     private final PaymentProperties paymentProperties;
+    private final SaleService saleService;
+    private final EmailService emailService;
+    private final PackageHoldPolicyRepository holdPolicyRepository;
 
     public Page<TransactionResponse> getAllTransactions(Pageable pageable) {
         return transactionRepository.findAllByOrderByCreatedAtDesc(pageable)
@@ -59,8 +68,57 @@ public class TransactionService {
         tx.setStatus("CONFIRMED");
         tx.setConfirmedBy(admin);
         transactionRepository.save(tx);
+        saleService.confirmRedemptionAndCommission(tx);
+        queueMembershipConfirmationEmail(tx);
 
         return toResponse(tx);
+    }
+
+    /**
+     * Chụp dữ liệu email khi entity còn nằm trong transaction hiện tại. EmailService
+     * nhận toàn giá trị thuần và gửi ở thread nền, vì vậy API không phải chờ SMTP.
+     */
+    private void queueMembershipConfirmationEmail(Transaction tx) {
+        Membership membership = tx.getMembership();
+        User member = membership.getUser();
+        GymPackage confirmedPackage = tx.getRequestedPackage() != null
+                ? tx.getRequestedPackage()
+                : membership.getGymPackage();
+        String recipientEmail = member.getEmail();
+        String customerName = member.getFullName();
+        Integer transactionId = tx.getId();
+        String packageName = confirmedPackage.getName();
+        String transactionType = tx.getType();
+        BigDecimal amount = tx.getAmount();
+        Integer termsVersion = tx.getTermsVersion();
+
+        Runnable enqueueEmail = () -> {
+            try {
+                emailService.sendMembershipConfirmedEmail(
+                        recipientEmail,
+                        customerName,
+                        transactionId,
+                        packageName,
+                        transactionType,
+                        amount,
+                        termsVersion);
+            } catch (RuntimeException exception) {
+                // Giao dịch đã được xác nhận; lỗi xếp hàng email không được làm
+                // Admin hiểu nhầm rằng thao tác database đã thất bại.
+                log.error("Không thể xếp email xác nhận giao dịch #{} vào hàng đợi", transactionId, exception);
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    enqueueEmail.run();
+                }
+            });
+        } else {
+            enqueueEmail.run();
+        }
     }
 
     /**
@@ -118,7 +176,10 @@ public class TransactionService {
 
         // Promotion được giữ chỗ lúc tạo giao dịch; trả lại khi giao dịch bị từ chối.
         if (tx.getPromotion() != null) {
-            Promotion promotion = tx.getPromotion();
+            Promotion promotion = promotionRepository
+                    .findByIdForUpdate(tx.getPromotion().getId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Không tìm thấy khuyến mãi của giao dịch"));
             int currentUsage = promotion.getCurrentUsage() == null
                     ? 0
                     : promotion.getCurrentUsage();
@@ -127,6 +188,7 @@ public class TransactionService {
         }
 
         transactionRepository.save(tx);
+        saleService.releaseRedemption(tx);
     }
 
     private Transaction getPendingTransaction(Integer transactionId) {
@@ -167,6 +229,7 @@ public class TransactionService {
                 membership.setStartDate(startDate);
                 membership.setEndDate(startDate.plusDays(requestedDays));
                 membership.setStatus("ACTIVE");
+                refreshHoldPolicy(membership, requestedPackage, requestedDays);
             }
             case "RENEW" -> {
                 requireActiveMembership(membership);
@@ -175,6 +238,7 @@ public class TransactionService {
                 }
                 membership.setEndDate(membership.getEndDate().plusDays(requestedDays));
                 membership.setDurationDays(membership.getDurationDays() + requestedDays);
+                refreshHoldPolicy(membership, membership.getGymPackage(), membership.getDurationDays());
             }
             case "UPGRADE" -> {
                 requireActiveMembership(membership);
@@ -188,11 +252,20 @@ public class TransactionService {
                     membership.setEndDate(membership.getEndDate().plusDays(requestedDays));
                     membership.setDurationDays(membership.getDurationDays() + requestedDays);
                 }
+                refreshHoldPolicy(membership, requestedPackage, membership.getDurationDays());
             }
             default -> throw new IllegalStateException("Loại giao dịch không được hỗ trợ.");
         }
 
         membershipRepository.save(membership);
+    }
+
+    private void refreshHoldPolicy(Membership membership, GymPackage gymPackage, int durationDays) {
+        datn_gym.entity.PackageHoldPolicy policy = holdPolicyRepository
+                .findApplicable(gymPackage.getId(), durationDays).orElse(null);
+        membership.setHoldMaxTimes(policy == null ? 0 : policy.getMaxHoldTimes());
+        membership.setHoldMaxDaysPerTime(policy == null ? 0 : policy.getMaxDaysPerHold());
+        membership.setHoldMaxTotalDays(policy == null ? 0 : policy.getMaxTotalHoldDays());
     }
 
     private void requireActiveMembership(Membership membership) {
@@ -224,9 +297,10 @@ public class TransactionService {
                         : null)
                 .createdAt(tx.getCreatedAt())
                 .promotionCode(tx.getPromotion() != null ? tx.getPromotion().getCode() : null)
+                .referralCode(tx.getSaleCode() != null ? tx.getSaleCode().getCode() : null)
                 .discountPercent(tx.getPromotion() != null
-                        ? tx.getPromotion().getDiscountPercent()
-                        : null)
+                        ? tx.getPromotion().getDiscountPercent() : tx.getCustomerDiscountPercent())
+                .acceptedTerms(tx.getAcceptedTerms()).termsVersion(tx.getTermsVersion())
                 .build();
     }
 }

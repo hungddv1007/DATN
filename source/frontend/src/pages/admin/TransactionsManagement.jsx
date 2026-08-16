@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import transactionService from '../../services/transactionService';
+import { confirmDialog } from '../../utils/dialog';
 import { Check, X } from 'lucide-react';
 import AdminPagination from '../../components/admin/AdminPagination';
 import { ADMIN_PAGE_SIZE } from '../../hooks/useClientPagination';
@@ -36,7 +37,7 @@ const TransactionsManagement = () => {
   }, [fetchTransactions]);
 
   const handleConfirm = async (id) => {
-    if (!window.confirm('Bạn chắc chắn muốn DUYỆT giao dịch này?')) return;
+    if (!await confirmDialog('Bạn chắc chắn muốn duyệt giao dịch này?', { confirmText: 'Duyệt giao dịch' })) return;
     try {
       await transactionService.confirmTransaction(id);
       alert('Đã duyệt giao dịch thành công!');
@@ -47,7 +48,7 @@ const TransactionsManagement = () => {
   };
 
   const handleCancel = async (id) => {
-    if (!window.confirm('Bạn chắc chắn muốn HỦY giao dịch này? Yêu cầu chưa duyệt sẽ không được áp dụng vào gói tập.')) return;
+    if (!await confirmDialog('Bạn chắc chắn muốn hủy giao dịch này? Yêu cầu chưa duyệt sẽ không được áp dụng vào gói tập.', { confirmText: 'Hủy giao dịch', danger: true })) return;
     try {
       await transactionService.cancelTransaction(id);
       alert('Đã hủy giao dịch thành công!');
@@ -69,7 +70,7 @@ const TransactionsManagement = () => {
 
   return (
     <AdminLayout>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1>Quản lý Giao dịch</h1>
       </div>
 

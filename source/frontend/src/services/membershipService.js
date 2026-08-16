@@ -7,6 +7,13 @@ const membershipService = {
     return response.data;
   },
 
+  previewPurchase: async (packageId, days, promotionCode, referralCode) => {
+    const response = await api.get('/member/memberships/preview/purchase', {
+      params: { packageId, days, promotionCode: promotionCode || undefined, referralCode: referralCode || undefined }
+    });
+    return response.data;
+  },
+
   // Lấy gói tập hiện tại của hội viên
   getCurrentMembership: async () => {
     const response = await api.get('/member/memberships/current');
@@ -32,8 +39,8 @@ const membershipService = {
   },
 
   // Bảo lưu gói tập
-  pauseMembership: async () => {
-    const response = await api.post('/member/memberships/pause');
+  pauseMembership: async (data) => {
+    const response = await api.post('/member/memberships/pause', data);
     return response.data;
   },
 
@@ -44,11 +51,6 @@ const membershipService = {
   },
 
   // Hủy gói tập
-  cancelMembership: async () => {
-    const response = await api.post('/member/memberships/cancel');
-    return response.data;
-  },
-
   // Xem trước giá gia hạn
   previewRenew: async (days) => {
     const response = await api.get(`/member/memberships/preview/renew`, { params: { days } });

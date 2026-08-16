@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import packageService from '../../services/packageService';
+import { confirmDialog } from '../../utils/dialog';
 import { Edit, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
 import './AdminManagement.css';
 
@@ -58,7 +59,7 @@ const PackagesManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn gói tập này? (Khuyến nghị: Chỉ nên Ẩn đi)')) return;
+    if (!await confirmDialog('Bạn có chắc chắn muốn xóa vĩnh viễn gói tập này? Khuyến nghị: chỉ nên ẩn gói.', { confirmText: 'Xóa vĩnh viễn', danger: true })) return;
     try {
       await packageService.deletePackage(id);
       alert('Xóa thành công!');
@@ -70,7 +71,7 @@ const PackagesManagement = () => {
 
   const handleToggleStatus = async (id, currentStatus) => {
     const action = currentStatus ? 'Ẩn' : 'Hiện';
-    if (!window.confirm(`Bạn có chắc chắn muốn ${action} gói tập này?`)) return;
+    if (!await confirmDialog(`Bạn có chắc chắn muốn ${action.toLowerCase()} gói tập này?`, { confirmText: action })) return;
     try {
       await packageService.togglePackageStatus(id);
       alert(`${action} thành công!`);
@@ -109,7 +110,7 @@ const PackagesManagement = () => {
 
   return (
     <AdminLayout>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1>Quản lý Gói Tập</h1>
         <button 
           onClick={handleAddNew}

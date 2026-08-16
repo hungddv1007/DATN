@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import packageService from '../../services/packageService';
+import { confirmDialog } from '../../utils/dialog';
 import { Tag, Plus, Edit2, Trash2 } from 'lucide-react';
 import './DiscountsManagement.css';
 
@@ -75,7 +76,7 @@ const DiscountsManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa mốc chiết khấu này không?")) return;
+    if (!await confirmDialog('Bạn có chắc chắn muốn xóa mốc chiết khấu này không?', { confirmText: 'Xóa', danger: true })) return;
     try {
       await packageService.deleteDiscount(id);
       setSuccess('Xóa mốc chiết khấu thành công');

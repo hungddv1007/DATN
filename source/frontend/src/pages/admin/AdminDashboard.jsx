@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Users, Package, CreditCard, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import AdminLayout from '../../components/layout/AdminLayout';
+import { SummaryCard, SummaryGrid } from '../../components/common/SummaryCards';
 import statisticsService from '../../services/statisticsService';
 
 const AdminDashboard = () => {
@@ -40,32 +41,22 @@ const AdminDashboard = () => {
       <h1 style={{ marginBottom: '10px' }}>Tổng Quan</h1>
       <p style={{ color: '#94a3b8', marginBottom: '30px' }}>Chào mừng trở lại, <strong style={{ color: '#f1f5f9' }}>{user?.fullName || 'Admin'}</strong>!</p>
 
-      <div className="admin-stats" style={{ marginBottom: '40px' }}>
-        <div className="stat-card" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(30,58,138,0.2))', border: '1px solid rgba(59,130,246,0.2)' }}>
-          <Users size={28} className="stat-icon" style={{ color: '#60a5fa' }} />
-          <div className="stat-label">Tổng người dùng</div>
-          <div className="stat-value">{stats.totalUsers}</div>
-        </div>
-        <div className="stat-card" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,78,59,0.2))', border: '1px solid rgba(16,185,129,0.2)' }}>
-          <Package size={28} className="stat-icon" style={{ color: '#34d399' }} />
-          <div className="stat-label">Đăng ký tháng này</div>
-          <div className="stat-value">{stats.newRegistrationsThisMonth}</div>
-        </div>
-        <div className="stat-card" style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.1), rgba(124,45,18,0.2))', border: '1px solid rgba(249,115,22,0.2)' }}>
-          <CreditCard size={28} className="stat-icon" style={{ color: '#fb923c' }} />
-          <div className="stat-label">Doanh thu tháng (VNĐ)</div>
-          <div className="stat-value">{stats.monthlyRevenue.toLocaleString('vi-VN')} đ</div>
-        </div>
-        <div className="stat-card" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(76,29,149,0.2))', border: '1px solid rgba(139,92,246,0.2)' }}>
-          <BarChart3 size={28} className="stat-icon" style={{ color: '#a78bfa' }} />
-          <div className="stat-label">PT đang hoạt động</div>
-          <div className="stat-value">{stats.activePTs}</div>
-        </div>
-      </div>
+      <SummaryGrid columns={4} ariaLabel="Tổng quan quản trị">
+        <SummaryCard icon={Users} label="Tổng người dùng" value={stats.totalUsers} tone="blue" />
+        <SummaryCard icon={Package} label="Đăng ký tháng này" value={stats.newRegistrationsThisMonth} tone="green" />
+        <SummaryCard
+          icon={CreditCard}
+          label="Doanh thu tháng (VNĐ)"
+          value={`${stats.monthlyRevenue.toLocaleString('vi-VN')} đ`}
+          tone="orange"
+          compact
+        />
+        <SummaryCard icon={BarChart3} label="PT đang hoạt động" value={stats.activePTs} tone="purple" />
+      </SummaryGrid>
 
       <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
         {/* Biểu đồ Doanh thu */}
-        <div style={{ flex: '2', minWidth: '500px', background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ flex: '2', minWidth: 'min(500px, 100%)', background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ color: '#f1f5f9', marginBottom: '20px' }}>Doanh Thu 6 Tháng Gần Nhất (VNĐ)</h3>
           <div style={{ width: '100%', height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -85,7 +76,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Biểu đồ Phân bổ Gói Tập */}
-        <div style={{ flex: '1', minWidth: '300px', background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ flex: '1', minWidth: 'min(300px, 100%)', background: '#1e293b', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <h3 style={{ color: '#f1f5f9', marginBottom: '20px', textAlign: 'center' }}>Phân Bổ Gói Tập Hiện Tại</h3>
           <div style={{ width: '100%', height: '300px' }}>
             {stats.packageData.length > 0 ? (

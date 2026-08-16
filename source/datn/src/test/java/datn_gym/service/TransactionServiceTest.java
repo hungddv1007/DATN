@@ -10,6 +10,7 @@ import datn_gym.repository.MembershipRepository;
 import datn_gym.repository.PromotionRepository;
 import datn_gym.repository.TransactionRepository;
 import datn_gym.repository.UserRepository;
+import datn_gym.repository.PackageHoldPolicyRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,9 @@ class TransactionServiceTest {
     private PromotionRepository promotionRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock private SaleService saleService;
+    @Mock private EmailService emailService;
+    @Mock private PackageHoldPolicyRepository holdPolicyRepository;
 
     private TransactionService service;
     private User admin;
@@ -48,8 +52,12 @@ class TransactionServiceTest {
                 membershipRepository,
                 promotionRepository,
                 userRepository,
-                new PaymentProperties("", "", "", "GYMPRO", 24));
+                new PaymentProperties("", "", "", "GYMPRO", 24),
+                saleService, emailService, holdPolicyRepository);
         admin = User.builder().id(99).email("admin@gym.local").fullName("Admin").build();
+        org.mockito.Mockito.lenient().when(holdPolicyRepository.findApplicable(
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(Optional.empty());
     }
 
     @Test
@@ -98,12 +106,14 @@ class TransactionServiceTest {
         Transaction transaction = pendingTransaction("NEW", membership);
         transaction.setPromotion(promotion);
         when(transactionRepository.findById(1)).thenReturn(Optional.of(transaction));
+        when(promotionRepository.findByIdForUpdate(7)).thenReturn(Optional.of(promotion));
 
         service.cancelTransaction(1, admin.getEmail());
 
         assertThat(membership.getStatus()).isEqualTo("CANCELLED");
         assertThat(promotion.getCurrentUsage()).isEqualTo(1);
         verify(membershipRepository).save(membership);
+        verify(promotionRepository).findByIdForUpdate(7);
         verify(promotionRepository).save(promotion);
     }
 
@@ -115,6 +125,7 @@ class TransactionServiceTest {
         Transaction transaction = pendingTransaction("NEW", membership);
         transaction.setPromotion(promotion);
         transaction.setCreatedAt(LocalDateTime.now().minusHours(25));
+        when(promotionRepository.findByIdForUpdate(7)).thenReturn(Optional.of(promotion));
         when(transactionRepository.findByStatusAndCreatedAtBefore(
                 org.mockito.ArgumentMatchers.eq("PENDING"),
                 org.mockito.ArgumentMatchers.any(LocalDateTime.class)))

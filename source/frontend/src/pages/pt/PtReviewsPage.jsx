@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PtLayout from '../../components/layout/PtLayout';
-import { PtSummaryCard, PtSummaryGrid } from '../../components/pt/PtSummaryCards';
+import { SummaryCard, SummaryGrid } from '../../components/common/SummaryCards';
 import api from '../../services/api';
 import { Star, MessageSquare } from 'lucide-react';
 import '../admin/AdminManagement.css';
@@ -44,11 +44,11 @@ const PtReviewsPage = () => {
           <p>Xem phản hồi và đánh giá từ học viên của bạn.</p>
         </header>
 
-        <PtSummaryGrid columns={3} ariaLabel="Thống kê đánh giá">
-          <PtSummaryCard icon={Star} label="Điểm trung bình" value={avgRating || '—'} tone="yellow" />
-          <PtSummaryCard icon={MessageSquare} label="Tổng lượt đánh giá" value={reviews.length} tone="orange" />
-          <PtSummaryCard icon={Star} label="Đánh giá 5 sao" value={fiveStarReviews} tone="green" />
-        </PtSummaryGrid>
+        <SummaryGrid columns={3} ariaLabel="Thống kê đánh giá">
+          <SummaryCard icon={Star} label="Điểm trung bình" value={avgRating || '—'} tone="yellow" />
+          <SummaryCard icon={MessageSquare} label="Tổng lượt đánh giá" value={reviews.length} tone="orange" />
+          <SummaryCard icon={Star} label="Đánh giá 5 sao" value={fiveStarReviews} tone="green" />
+        </SummaryGrid>
 
         <section className="pt-review-list">
           <div className="pt-review-list-header">

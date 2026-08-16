@@ -23,5 +23,7 @@ public class PricePreviewResponse {
     private BigDecimal afterDiscount;      // Sau chiết khấu
     private BigDecimal credit;             // Credit (proration)
     private BigDecimal finalAmount;        // Phải trả
+    private Integer codeDiscount;          // % giảm thêm từ mã khuyến mãi / giới thiệu
+    private String codeType;               // PROMOTION | SALE_REFERRAL | null
     private String type;                   // RENEW | UPGRADE | UPGRADE_RENEW
 }

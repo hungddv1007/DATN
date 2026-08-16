@@ -49,7 +49,7 @@ const PackagesSection = () => {
               <h3 className="package-name">{pkg.name}</h3>
               <div className="package-price">Đơn giá: {formatPrice(pkg.dailyPrice)}đ/ngày</div>
               {pkg.minDays > 1 && (
-                <div style={{ fontSize: '0.85rem', color: '#f97316', fontWeight: 'bold', marginBottom: '15px' }}>
+                <div className="package-min-days">
                   Đăng ký từ {pkg.minDays} ngày
                 </div>
               )}

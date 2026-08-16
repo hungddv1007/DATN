@@ -30,6 +30,10 @@ public class MembershipResponse {
     private Integer holdReturnPercent;
     private Integer totalHoldDays;
     private LocalDate pausedAt;
+    private LocalDate holdUntil;
+    private Integer maxHoldDaysPerTime;
+    private Integer maxHoldTotalDays;
+    private Integer remainingHoldDays;
 
     // Thông tin giao dịch (mới nhất)
     private Integer transactionId;
@@ -39,6 +43,7 @@ public class MembershipResponse {
     private String paymentMethod;
     private String transactionStatus;
     private String promotionCode;
+    private String referralCode;
     private Integer discountPercent;
 
     // Tính toán

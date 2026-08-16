@@ -5,6 +5,7 @@ import AboutSection from '../../components/home/AboutSection';
 import PackagesSection from '../../components/home/PackagesSection';
 import PtSection from '../../components/home/PtSection';
 import NewsVideoSection from '../../components/home/NewsVideoSection';
+import CustomerReviewsSection from '../../components/home/CustomerReviewsSection';
 
 const HomePage = () => {
   return (
@@ -13,6 +14,7 @@ const HomePage = () => {
       <AboutSection />
       <PackagesSection />
       <PtSection />
+      <CustomerReviewsSection />
       <NewsVideoSection />
     </MainLayout>
   );

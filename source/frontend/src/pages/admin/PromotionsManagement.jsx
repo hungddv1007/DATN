@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import promotionService from '../../services/promotionService';
 import packageService from '../../services/packageService';
+import { confirmDialog } from '../../utils/dialog';
 import { Edit, Trash2, Plus, Eye, EyeOff, Tag } from 'lucide-react';
 import AdminPagination from '../../components/admin/AdminPagination';
 import useClientPagination from '../../hooks/useClientPagination';
@@ -72,7 +73,7 @@ const PromotionsManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn khuyến mãi này? (Khuyến nghị: Chỉ nên Ẩn)')) return;
+    if (!await confirmDialog('Bạn có chắc chắn muốn xóa vĩnh viễn khuyến mãi này? Khuyến nghị: chỉ nên ẩn khuyến mãi.', { confirmText: 'Xóa vĩnh viễn', danger: true })) return;
     try {
       await promotionService.deletePromotion(id);
       alert('Xóa thành công!');
@@ -84,7 +85,7 @@ const PromotionsManagement = () => {
 
   const handleToggleStatus = async (id, currentStatus) => {
     const action = currentStatus ? 'Ẩn' : 'Hiện';
-    if (!window.confirm(`Bạn có chắc chắn muốn ${action} khuyến mãi này?`)) return;
+    if (!await confirmDialog(`Bạn có chắc chắn muốn ${action.toLowerCase()} khuyến mãi này?`, { confirmText: action })) return;
     try {
       await promotionService.togglePromotionStatus(id);
       alert(`${action} thành công!`);
@@ -129,7 +130,7 @@ const PromotionsManagement = () => {
 
   return (
     <AdminLayout>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1>Quản lý Khuyến Mãi</h1>
         <button 
           onClick={handleAddNew}

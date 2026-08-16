@@ -2,18 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
+import serviceReviewService from '../../services/serviceReviewService';
+import { promptDialog } from '../../utils/dialog';
 import { CreditCard, CheckCircle, Clock, XCircle } from 'lucide-react';
 import './MemberTransactions.css';
 
 const MemberTransactions = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reviewedIds, setReviewedIds] = useState(new Set());
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const data = await membershipService.getMembershipHistory();
+        const [data, reviews] = await Promise.all([membershipService.getMembershipHistory(), serviceReviewService.mine()]);
         setHistory(data);
+        setReviewedIds(new Set(reviews.map(r => r.transactionId)));
       } catch (error) {
         console.error('Failed to fetch membership history', error);
       } finally {
@@ -49,6 +53,33 @@ const MemberTransactions = () => {
       case 'CANCELLED': return <span style={{ color: '#64748b', fontWeight: 600 }}>Đã hủy</span>;
       default: return <span>{status}</span>;
     }
+  };
+
+  const reviewTransaction = async (item) => {
+    const ratingStar = Number(await promptDialog('Hãy chọn số điểm từ 1 đến 5.', {
+      title: 'Đánh giá dịch vụ GymPro',
+      inputType: 'number',
+      inputMode: 'numeric',
+      min: 1,
+      max: 5,
+      defaultValue: 5,
+      confirmText: 'Tiếp tục',
+      required: true,
+    }));
+    if (!Number.isInteger(ratingStar) || ratingStar < 1 || ratingStar > 5) return;
+    const comment = await promptDialog('Ý kiến của bạn có thể được Admin duyệt để hiển thị tại mục Trải nghiệm thực tế.', {
+      title: 'Chia sẻ trải nghiệm',
+      placeholder: 'Nhập cảm nhận của bạn...',
+      multiline: true,
+      confirmText: 'Gửi đánh giá',
+      required: true,
+    });
+    if (!comment?.trim()) return;
+    try {
+      await serviceReviewService.create({ transactionId: item.transactionId, ratingStar, comment, displayName: true });
+      setReviewedIds(current => new Set([...current, item.transactionId]));
+      alert('Cảm ơn bạn! Đánh giá đang chờ Admin kiểm duyệt.');
+    } catch (e) { alert(e.response?.data?.message || 'Không thể gửi đánh giá'); }
   };
 
   return (
@@ -102,6 +133,10 @@ const MemberTransactions = () => {
                       <div className="tx-method">
                         Phương thức: <strong>{item.paymentMethod === 'BANK' ? 'Chuyển khoản' : item.paymentMethod === 'CASH' ? 'Tiền mặt' : item.paymentMethod}</strong>
                       </div>
+                      {item.transactionStatus === 'CONFIRMED' && <button className="btn-buy"
+                        disabled={reviewedIds.has(item.transactionId)} onClick={() => reviewTransaction(item)}>
+                        {reviewedIds.has(item.transactionId) ? 'Đã đánh giá' : 'Đánh giá dịch vụ'}
+                      </button>}
                     </div>
                   </div>
                 </div>

@@ -120,6 +120,7 @@ public class AuthService {
                         .role(roleMember)
                         .status(true)
                         .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                        .provider("GOOGLE")
                         .build();
 
                 userRepository.save(user);
@@ -142,6 +143,22 @@ public class AuthService {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException("Lỗi xác thực Google: " + e.getMessage());
+        }
+    }
+
+    public boolean verifyGoogleIdentity(String idTokenString, String expectedEmail) {
+        if (idTokenString == null || idTokenString.isBlank()) return false;
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(), GsonFactory.getDefaultInstance())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+            return idToken != null
+                    && Boolean.TRUE.equals(idToken.getPayload().getEmailVerified())
+                    && expectedEmail.equalsIgnoreCase(idToken.getPayload().getEmail());
+        } catch (Exception e) {
+            return false;
         }
     }
 
