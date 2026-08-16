@@ -363,3 +363,4 @@
     font-size: 16px;
   }
 }
+.ai-sale-handoff{border:1px solid #f97316;background:#7c2d1222;color:#fdba74;border-radius:7px;padding:6px 8px;cursor:pointer;font-size:.72rem}.ai-sale-handoff:disabled{opacity:.7}.ai-chat-message.sale .ai-message-bubble{background:#134e4a;color:#ecfeff}.ai-chat-message.sale .ai-message-avatar{background:#0f766e}

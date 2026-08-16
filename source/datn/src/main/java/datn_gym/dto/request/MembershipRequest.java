@@ -17,6 +17,14 @@ public class MembershipRequest {
     // Mã khuyến mãi (tùy chọn)
     private String promotionCode;
 
+    private String referralCode;
+
+    @jakarta.validation.constraints.AssertTrue(message = "Bạn phải đồng ý Điều khoản thành viên")
+    private boolean acceptedTerms;
+
+    @NotNull(message = "Thiếu phiên bản Điều khoản thành viên")
+    private Integer termsVersionId;
+
     // CASH | BANK | ONLINE
     private String paymentMethod;
 

@@ -30,5 +30,8 @@ public class TransactionResponse {
 
     // Khuyến mãi
     private String promotionCode;
+    private String referralCode;
     private Integer discountPercent;
+    private Boolean acceptedTerms;
+    private Integer termsVersion;
 }

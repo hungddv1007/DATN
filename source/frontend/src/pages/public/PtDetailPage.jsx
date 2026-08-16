@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import ptService from '../../services/ptService';
 import reviewService from '../../services/reviewService';
 import { resolveFileUrl } from '../../utils/fileUrl';
+import { confirmDialog } from '../../utils/dialog';
 import './PtDetailPage.css';
 
 const PtDetailPage = () => {
@@ -74,7 +75,7 @@ const PtDetailPage = () => {
   };
 
   const handleDelete = async () => {
-    if (!myReview || !window.confirm('Bạn có chắc muốn xóa đánh giá này?')) return;
+    if (!myReview || !await confirmDialog('Bạn có chắc muốn xóa đánh giá này?', { confirmText: 'Xóa đánh giá', danger: true })) return;
     setSaving(true);
     setError('');
     try {

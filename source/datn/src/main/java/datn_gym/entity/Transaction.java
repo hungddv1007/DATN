@@ -24,6 +24,10 @@ public class Transaction {
     @JoinColumn(name = "promotion_id")
     private Promotion promotion;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sale_code_id")
+    private SaleReferralCode saleCode;
+
     /**
      * Snapshot của thay đổi sẽ được áp dụng sau khi giao dịch được duyệt.
      * Không cập nhật Membership khi giao dịch vẫn còn PENDING.
@@ -70,13 +74,32 @@ public class Transaction {
     @JoinColumn(name = "confirmed_by")
     private User confirmedBy;
 
+    @Column(name = "accepted_terms", nullable = false)
+    @Builder.Default
+    private Boolean acceptedTerms = false;
+
+    @Column(name = "terms_accepted_at")
+    private LocalDateTime termsAcceptedAt;
+
+    @Column(name = "terms_version")
+    private Integer termsVersion;
+
+    @Column(name = "accepted_ip", length = 64)
+    private String acceptedIp;
+
+    @Column(name = "accepted_user_agent", length = 500)
+    private String acceptedUserAgent;
+
+    @Column(name = "customer_discount_percent", nullable = false)
+    @Builder.Default
+    private Integer customerDiscountPercent = 0;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Version
     @Column(name = "version", nullable = false)
-    @Builder.Default
-    private Long version = 0L;
+    private Long version;
 
     @PrePersist
     protected void onCreate() { 

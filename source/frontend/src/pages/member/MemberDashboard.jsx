@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
+import membershipTransferService from '../../services/membershipTransferService';
 import ptScheduleService from '../../services/ptScheduleService';
 import notificationService from '../../services/notificationService';
-import { Package, CreditCard, Bell, User, Calendar, Star, Utensils, X, CheckCheck, Trash2, HeartPulse } from 'lucide-react';
+import { Package, CreditCard, Bell, User, Calendar, Star, Utensils, X, CheckCheck, Trash2, HeartPulse, ArrowRightLeft } from 'lucide-react';
 import './DashboardPage.css';
 
 const MemberDashboard = () => {
@@ -14,6 +15,7 @@ const MemberDashboard = () => {
   const [latestTransaction, setLatestTransaction] = useState(null);
   const [schedule, setSchedule] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingTransfers, setPendingTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Notification modal state
@@ -53,6 +55,12 @@ const MemberDashboard = () => {
       setUnreadCount(countRes.unreadCount || 0);
     } catch (error) {
       console.log('Could not fetch unread notification count');
+    }
+    try {
+      const transferData = await membershipTransferService.incoming();
+      setPendingTransfers(transferData.filter(item => item.status === 'PENDING_RECIPIENT'));
+    } catch (error) {
+      console.log('Could not fetch incoming membership transfers');
     }
     setLoading(false);
   };
@@ -122,11 +130,15 @@ const MemberDashboard = () => {
               <p className="dash-value">Đang tải...</p>
             ) : membership ? (
               <p className="dash-value" style={{ color: '#22c55e' }}>{membership.packageName}</p>
+            ) : pendingTransfers.length > 0 ? (
+              <p className="dash-value dash-value-transfer">Có gói đang chờ nhận</p>
             ) : (
               <p className="dash-value">Chưa đăng ký</p>
             )}
             {membership ? (
               <Link to="/member/membership" className="dash-link">Quản lý gói tập →</Link>
+            ) : pendingTransfers.length > 0 ? (
+              <Link to="/member/membership-transfer" className="dash-link">Xem và nhận gói →</Link>
             ) : (
               <Link to="/packages" className="dash-link">Xem gói tập →</Link>
             )}
@@ -213,6 +225,23 @@ const MemberDashboard = () => {
             <h3>Hồ sơ cá nhân</h3>
             <p className="dash-value">{user?.email || ''}</p>
             <Link to="/profile" className="dash-link">Chỉnh sửa →</Link>
+          </div>
+
+          <div className={`dash-card transfer-dash-card ${pendingTransfers.length > 0 ? 'has-pending-transfer' : ''}`}>
+            <ArrowRightLeft size={32} className="dash-icon" />
+            <h3>Chuyển nhượng gói tập</h3>
+            {loading ? (
+              <p className="dash-value">Đang tải...</p>
+            ) : pendingTransfers.length > 0 ? (
+              <p className="dash-value dash-value-transfer">
+                {pendingTransfers.length} gói đang chờ nhận
+              </p>
+            ) : (
+              <p className="dash-value">Không có yêu cầu mới</p>
+            )}
+            <Link to="/member/membership-transfer" className="dash-link">
+              {pendingTransfers.length > 0 ? 'Nhận gói ngay →' : 'Xem chuyển nhượng →'}
+            </Link>
           </div>
         </div>
 

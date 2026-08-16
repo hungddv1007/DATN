@@ -125,6 +125,7 @@ const Header = () => {
     if (!user) return '/';
     if (user.role === 'ADMIN') return '/admin';
     if (user.role === 'PT') return '/pt/dashboard';
+    if (user.role === 'SALE') return '/sale';
     return '/member/dashboard';
   };
 

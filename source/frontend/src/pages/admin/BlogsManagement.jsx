@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import blogService from '../../services/blogService';
 import { resolveFileUrl } from '../../utils/fileUrl';
+import { confirmDialog } from '../../utils/dialog';
 import fileService from '../../services/fileService';
 import { Edit, Trash2, Plus, Eye, EyeOff, Image as ImageIcon, Upload } from 'lucide-react';
 import AdminPagination from '../../components/admin/AdminPagination';
@@ -63,7 +64,7 @@ const BlogsManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn bài viết này?')) return;
+    if (!await confirmDialog('Bạn có chắc chắn muốn xóa vĩnh viễn bài viết này?', { confirmText: 'Xóa vĩnh viễn', danger: true })) return;
     try {
       await blogService.deleteBlog(id);
       alert('Xóa thành công!');
@@ -75,7 +76,7 @@ const BlogsManagement = () => {
 
   const handleToggleStatus = async (id, currentStatus) => {
     const action = currentStatus === 'PUBLISHED' ? 'Chuyển về Bản Nháp' : 'Xuất bản';
-    if (!window.confirm(`Bạn có chắc chắn muốn ${action}?`)) return;
+    if (!await confirmDialog(`Bạn có chắc chắn muốn ${action}?`, { confirmText: action })) return;
     try {
       await blogService.toggleBlogStatus(id);
       alert(`${action} thành công!`);

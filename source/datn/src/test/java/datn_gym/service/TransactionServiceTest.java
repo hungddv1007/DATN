@@ -10,6 +10,7 @@ import datn_gym.repository.MembershipRepository;
 import datn_gym.repository.PromotionRepository;
 import datn_gym.repository.TransactionRepository;
 import datn_gym.repository.UserRepository;
+import datn_gym.repository.PackageHoldPolicyRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +38,9 @@ class TransactionServiceTest {
     private PromotionRepository promotionRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock private SaleService saleService;
+    @Mock private EmailService emailService;
+    @Mock private PackageHoldPolicyRepository holdPolicyRepository;
 
     private TransactionService service;
     private User admin;
@@ -48,8 +52,12 @@ class TransactionServiceTest {
                 membershipRepository,
                 promotionRepository,
                 userRepository,
-                new PaymentProperties("", "", "", "GYMPRO", 24));
+                new PaymentProperties("", "", "", "GYMPRO", 24),
+                saleService, emailService, holdPolicyRepository);
         admin = User.builder().id(99).email("admin@gym.local").fullName("Admin").build();
+        org.mockito.Mockito.lenient().when(holdPolicyRepository.findApplicable(
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(Optional.empty());
     }
 
     @Test

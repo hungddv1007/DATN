@@ -4,8 +4,10 @@ import PtLayout from '../../components/layout/PtLayout';
 import { SummaryCard, SummaryGrid } from '../../components/common/SummaryCards';
 import api from '../../services/api';
 import memberProfileService from '../../services/memberProfileService';
+import { confirmDialog } from '../../utils/dialog';
+import ptScheduleService from '../../services/ptScheduleService';
 import { analyzeNutrition, generateDietFromPhysicalProfile } from '../../services/nutritionAIService';
-import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus, Activity, Sparkles } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus, Activity, Sparkles, ChartNoAxesColumnIncreasing } from 'lucide-react';
 import PhysicalProfileView from '../../components/member/PhysicalProfileView';
 import '../admin/AdminManagement.css';
 import './PtMemberDetail.css';
@@ -13,8 +15,30 @@ import './PtMemberDetail.css';
 const TABS = [
   { key: 'physical', label: 'Hồ sơ thể chất', icon: Activity },
   { key: 'notes', label: 'Ghi chú', icon: StickyNote },
+  { key: 'training', label: 'Thống kê tập luyện', icon: ChartNoAxesColumnIncreasing },
   { key: 'diet', label: 'Khẩu phần ăn', icon: Utensils },
 ];
+
+const toISODate = date => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
+const getTrainingRange = period => {
+  const today = new Date();
+  const from = new Date(today);
+  const to = new Date(today);
+  const day = today.getDay() || 7;
+  if (period === 'CURRENT_WEEK' || period === 'PREVIOUS_WEEK') {
+    from.setDate(today.getDate() - day + 1 - (period === 'PREVIOUS_WEEK' ? 7 : 0));
+    to.setDate(from.getDate() + 6);
+  } else {
+    const monthOffset = period === 'PREVIOUS_MONTH' ? -1 : 0;
+    from.setFullYear(today.getFullYear(), today.getMonth() + monthOffset, 1);
+    to.setFullYear(today.getFullYear(), today.getMonth() + monthOffset + 1, 0);
+  }
+  return { from: toISODate(from), to: toISODate(to) };
+};
 
 const emptyDiet = {
   title: '', breakfast: '', snackMorning: '', lunch: '',
@@ -38,6 +62,10 @@ const PtMemberDetail = () => {
   const [physicalProfile, setPhysicalProfile] = useState(null);
   const [physicalProfileLoading, setPhysicalProfileLoading] = useState(false);
   const [physicalProfileError, setPhysicalProfileError] = useState('');
+  const [trainingPeriod, setTrainingPeriod] = useState('CURRENT_WEEK');
+  const [trainingStats, setTrainingStats] = useState(null);
+  const [trainingStatsLoading, setTrainingStatsLoading] = useState(false);
+  const [trainingStatsError, setTrainingStatsError] = useState('');
 
   // Diet state
   const [trainingDiet, setTrainingDiet] = useState(null);
@@ -102,6 +130,19 @@ const PtMemberDetail = () => {
     }
   }, [memberId]);
 
+  const fetchTrainingStats = useCallback(async () => {
+    setTrainingStatsLoading(true);
+    setTrainingStatsError('');
+    try {
+      const range = getTrainingRange(trainingPeriod);
+      setTrainingStats(await ptScheduleService.getTrainingStats(memberId, range.from, range.to));
+    } catch (err) {
+      setTrainingStatsError(err.response?.data?.message || 'Không thể tải thống kê tập luyện.');
+    } finally {
+      setTrainingStatsLoading(false);
+    }
+  }, [memberId, trainingPeriod]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -109,7 +150,8 @@ const PtMemberDetail = () => {
   useEffect(() => {
     if (activeTab === 'diet') fetchDiets();
     if (activeTab === 'physical') fetchPhysicalProfile();
-  }, [activeTab, fetchDiets, fetchPhysicalProfile]);
+    if (activeTab === 'training') fetchTrainingStats();
+  }, [activeTab, fetchDiets, fetchPhysicalProfile, fetchTrainingStats]);
 
   const startEditDiet = (type) => {
     setAnalysisResult(null);
@@ -258,7 +300,7 @@ const PtMemberDetail = () => {
   };
 
   const handleDeleteDiet = async (dietId) => {
-    if (!window.confirm('Bạn có chắc muốn xóa mẫu thực đơn này?')) return;
+    if (!await confirmDialog('Bạn có chắc muốn xóa mẫu thực đơn này?', { confirmText: 'Xóa thực đơn', danger: true })) return;
     try {
       await api.delete(`/pt/diets/${dietId}`);
       await fetchDiets();
@@ -287,7 +329,7 @@ const PtMemberDetail = () => {
   };
 
   const handleDeleteNote = async (noteId) => {
-    if (!window.confirm('Bạn có chắc muốn xóa ghi chú này?')) return;
+    if (!await confirmDialog('Bạn có chắc muốn xóa ghi chú này?', { confirmText: 'Xóa ghi chú', danger: true })) return;
     try {
       await api.delete(`/pt/notes/${noteId}`);
       const res = await api.get(`/pt/notes/member/${memberId}`);
@@ -767,6 +809,75 @@ const PtMemberDetail = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'training' && (
+        <section className="pt-training-stats">
+          <div className="pt-training-toolbar">
+            <div>
+              <h3>Hiệu quả tập luyện</h3>
+              <p>Theo dõi lịch sử để điều chỉnh giáo án cho buổi tiếp theo.</p>
+            </div>
+            <select value={trainingPeriod} onChange={event => setTrainingPeriod(event.target.value)}>
+              <option value="CURRENT_WEEK">Tuần này</option>
+              <option value="PREVIOUS_WEEK">Tuần trước</option>
+              <option value="CURRENT_MONTH">Tháng này</option>
+              <option value="PREVIOUS_MONTH">Tháng trước</option>
+            </select>
+          </div>
+
+          {trainingStatsLoading && <div className="pt-training-empty">Đang tải thống kê...</div>}
+          {!trainingStatsLoading && trainingStatsError && <div className="pt-training-error">{trainingStatsError}</div>}
+          {!trainingStatsLoading && trainingStats && <>
+            <div className="pt-training-summary">
+              <div><span>Hoàn thành</span><strong>{trainingStats.completedSessions}</strong></div>
+              <div><span>Đang lên lịch</span><strong>{trainingStats.scheduledSessions}</strong></div>
+              <div><span>Vắng mặt</span><strong>{trainingStats.noShowSessions}</strong></div>
+              <div><span>Thời gian đã tập</span><strong>{trainingStats.completedMinutes} phút</strong></div>
+            </div>
+
+            <div className="pt-training-breakdown">
+              <div>
+                <h4>Nhóm cơ đã tập</h4>
+                {Object.keys(trainingStats.muscleGroupFrequency || {}).length === 0
+                  ? <p>Chưa có dữ liệu hoàn thành trong kỳ.</p>
+                  : Object.entries(trainingStats.muscleGroupFrequency).map(([name, count]) => (
+                    <div className="pt-training-frequency" key={name}><span>{name}</span><strong>{count} buổi</strong></div>
+                  ))}
+              </div>
+              <div>
+                <h4>Bài tập đã thực hiện</h4>
+                {Object.keys(trainingStats.exerciseFrequency || {}).length === 0
+                  ? <p>Chưa có dữ liệu hoàn thành trong kỳ.</p>
+                  : Object.entries(trainingStats.exerciseFrequency).map(([name, count]) => (
+                    <div className="pt-training-frequency" key={name}><span>{name}</span><strong>{count} lần</strong></div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="pt-training-history">
+              <h4>Chi tiết các buổi tập</h4>
+              {(trainingStats.sessions || []).length === 0 ? (
+                <div className="pt-training-empty">Không có lịch tập trong khoảng thời gian này.</div>
+              ) : (
+                <div className="pt-training-table-wrap"><table>
+                  <thead><tr><th>Ngày</th><th>Giờ</th><th>Nội dung</th><th>Trạng thái</th><th>Kết quả</th></tr></thead>
+                  <tbody>{trainingStats.sessions.map(session => (
+                    <tr key={session.id}>
+                      <td>{new Date(`${session.scheduleDate}T00:00:00`).toLocaleDateString('vi-VN')}</td>
+                      <td>{session.startTime}–{session.endTime}</td>
+                      <td>{session.exerciseNote || '—'}</td>
+                      <td><span className={`pt-training-status status-${(session.status || '').toLowerCase()}`}>
+                        {{ SCHEDULED: 'Đã lên lịch', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', NO_SHOW: 'Vắng mặt' }[session.status] || session.status}
+                      </span></td>
+                      <td>{(session.exercises || []).map(item => item.exerciseName).join(', ') || session.actualNote || '—'}</td>
+                    </tr>
+                  ))}</tbody>
+                </table></div>
+              )}
+            </div>
+          </>}
+        </section>
       )}
 
       {activeTab === 'diet' && (

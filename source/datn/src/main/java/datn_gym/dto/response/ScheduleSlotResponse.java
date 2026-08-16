@@ -18,5 +18,8 @@ public class ScheduleSlotResponse {
     private String endTime;           // "18:30"
     private String exerciseNote;
     private String status;
+    private String actualNote;
+    private java.time.LocalDateTime completedAt;
+    private java.util.List<ScheduleExerciseResponse> exercises;
     private String recurringGroupId;  // UUID nhóm lặp lại
 }

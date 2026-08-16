@@ -1,6 +1,7 @@
 package datn_gym.service;
 
 import datn_gym.dto.request.MembershipRequest;
+import datn_gym.dto.request.PauseMembershipRequest;
 import datn_gym.dto.request.RenewRequest;
 import datn_gym.dto.request.UpgradeRequest;
 import datn_gym.dto.response.MembershipResponse;
@@ -32,13 +33,20 @@ public class MembershipService {
     private final TransactionRepository transactionRepository;
     private final PackageDiscountRepository discountRepository;
     private final PtProfileRepository ptProfileRepository;
+    private final PackageHoldPolicyRepository holdPolicyRepository;
+    private final MembershipTransferRepository transferRepository;
+    private final PolicyService policyService;
+    private final SaleService saleService;
 
     // ================================================================
     // A. ĐĂNG KÝ GÓI MỚI (NEW)
     // ================================================================
     @Transactional
-    public MembershipResponse registerPackage(String memberEmail, MembershipRequest request) {
+    public MembershipResponse registerPackage(String memberEmail, MembershipRequest request,
+                                               String acceptedIp, String userAgent) {
         User member = getMemberForMembershipUpdate(memberEmail);
+        PolicyVersion terms = policyService.requireAcceptedVersion(
+                request.getTermsVersionId(), "MEMBERSHIP_TERMS");
 
         expireOverdueMemberships();
 
@@ -64,7 +72,7 @@ public class MembershipService {
 
         // Tính tiền
         PriceCalc calc = calculatePrice(gymPackage, request.getDurationDays(),
-                request.getPromotionCode(), BigDecimal.ZERO);
+                request.getPromotionCode(), request.getReferralCode(), BigDecimal.ZERO, member, true);
 
         // Tạo Membership
         LocalDate startDate = LocalDate.now();
@@ -81,12 +89,22 @@ public class MembershipService {
                 .dailyPrice(gymPackage.getDailyPrice())
                 .build();
 
-        membershipRepository.save(membership);
+        applyHoldPolicy(membership, gymPackage, request.getDurationDays());
+
+        membership = membershipRepository.save(membership);
 
         // Tạo Transaction
         Transaction transaction = createTransaction(
                 membership, calc, request.getPaymentMethod(), "NEW",
                 request.getDurationDays(), gymPackage, pt);
+
+        transaction.setAcceptedTerms(true);
+        transaction.setTermsAcceptedAt(java.time.LocalDateTime.now());
+        transaction.setTermsVersion(terms.getVersionNumber());
+        transaction.setAcceptedIp(limit(acceptedIp, 64));
+        transaction.setAcceptedUserAgent(limit(userAgent, 500));
+        policyService.recordAcceptance(member, terms, transaction, "PURCHASE", acceptedIp, userAgent);
+        saleService.reserveRedemption(calc.saleCode, member, transaction);
 
         return toResponse(membership, transaction);
     }
@@ -99,6 +117,7 @@ public class MembershipService {
         User member = getMemberForMembershipUpdate(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         assertNoPendingTransaction(membership.getId());
+        assertNoPendingTransfer(membership.getId());
         GymPackage gymPackage = membership.getGymPackage();
 
         if (request.getDurationDays() < gymPackage.getMinDays()) {
@@ -108,7 +127,7 @@ public class MembershipService {
 
         // Tính tiền (dùng daily_price hiện tại của gói)
         PriceCalc calc = calculatePrice(gymPackage, request.getDurationDays(),
-                request.getPromotionCode(), BigDecimal.ZERO);
+                request.getPromotionCode(), null, BigDecimal.ZERO, member, true);
 
         Transaction transaction = createTransaction(
                 membership, calc, request.getPaymentMethod(), "RENEW",
@@ -125,6 +144,7 @@ public class MembershipService {
         User member = getMemberForMembershipUpdate(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         assertNoPendingTransaction(membership.getId());
+        assertNoPendingTransfer(membership.getId());
         GymPackage oldPackage = membership.getGymPackage();
         GymPackage newPackage = getActivePackage(request.getNewPackageId());
 
@@ -155,7 +175,7 @@ public class MembershipService {
 
         // Tính giá gói mới
         PriceCalc calc = calculatePrice(newPackage, totalNewDays,
-                request.getPromotionCode(), credit);
+                request.getPromotionCode(), null, credit, member, true);
 
         // Xử lý PT mới (nếu gói mới có canChoosePt)
         User pt = resolvePt(newPackage, request.getPtId());
@@ -171,23 +191,37 @@ public class MembershipService {
     // D. BẢO LƯU (PAUSE)
     // ================================================================
     @Transactional
-    public MembershipResponse pauseMembership(String memberEmail) {
+    public MembershipResponse pauseMembership(String memberEmail, PauseMembershipRequest request) {
         User member = getMemberForMembershipUpdate(memberEmail);
         Membership membership = getActiveMembership(member.getId());
         assertNoPendingTransaction(membership.getId());
-        GymPackage gymPackage = membership.getGymPackage();
+        assertNoPendingTransfer(membership.getId());
 
-        if (gymPackage.getMaxHoldTimes() <= 0) {
-            throw new IllegalArgumentException("Gói " + gymPackage.getName() + " không hỗ trợ bảo lưu!");
+        if (membership.getHoldMaxTimes() <= 0) {
+            throw new IllegalArgumentException("Gói " + membership.getGymPackage().getName()
+                    + " không hỗ trợ bảo lưu!");
         }
 
-        if (membership.getHoldCount() >= gymPackage.getMaxHoldTimes()) {
+        if (membership.getHoldCount() >= membership.getHoldMaxTimes()) {
             throw new IllegalArgumentException(
-                    "Bạn đã sử dụng hết " + gymPackage.getMaxHoldTimes() + " lượt bảo lưu cho gói này!");
+                    "Bạn đã sử dụng hết " + membership.getHoldMaxTimes() + " lượt bảo lưu cho gói này!");
+        }
+
+        int requestedDays = request.getDays();
+        int totalRemaining = membership.getHoldMaxTotalDays() - membership.getTotalHoldDays();
+        if (requestedDays > membership.getHoldMaxDaysPerTime()) {
+            throw new IllegalArgumentException("Mỗi lần chỉ được bảo lưu tối đa "
+                    + membership.getHoldMaxDaysPerTime() + " ngày");
+        }
+        if (requestedDays > totalRemaining) {
+            throw new IllegalArgumentException("Gói chỉ còn " + totalRemaining + " ngày bảo lưu");
         }
 
         membership.setStatus("PAUSED");
         membership.setPausedAt(LocalDate.now());
+        membership.setHoldUntil(LocalDate.now().plusDays(requestedDays));
+        membership.setEndDate(membership.getEndDate().plusDays(requestedDays));
+        membership.setPauseReason(request.getReason());
         membership.setHoldCount(membership.getHoldCount() + 1);
         membershipRepository.save(membership);
 
@@ -203,36 +237,17 @@ public class MembershipService {
         Membership membership = membershipRepository.findByUser_IdAndStatus(member.getId(), "PAUSED")
                 .orElseThrow(() -> new IllegalArgumentException("Bạn không có gói đang bảo lưu!"));
 
-        GymPackage gymPackage = membership.getGymPackage();
         LocalDate pausedAt = membership.getPausedAt();
         long holdDays = ChronoUnit.DAYS.between(pausedAt, LocalDate.now());
+        long unusedDays = membership.getHoldUntil() == null ? 0
+                : Math.max(0, ChronoUnit.DAYS.between(LocalDate.now(), membership.getHoldUntil()));
 
-        // Tính return_days = holdDays × holdReturnPercent / 100
-        int returnPercent = gymPackage.getHoldReturnPercent() != null ? gymPackage.getHoldReturnPercent() : 0;
-        long returnDays = (long) Math.floor(holdDays * returnPercent / 100.0);
-
-        membership.setEndDate(membership.getEndDate().plusDays(returnDays));
+        membership.setEndDate(membership.getEndDate().minusDays(unusedDays));
         membership.setStatus("ACTIVE");
         membership.setPausedAt(null);
+        membership.setHoldUntil(null);
+        membership.setPauseReason(null);
         membership.setTotalHoldDays(membership.getTotalHoldDays() + (int) holdDays);
-        membershipRepository.save(membership);
-
-        return toResponse(membership, getLatestTransaction(membership.getId()));
-    }
-
-    // ================================================================
-    // F. HỦY GÓI (CANCEL)
-    // ================================================================
-    @Transactional
-    public MembershipResponse cancelMembership(String memberEmail) {
-        User member = getMemberForMembershipUpdate(memberEmail);
-        Membership membership = membershipRepository.findByUser_IdAndStatusIn(
-                member.getId(), List.of("ACTIVE", "PAUSED"))
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói tập để hủy!"));
-        assertNoPendingTransaction(membership.getId());
-
-        membership.setStatus("CANCELLED");
-        membership.setPausedAt(null);
         membershipRepository.save(membership);
 
         return toResponse(membership, getLatestTransaction(membership.getId()));
@@ -264,6 +279,34 @@ public class MembershipService {
                 .credit(BigDecimal.ZERO)
                 .finalAmount(afterDiscount)
                 .type("RENEW")
+                .build();
+    }
+
+    @Transactional
+    public PricePreviewResponse previewPurchase(String memberEmail, int packageId, int days,
+                                                String promotionCode, String referralCode) {
+        User member = getMemberForMembershipUpdate(memberEmail);
+        GymPackage gymPackage = getActivePackage(packageId);
+        if (days < gymPackage.getMinDays()) {
+            throw new IllegalArgumentException(
+                    "Gói " + gymPackage.getName() + " yêu cầu đăng ký tối thiểu " + gymPackage.getMinDays() + " ngày!");
+        }
+        PriceCalc calc = calculatePrice(gymPackage, days, promotionCode, referralCode,
+                BigDecimal.ZERO, member, false);
+        return PricePreviewResponse.builder()
+                .newPackageName(gymPackage.getName())
+                .newDailyPrice(gymPackage.getDailyPrice())
+                .totalNewDays(days)
+                .grossAmount(calc.grossAmount)
+                .longTermDiscount(calc.longTermDiscountPercent)
+                .afterDiscount(calc.afterDiscount)
+                .credit(BigDecimal.ZERO)
+                .finalAmount(calc.finalAmount)
+                .codeDiscount(calc.promotion != null ? calc.promotion.getDiscountPercent()
+                        : calc.customerDiscountPercent)
+                .codeType(calc.promotion != null ? "PROMOTION"
+                        : calc.saleCode != null ? "SALE_REFERRAL" : null)
+                .type("NEW")
                 .build();
     }
 
@@ -361,6 +404,13 @@ public class MembershipService {
         }
     }
 
+    private void assertNoPendingTransfer(Integer membershipId) {
+        if (transferRepository.existsBySourceMembership_IdAndStatus(membershipId, "PENDING_RECIPIENT")) {
+            throw new IllegalArgumentException(
+                    "Gói tập đang có yêu cầu chuyển nhượng chờ xử lý. Vui lòng xử lý yêu cầu đó trước!");
+        }
+    }
+
     private User resolvePt(GymPackage gymPackage, Integer ptId) {
         if (Boolean.TRUE.equals(gymPackage.getCanChoosePt()) && ptId != null) {
             User pt = userRepository.findById(ptId)
@@ -397,10 +447,18 @@ public class MembershipService {
         BigDecimal finalAmount;
         int longTermDiscountPercent;
         Promotion promotion;
+        SaleReferralCode saleCode;
+        int customerDiscountPercent;
     }
 
-    private PriceCalc calculatePrice(GymPackage pkg, int days, String promoCode, BigDecimal credit) {
+    private PriceCalc calculatePrice(GymPackage pkg, int days, String promoCode, String referralCode,
+                                     BigDecimal credit, User member, boolean reservePromotion) {
         PriceCalc calc = new PriceCalc();
+
+        if (promoCode != null && !promoCode.isBlank()
+                && referralCode != null && !referralCode.isBlank()) {
+            throw new IllegalArgumentException("Không thể dùng đồng thời mã khuyến mãi và mã giới thiệu SALE");
+        }
 
         calc.grossAmount = pkg.getDailyPrice().multiply(BigDecimal.valueOf(days));
 
@@ -418,9 +476,15 @@ public class MembershipService {
             ).orElseThrow(() -> new IllegalArgumentException("Mã khuyến mãi không hợp lệ hoặc đã hết hạn!"));
 
             afterPromo = applyPercent(calc.afterDiscount, promotion.getDiscountPercent());
-            promotion.setCurrentUsage(promotion.getCurrentUsage() + 1);
-            promotionRepository.save(promotion);
+            if (reservePromotion) {
+                promotion.setCurrentUsage(promotion.getCurrentUsage() + 1);
+                promotionRepository.save(promotion);
+            }
             calc.promotion = promotion;
+        } else if (referralCode != null && !referralCode.isBlank()) {
+            calc.saleCode = saleService.resolveUsableCode(referralCode, member);
+            calc.customerDiscountPercent = calc.saleCode.getDiscountPercent();
+            afterPromo = applyPercent(calc.afterDiscount, calc.customerDiscountPercent);
         }
 
         // Trừ credit (proration)
@@ -445,6 +509,8 @@ public class MembershipService {
         Transaction transaction = Transaction.builder()
                 .membership(membership)
                 .promotion(calc.promotion)
+                .saleCode(calc.saleCode)
+                .customerDiscountPercent(calc.customerDiscountPercent)
                 .requestedDurationDays(requestedDurationDays)
                 .requestedPackage(requestedPackage)
                 .requestedPt(requestedPt)
@@ -454,8 +520,7 @@ public class MembershipService {
                 .type(type)
                 .status("PENDING")
                 .build();
-        transactionRepository.save(transaction);
-        return transaction;
+        return transactionRepository.save(transaction);
     }
 
     private MembershipResponse toResponse(Membership m, Transaction tx) {
@@ -480,10 +545,14 @@ public class MembershipService {
                 .ptId(m.getPt() != null ? m.getPt().getId() : null)
                 .createdAt(m.getCreatedAt())
                 .holdCount(m.getHoldCount())
-                .maxHoldTimes(pkg.getMaxHoldTimes())
-                .holdReturnPercent(pkg.getHoldReturnPercent())
+                .maxHoldTimes(m.getHoldMaxTimes())
+                .holdReturnPercent(100)
                 .totalHoldDays(m.getTotalHoldDays())
                 .pausedAt(m.getPausedAt())
+                .holdUntil(m.getHoldUntil())
+                .maxHoldDaysPerTime(m.getHoldMaxDaysPerTime())
+                .maxHoldTotalDays(m.getHoldMaxTotalDays())
+                .remainingHoldDays(Math.max(0, m.getHoldMaxTotalDays() - m.getTotalHoldDays()))
                 .transactionId(tx != null ? tx.getId() : null)
                 .transactionType(tx != null ? tx.getType() : null)
                 .originalAmount(tx != null ? tx.getOriginalAmount() : null)
@@ -491,9 +560,23 @@ public class MembershipService {
                 .paymentMethod(tx != null ? tx.getPaymentMethod() : null)
                 .transactionStatus(tx != null ? tx.getStatus() : null)
                 .promotionCode(tx != null && tx.getPromotion() != null ? tx.getPromotion().getCode() : null)
-                .discountPercent(tx != null && tx.getPromotion() != null ? tx.getPromotion().getDiscountPercent() : null)
+                .referralCode(tx != null && tx.getSaleCode() != null ? tx.getSaleCode().getCode() : null)
+                .discountPercent(tx == null ? null : tx.getPromotion() != null
+                        ? tx.getPromotion().getDiscountPercent() : tx.getCustomerDiscountPercent())
                 .remainingDays(remainingDays)
                 .build();
+    }
+
+    private void applyHoldPolicy(Membership membership, GymPackage gymPackage, int durationDays) {
+        PackageHoldPolicy policy = holdPolicyRepository.findApplicable(gymPackage.getId(), durationDays)
+                .orElse(null);
+        membership.setHoldMaxTimes(policy == null ? 0 : policy.getMaxHoldTimes());
+        membership.setHoldMaxDaysPerTime(policy == null ? 0 : policy.getMaxDaysPerHold());
+        membership.setHoldMaxTotalDays(policy == null ? 0 : policy.getMaxTotalHoldDays());
+    }
+
+    private String limit(String value, int max) {
+        return value == null ? null : value.substring(0, Math.min(value.length(), max));
     }
 
     private MembershipResponse toHistoryResponse(Transaction tx) {

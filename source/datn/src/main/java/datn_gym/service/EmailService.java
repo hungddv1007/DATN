@@ -9,6 +9,8 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -39,6 +41,36 @@ public class EmailService {
         );
     }
 
+    @Async
+    public void sendMembershipConfirmedEmail(
+            String recipientEmail,
+            String customerName,
+            Integer transactionId,
+            String packageName,
+            String transactionType,
+            BigDecimal amount,
+            Integer termsVersion) {
+        String content = """
+            <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+              <h2 style="color:#ff6b00">GymPro — Xác nhận giao dịch</h2>
+              <p>Xin chào <strong>%s</strong>, giao dịch của bạn đã được xác nhận thành công.</p>
+              <table style="width:100%%;border-collapse:collapse;background:#f8fafc">
+                <tr><td style="padding:10px">Mã giao dịch</td><td style="padding:10px"><strong>#%s</strong></td></tr>
+                <tr><td style="padding:10px">Gói tập</td><td style="padding:10px"><strong>%s</strong></td></tr>
+                <tr><td style="padding:10px">Loại giao dịch</td><td style="padding:10px">%s</td></tr>
+                <tr><td style="padding:10px">Số tiền</td><td style="padding:10px"><strong>%,.0f ₫</strong></td></tr>
+                <tr><td style="padding:10px">Điều khoản đã đồng ý</td><td style="padding:10px">Phiên bản %s</td></tr>
+              </table>
+              <p style="font-size:13px;color:#64748b">Thông tin giao dịch và phiên bản điều khoản được lưu tại GymPro để đối chiếu khi cần.</p>
+            </div>
+            """.formatted(
+                escape(customerName),
+                transactionId, escape(packageName), escape(transactionType),
+                amount, termsVersion == null ? "không áp dụng" : termsVersion);
+        sendHtml(recipientEmail,
+                "GymPro — Giao dịch #" + transactionId + " đã được xác nhận", content);
+    }
+
     private void sendEmail(
             String toEmail,
             String subject,
@@ -62,6 +94,26 @@ public class EmailService {
                     e.getMessage()
             );
         }
+    }
+
+    private void sendHtml(String toEmail, String subject, String content) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(content, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Lỗi gửi email giao dịch tới {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    private String escape(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace("\"", "&quot;");
     }
 
     private String buildEmailContent(String description, String otp) {

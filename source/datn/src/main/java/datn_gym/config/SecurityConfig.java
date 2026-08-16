@@ -89,6 +89,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/pt/**").hasRole("PT")
                 .requestMatchers("/api/nutrition/**").hasRole("PT")
 
+                // Nhân viên kinh doanh
+                .requestMatchers("/api/sale/**").hasRole("SALE")
+
                 // 4. API Hội viên - chỉ MEMBER (đặt trước rule GET chung)
                 .requestMatchers("/api/member/**").hasRole("MEMBER")
 

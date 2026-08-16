@@ -19,6 +19,10 @@ const ptScheduleService = {
     return response.data;
   },
 
+  completeSchedule: async (id, data) => (await api.post(`/pt/schedules/${id}/complete`, data)).data,
+  markNoShow: async (id) => (await api.post(`/pt/schedules/${id}/no-show`)).data,
+  getTrainingStats: async (memberId, from, to) => (await api.get(`/pt/members/${memberId}/training-stats`, { params: { from, to } })).data,
+
   // PT xóa 1 hoặc cả nhóm buổi tập
   deleteSchedule: async (id, deleteAll = false, notify = false) => {
     const response = await api.delete(`/pt/schedules/${id}`, {

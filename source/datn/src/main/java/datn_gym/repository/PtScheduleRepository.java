@@ -14,6 +14,9 @@ public interface PtScheduleRepository extends JpaRepository<PtSchedule, Integer>
     List<PtSchedule> findByPtIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
             Integer ptId, LocalDate startDate, LocalDate endDate, String status);
 
+    List<PtSchedule> findByPtIdAndScheduleDateBetweenOrderByScheduleDateAscStartTimeAsc(
+            Integer ptId, LocalDate startDate, LocalDate endDate);
+
     // PT lấy lịch trong 1 ngày (dùng cho overlap check)
     List<PtSchedule> findByPtIdAndScheduleDateAndStatus(
             Integer ptId, LocalDate date, String status);
@@ -29,13 +32,19 @@ public interface PtScheduleRepository extends JpaRepository<PtSchedule, Integer>
     List<PtSchedule> findByMemberIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
             Integer memberId, LocalDate startDate, LocalDate endDate, String status);
 
+    List<PtSchedule> findByMemberIdAndScheduleDateBetweenOrderByScheduleDateAscStartTimeAsc(
+            Integer memberId, LocalDate startDate, LocalDate endDate);
+
+    List<PtSchedule> findByPt_IdAndMember_IdAndScheduleDateBetweenOrderByScheduleDateAscStartTimeAsc(
+            Integer ptId, Integer memberId, LocalDate startDate, LocalDate endDate);
+
     // Đếm số member ACTIVE (distinct) mà PT đang kèm
     @Query("SELECT COUNT(DISTINCT s.member.id) FROM PtSchedule s " +
-           "WHERE s.pt.id = :ptId AND s.status = 'ACTIVE'")
+           "WHERE s.pt.id = :ptId AND s.status = 'SCHEDULED'")
     long countDistinctActiveMembersByPtId(@Param("ptId") Integer ptId);
 
     // Kiểm tra member đã có PT nào kèm chưa (đang ACTIVE)
     @Query("SELECT COUNT(s) > 0 FROM PtSchedule s " +
-           "WHERE s.member.id = :memberId AND s.status = 'ACTIVE'")
+           "WHERE s.member.id = :memberId AND s.status = 'SCHEDULED'")
     boolean existsActiveMemberSchedule(@Param("memberId") Integer memberId);
 }

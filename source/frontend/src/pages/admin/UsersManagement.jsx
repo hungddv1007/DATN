@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import userService from '../../services/userService';
 import { resolveFileUrl } from '../../utils/fileUrl';
+import { confirmDialog } from '../../utils/dialog';
 import { Lock, Unlock, ShieldAlert, CheckCircle, Search, Filter } from 'lucide-react';
 import AdminPagination from '../../components/admin/AdminPagination';
 import useClientPagination from '../../hooks/useClientPagination';
@@ -34,7 +35,7 @@ const UsersManagement = () => {
 
   const handleToggleStatus = async (id, currentStatus) => {
     const action = currentStatus ? 'Khóa' : 'Mở khóa';
-    if (!window.confirm(`Bạn có chắc chắn muốn ${action} tài khoản này?`)) return;
+    if (!await confirmDialog(`Bạn có chắc chắn muốn ${action.toLowerCase()} tài khoản này?`, { confirmText: action, danger: currentStatus })) return;
     try {
       await userService.toggleUserStatus(id);
       alert(`${action} thành công!`);

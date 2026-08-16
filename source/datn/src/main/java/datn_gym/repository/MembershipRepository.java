@@ -5,17 +5,30 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
 
 public interface MembershipRepository extends JpaRepository<Membership, Integer> {
 
     Optional<Membership> findByUser_IdAndStatus(Integer userId, String status);
     Optional<Membership> findByUser_IdAndStatusIn(Integer userId, List<String> statuses);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM Membership m WHERE m.id = :id")
+    Optional<Membership> findByIdForUpdate(@Param("id") Integer id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM Membership m WHERE m.user.id = :userId AND m.status IN :statuses")
+    Optional<Membership> findCurrentByUserIdForUpdate(@Param("userId") Integer userId,
+                                                      @Param("statuses") List<String> statuses);
+
+    List<Membership> findByStatusAndHoldUntilLessThanEqual(String status, LocalDate date);
     Optional<Membership> findByUser_IdAndStatusAndEndDateGreaterThanEqual(
             Integer userId, String status, LocalDate date);
     List<Membership> findByUser_IdOrderByCreatedAtDesc(Integer userId);

@@ -116,6 +116,9 @@ public class AiChatService {
             Integer conversationId,
             AiChatRequest request) {
         AiConversation conversation = requireOwnedConversation(email, conversationId);
+        if (List.of("WAITING_SALE", "SALE_ASSIGNED", "SALE_JOINED").contains(conversation.getHandoffStatus())) {
+            throw new IllegalArgumentException("Cuộc trò chuyện đang ở chế độ tư vấn trực tiếp; hãy dùng ô chat với nhân viên SALE");
+        }
         String userText = request.getMessage().trim();
         boolean deterministicAccountQuery = isDeterministicAccountQuery(userText);
         if (!deterministicAccountQuery) {
@@ -346,6 +349,11 @@ public class AiChatService {
                 .title(conversation.getTitle())
                 .physicalDataConsent(Boolean.TRUE.equals(
                         conversation.getPhysicalDataConsent()))
+                .saleDataConsent(Boolean.TRUE.equals(conversation.getSaleDataConsent()))
+                .handoffStatus(conversation.getHandoffStatus())
+                .assignedSaleId(conversation.getAssignedSale() == null ? null : conversation.getAssignedSale().getId())
+                .assignedSaleName(conversation.getAssignedSale() == null ? null : conversation.getAssignedSale().getFullName())
+                .handoffAt(conversation.getHandoffAt())
                 .createdAt(conversation.getCreatedAt())
                 .updatedAt(conversation.getUpdatedAt())
                 .build();
@@ -357,6 +365,8 @@ public class AiChatService {
                 .role(message.getRole())
                 .content(message.getContent())
                 .model(message.getModel())
+                .senderUserId(message.getSenderUser() == null ? null : message.getSenderUser().getId())
+                .senderName(message.getSenderUser() == null ? null : message.getSenderUser().getFullName())
                 .createdAt(message.getCreatedAt())
                 .build();
     }

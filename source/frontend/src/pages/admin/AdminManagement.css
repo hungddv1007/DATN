@@ -308,3 +308,463 @@
 .btn-primary-action.green:hover {
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
 }
+
+/* =========================================
+   BUSINESS & SERVICE REVIEW PAGE
+   ========================================= */
+.business-page {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  color: #e2e8f0;
+}
+
+.business-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.business-header h1 {
+  margin: 8px 0 6px;
+  color: #f8fafc;
+  font-size: clamp(1.75rem, 3vw, 2.35rem);
+  line-height: 1.15;
+}
+
+.business-header p,
+.business-panel-heading p {
+  margin: 0;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.business-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #fb923c;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.business-alert {
+  margin-bottom: 20px;
+  padding: 13px 16px;
+  border: 1px solid rgba(239, 68, 68, 0.38);
+  border-radius: 10px;
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
+}
+
+.business-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.business-summary-card {
+  display: flex;
+  align-items: center;
+  min-height: 112px;
+  gap: 15px;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid #2b3a50;
+  border-radius: 14px;
+  background: #172236;
+  position: relative;
+}
+
+.business-summary-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--summary-color);
+}
+
+.business-summary-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--summary-color) 45%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--summary-color) 14%, transparent);
+  color: var(--summary-color);
+}
+
+.business-summary-card div:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.business-summary-card span {
+  color: #9fb0c8;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.business-summary-card strong {
+  color: #fff;
+  font-size: clamp(1.35rem, 2vw, 1.7rem);
+  line-height: 1.1;
+}
+
+.summary-blue { --summary-color: #3b82f6; }
+.summary-orange { --summary-color: #f97316; }
+.summary-yellow { --summary-color: #eab308; }
+
+.business-panel {
+  margin-bottom: 24px;
+  padding: 22px;
+  border: 1px solid #2b3a50;
+  border-radius: 14px;
+  background: #172236;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.15);
+}
+
+.business-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 20px;
+}
+
+.business-panel-heading h2 {
+  margin: 0 0 3px;
+  color: #f8fafc;
+  font-size: 1.18rem;
+}
+
+.business-panel-heading p {
+  font-size: 0.9rem;
+}
+
+.business-heading-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border: 1px solid rgba(59, 130, 246, 0.32);
+  border-radius: 11px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+}
+
+.business-heading-icon.icon-orange {
+  border-color: rgba(249, 115, 22, 0.32);
+  background: rgba(249, 115, 22, 0.12);
+  color: #fb923c;
+}
+
+.business-heading-icon.icon-yellow {
+  border-color: rgba(234, 179, 8, 0.32);
+  background: rgba(234, 179, 8, 0.12);
+  color: #facc15;
+}
+
+.business-sale-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.business-sale-form label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.business-sale-form label > span {
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.business-sale-form input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #3b4b63;
+  border-radius: 8px;
+  outline: none;
+  background: #0f192a;
+  color: #f8fafc;
+  font: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.business-sale-form input::placeholder { color: #64748b; }
+.business-sale-form input:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.14);
+}
+
+.business-primary-btn,
+.business-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s, filter 0.2s, background 0.2s;
+}
+
+.business-primary-btn {
+  min-height: 42px;
+  padding: 0 17px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, 0.23);
+}
+
+.business-primary-btn:hover:not(:disabled),
+.business-action-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.business-primary-btn:disabled { cursor: wait; opacity: 0.6; }
+
+.business-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 11px;
+}
+
+.business-table { min-width: 720px; }
+.business-table th { background: #111c2e; }
+.business-table th:last-child,
+.business-table td:last-child { text-align: right; }
+.business-table tbody tr:last-child td { border-bottom: none; }
+
+.business-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.business-person > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  border-radius: 50%;
+  background: rgba(249, 115, 22, 0.12);
+  color: #fb923c;
+  font-weight: 800;
+}
+
+.business-status,
+.business-featured,
+.business-rating {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.business-status.status-active,
+.business-status.status-paid,
+.business-status.status-approved {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+.business-status.status-pending,
+.business-status.status-payable {
+  border-color: rgba(234, 179, 8, 0.32);
+  background: rgba(234, 179, 8, 0.12);
+  color: #fde047;
+}
+
+.business-status.status-locked,
+.business-status.status-reversed,
+.business-status.status-rejected {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+.business-featured {
+  margin-top: 7px;
+  border-color: rgba(234, 179, 8, 0.3);
+  background: rgba(234, 179, 8, 0.1);
+  color: #fde047;
+}
+
+.business-rating {
+  border-color: rgba(234, 179, 8, 0.26);
+  background: rgba(234, 179, 8, 0.1);
+  color: #facc15;
+}
+
+.business-code { color: #93c5fd; }
+.business-money { color: #86efac; }
+.business-muted { color: #64748b; }
+.business-empty { padding: 32px !important; text-align: center !important; color: #94a3b8 !important; }
+
+.business-review-content {
+  min-width: 260px;
+  max-width: 560px;
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+.business-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.business-action-btn {
+  min-height: 34px;
+  padding: 7px 11px;
+  font-size: 0.78rem;
+}
+
+.action-pay,
+.action-approve { background: #15803d; }
+.action-reject { background: rgba(239, 68, 68, 0.13); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
+
+.review-admin-header {
+  align-items: center;
+}
+
+.review-admin-counts {
+  display: flex;
+  gap: 10px;
+}
+
+.review-admin-counts > span {
+  display: grid;
+  min-width: 108px;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid #2b3a50;
+  border-radius: 10px;
+  background: #172236;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.review-admin-counts strong {
+  color: #fff;
+  font-size: 1.25rem;
+}
+
+.review-pinned-count > span {
+  min-width: 180px;
+}
+
+.review-filter-tabs {
+  flex-wrap: wrap;
+}
+
+.review-admin-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.review-admin-panel .business-table-scroll {
+  border: none;
+  border-radius: 0;
+}
+
+.review-pinned-row td {
+  background: rgba(234, 179, 8, 0.035);
+}
+
+.review-pinned-row td:first-child {
+  box-shadow: inset 3px 0 #eab308;
+}
+
+.review-member-cell {
+  display: grid;
+  min-width: 150px;
+  gap: 4px;
+}
+
+.review-member-cell small {
+  color: #64748b;
+}
+
+.review-featured-only {
+  margin-top: 0;
+}
+
+.review-not-featured {
+  display: inline-flex;
+  padding: 5px 9px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.07);
+  color: #94a3b8;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.review-admin-actions .business-action-btn:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.action-pin {
+  background: #b45309;
+}
+
+.action-unpin {
+  border: 1px solid rgba(234, 179, 8, 0.32);
+  background: rgba(234, 179, 8, 0.1);
+  color: #fde047;
+}
+
+@media (max-width: 1200px) {
+  .business-sale-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .business-primary-btn { min-height: 42px; }
+}
+
+@media (max-width: 760px) {
+  .business-header { align-items: flex-start; }
+  .business-summary { grid-template-columns: 1fr; }
+  .business-summary-card { min-height: 92px; }
+  .business-panel { padding: 16px; }
+  .business-sale-form { grid-template-columns: 1fr; padding: 14px; }
+  .business-primary-btn { width: 100%; }
+  .business-panel-heading { align-items: flex-start; }
+  .review-admin-header { align-items: stretch; flex-direction: column; }
+  .review-admin-counts { width: 100%; }
+  .review-admin-counts > span { flex: 1; }
+}

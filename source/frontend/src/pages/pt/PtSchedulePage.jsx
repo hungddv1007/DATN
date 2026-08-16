@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import PtLayout from '../../components/layout/PtLayout';
 import ptScheduleService from '../../services/ptScheduleService';
+import exerciseService from '../../services/exerciseService';
 import ptDashboardService from '../../services/ptDashboardService';
-import { ChevronLeft, ChevronRight, Plus, X, Repeat, Bell, Trash2 } from 'lucide-react';
+import { confirmDialog } from '../../utils/dialog';
+import { ChevronLeft, ChevronRight, Plus, X, Repeat, Bell, Trash2, CircleCheckBig, UserX } from 'lucide-react';
 import TimePickerWheel from '../../components/common/TimePickerWheel';
 import {
   getScheduleTransitionLabel,
@@ -35,6 +37,18 @@ function addDays(d, n) {
   x.setDate(x.getDate() + n);
   return x;
 }
+
+const memberPalette = (memberId) => {
+  const hue = (Number(memberId || 0) * 67 + 18) % 360;
+  return { '--member-color': `hsl(${hue} 78% 62%)`, '--member-bg': `hsla(${hue},55%,22%,.55)` };
+};
+
+const STATUS_LABELS = {
+  SCHEDULED: 'Đã lên lịch',
+  COMPLETED: 'Đã hoàn thành',
+  CANCELLED: 'Đã hủy',
+  NO_SHOW: 'Vắng mặt',
+};
 
 const PtSchedulePage = () => {
   const location = useLocation();
@@ -73,6 +87,14 @@ const PtSchedulePage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteAll, setDeleteAll] = useState(false);
   const [deleteNotify, setDeleteNotify] = useState(false);
+
+  // Completion state
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [availableExercises, setAvailableExercises] = useState([]);
+  const [completionRows, setCompletionRows] = useState([
+    { exerciseId: '', setCount: '', repCount: '', weightKg: '', durationMinutes: '', note: '' }
+  ]);
+  const [actualNote, setActualNote] = useState('');
 
   // ============ Computed ============
   const getDisplayedMonday = useCallback(() => {
@@ -180,6 +202,83 @@ const PtSchedulePage = () => {
     setShowModal(false);
     setEditingSchedule(null);
     setShowDeleteConfirm(false);
+    setShowCompletion(false);
+  };
+
+  const openCompletion = async () => {
+    setFormError('');
+    setActualNote(editingSchedule?.actualNote || '');
+    setCompletionRows([{ exerciseId: '', setCount: '', repCount: '', weightKg: '', durationMinutes: '', note: '' }]);
+    try {
+      if (availableExercises.length === 0) {
+        setAvailableExercises(await exerciseService.getAllExercises());
+      }
+      setShowCompletion(true);
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Không thể tải từ điển bài tập.');
+    }
+  };
+
+  const updateCompletionRow = (index, field, value) => {
+    setCompletionRows(rows => rows.map((row, rowIndex) =>
+      rowIndex === index ? { ...row, [field]: value } : row
+    ));
+  };
+
+  const addCompletionRow = () => setCompletionRows(rows => [
+    ...rows,
+    { exerciseId: '', setCount: '', repCount: '', weightKg: '', durationMinutes: '', note: '' }
+  ]);
+
+  const removeCompletionRow = (index) => setCompletionRows(rows =>
+    rows.length === 1 ? rows : rows.filter((_, rowIndex) => rowIndex !== index)
+  );
+
+  const confirmCompletion = async () => {
+    if (!editingSchedule) return;
+    if (completionRows.some(row => !row.exerciseId)) {
+      setFormError('Vui lòng chọn bài tập cho tất cả các dòng.');
+      return;
+    }
+    setSubmitting(true);
+    setFormError('');
+    try {
+      const exercises = completionRows.map(row => ({
+        exerciseId: Number(row.exerciseId),
+        setCount: row.setCount ? Number(row.setCount) : null,
+        repCount: row.repCount ? Number(row.repCount) : null,
+        weightKg: row.weightKg !== '' ? Number(row.weightKg) : null,
+        durationMinutes: row.durationMinutes ? Number(row.durationMinutes) : null,
+        note: row.note.trim() || null,
+      }));
+      await ptScheduleService.completeSchedule(editingSchedule.id, {
+        actualNote: actualNote.trim() || null,
+        exercises,
+      });
+      showToast('Đã ghi nhận kết quả buổi tập.');
+      closeModal();
+      await loadSchedules();
+    } catch (err) {
+      setFormError(err.response?.data?.message || err.response?.data || 'Không thể hoàn thành buổi tập.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const confirmNoShow = async () => {
+    if (!editingSchedule || !await confirmDialog(`Xác nhận ${editingSchedule.memberName} vắng buổi tập này?`, { confirmText: 'Xác nhận vắng', danger: true })) return;
+    setSubmitting(true);
+    setFormError('');
+    try {
+      await ptScheduleService.markNoShow(editingSchedule.id);
+      showToast('Đã ghi nhận học viên vắng mặt.');
+      closeModal();
+      await loadSchedules();
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Không thể ghi nhận vắng mặt.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ============ Form Submit ============
@@ -193,6 +292,11 @@ const PtSchedulePage = () => {
     }
     if (timeToMinutes(formEndTime) <= timeToMinutes(formStartTime)) {
       setFormError('Giờ kết thúc phải sau giờ bắt đầu.');
+      return;
+    }
+    const duration = timeToMinutes(formEndTime) - timeToMinutes(formStartTime);
+    if (duration < 30 || duration > 120) {
+      setFormError('Mỗi buổi tập phải kéo dài tối thiểu 30 phút và tối đa 2 giờ.');
       return;
     }
 
@@ -362,11 +466,14 @@ const PtSchedulePage = () => {
                     <button
                       type="button"
                       key={item.id}
-                      className={`pts-card ${item.recurringGroupId ? 'pts-card-recurring' : 'pts-card-confirmed'}`}
+                      className={`pts-card pts-status-${(item.status || 'SCHEDULED').toLowerCase()} ${item.recurringGroupId ? 'pts-card-recurring' : 'pts-card-confirmed'}`}
+                      style={memberPalette(item.memberId)}
                       onClick={() => openEditModal(item)}
                     >
                       <div className="pts-card-top">
                         <span className="pts-time-badge">{item.startTime} - {item.endTime}</span>
+                        {item.recurringGroupId && <Repeat size={13} title="Lịch lặp lại" />}
+                        {item.status && item.status !== 'SCHEDULED' && <span className="pts-status-badge">{STATUS_LABELS[item.status] || item.status}</span>}
                       </div>
                       {getScheduleTransitionLabel(item.startTime, item.endTime) && (
                         <div className="pts-cross-block">
@@ -426,11 +533,14 @@ const PtSchedulePage = () => {
                         {items.map(item => (
                           <button
                             key={item.id}
-                            className={`pts-card ${item.recurringGroupId ? 'pts-card-recurring' : 'pts-card-confirmed'}`}
+                            className={`pts-card pts-status-${(item.status || 'SCHEDULED').toLowerCase()} ${item.recurringGroupId ? 'pts-card-recurring' : 'pts-card-confirmed'}`}
+                            style={memberPalette(item.memberId)}
                             onClick={() => openEditModal(item)}
                           >
                             <div className="pts-card-top">
                               <span className="pts-time-badge">{item.startTime} - {item.endTime}</span>
+                              {item.recurringGroupId && <Repeat size={13} title="Lịch lặp lại" />}
+                              {item.status && item.status !== 'SCHEDULED' && <span className="pts-status-badge">{STATUS_LABELS[item.status] || item.status}</span>}
                             </div>
                             {getScheduleTransitionLabel(item.startTime, item.endTime) && (
                               <div className="pts-cross-block">
@@ -494,6 +604,25 @@ const PtSchedulePage = () => {
                   <div className="pts-form-group">
                     <label className="pts-form-label">Học viên</label>
                     <div className="pts-form-static">{editingSchedule.memberName}</div>
+                    <div className={`pts-modal-status pts-modal-status-${(editingSchedule.status || 'SCHEDULED').toLowerCase()}`}>
+                      {STATUS_LABELS[editingSchedule.status || 'SCHEDULED']}
+                    </div>
+                    {editingSchedule.status === 'COMPLETED' && (
+                      <div className="pts-completed-summary">
+                        {(editingSchedule.exercises || []).map(exercise => (
+                          <div key={exercise.id || `${exercise.exerciseId}-${exercise.exerciseName}`}>
+                            <strong>{exercise.exerciseName}</strong>
+                            <span>{[
+                              exercise.setCount && `${exercise.setCount} hiệp`,
+                              exercise.repCount && `${exercise.repCount} lần`,
+                              exercise.weightKg != null && `${exercise.weightKg} kg`,
+                              exercise.durationMinutes && `${exercise.durationMinutes} phút`,
+                            ].filter(Boolean).join(' · ') || 'Đã thực hiện'}</span>
+                          </div>
+                        ))}
+                        {editingSchedule.actualNote && <p>{editingSchedule.actualNote}</p>}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -602,15 +731,21 @@ const PtSchedulePage = () => {
 
                 {/* Actions */}
                 <div className="pts-modal-footer">
-                  {editingSchedule && (
-                    <button type="button" className="pts-btn-danger" onClick={handleDeleteClick}>
-                      <Trash2 size={14} /> Hủy buổi này
+                  {editingSchedule && (editingSchedule.status || 'SCHEDULED') === 'SCHEDULED' && <>
+                    <button type="button" className="pts-btn-complete" onClick={openCompletion}>
+                      <CircleCheckBig size={14} /> Hoàn thành
                     </button>
-                  )}
+                    <button type="button" className="pts-btn-no-show" onClick={confirmNoShow}>
+                      <UserX size={14} /> Vắng mặt
+                    </button>
+                    <button type="button" className="pts-btn-danger" onClick={handleDeleteClick}>
+                      <Trash2 size={14} /> Hủy buổi
+                    </button>
+                  </>}
                   <button type="button" className="pts-btn-secondary" onClick={closeModal}>Đóng</button>
-                  <button type="submit" className="pts-btn-primary" disabled={submitting}>
+                  {(!editingSchedule || (editingSchedule.status || 'SCHEDULED') === 'SCHEDULED') && <button type="submit" className="pts-btn-primary" disabled={submitting}>
                     {submitting ? 'Đang xử lý...' : (editingSchedule ? 'Cập Nhật' : 'Xác Nhận Đặt Lịch')}
-                  </button>
+                  </button>}
                 </div>
               </form>
 
@@ -647,6 +782,56 @@ const PtSchedulePage = () => {
                       <button className="pts-btn-secondary" onClick={() => setShowDeleteConfirm(false)}>Hủy bỏ</button>
                       <button className="pts-btn-danger" onClick={confirmDelete} disabled={submitting}>
                         {submitting ? 'Đang xóa...' : 'Xác nhận hủy'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showCompletion && (
+                <div className="pts-delete-overlay">
+                  <div className="pts-delete-card pts-completion-card">
+                    <h4>Ghi nhận kết quả buổi tập</h4>
+                    <p>Chọn các bài tập <strong>{editingSchedule?.memberName}</strong> đã thực hiện.</p>
+                    <div className="pts-completion-rows">
+                      {completionRows.map((row, index) => (
+                        <div className="pts-completion-row" key={index}>
+                          <select className="pts-form-control" value={row.exerciseId}
+                            onChange={event => updateCompletionRow(index, 'exerciseId', event.target.value)}>
+                            <option value="">-- Chọn bài tập --</option>
+                            {availableExercises.map(exercise => (
+                              <option value={exercise.id} key={exercise.id}>
+                                {exercise.name}{exercise.muscleGroup ? ` · ${exercise.muscleGroup}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="pts-completion-metrics">
+                            <input type="number" min="1" placeholder="Hiệp" value={row.setCount}
+                              onChange={event => updateCompletionRow(index, 'setCount', event.target.value)} />
+                            <input type="number" min="1" placeholder="Lần" value={row.repCount}
+                              onChange={event => updateCompletionRow(index, 'repCount', event.target.value)} />
+                            <input type="number" min="0" step="0.5" placeholder="Kg" value={row.weightKg}
+                              onChange={event => updateCompletionRow(index, 'weightKg', event.target.value)} />
+                            <input type="number" min="1" placeholder="Phút" value={row.durationMinutes}
+                              onChange={event => updateCompletionRow(index, 'durationMinutes', event.target.value)} />
+                            <button type="button" title="Xóa dòng" onClick={() => removeCompletionRow(index)}><Trash2 size={15} /></button>
+                          </div>
+                          <input className="pts-form-control" placeholder="Ghi chú riêng cho bài tập (tùy chọn)"
+                            value={row.note} onChange={event => updateCompletionRow(index, 'note', event.target.value)} />
+                        </div>
+                      ))}
+                    </div>
+                    <button type="button" className="pts-btn-add-exercise" onClick={addCompletionRow}>
+                      <Plus size={15} /> Thêm bài tập
+                    </button>
+                    <textarea className="pts-form-control pts-completion-note" rows="3"
+                      placeholder="Nhận xét chung sau buổi tập (tùy chọn)" value={actualNote}
+                      onChange={event => setActualNote(event.target.value)} />
+                    {formError && <div className="pts-form-error">{formError}</div>}
+                    <div className="pts-delete-actions">
+                      <button type="button" className="pts-btn-secondary" onClick={() => setShowCompletion(false)}>Quay lại</button>
+                      <button type="button" className="pts-btn-complete" onClick={confirmCompletion} disabled={submitting}>
+                        <CircleCheckBig size={15} /> {submitting ? 'Đang lưu...' : 'Xác nhận hoàn thành'}
                       </button>
                     </div>
                   </div>

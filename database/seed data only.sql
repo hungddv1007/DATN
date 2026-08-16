@@ -6,6 +6,7 @@
 INSERT INTO roles (name) VALUES ('ADMIN');
 INSERT INTO roles (name) VALUES ('PT');
 INSERT INTO roles (name) VALUES ('MEMBER');
+INSERT INTO roles (name) VALUES ('SALE');
 
 -- 2. Insert Users (100 users: 1 ADMIN, 15 PT, 84 MEMBER)
 -- Mat khau cho tat ca la '123456' (da ma hoa BCrypt)
@@ -109,6 +110,15 @@ INSERT INTO users (role_id, email, password, full_name, phone, status, provider)
 INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member82@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi', N'Võ Đức Thắng', '0917187026', 1, 'LOCAL');
 INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member83@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi', N'Ngô Gia Khánh', '0917459615', 1, 'LOCAL');
 INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (3, 'member84@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi', N'Ngô Gia Kiệt', '0965780913', 1, 'LOCAL');
+
+-- Avatar demo: chỉ cập nhật cột avatar, không thay đổi bất kỳ thông tin tài khoản nào.
+-- DiceBear tạo ảnh ổn định theo seed; không dùng email, họ tên hay dữ liệu cá nhân trong URL.
+UPDATE users
+SET avatar = CASE
+    WHEN role_id = 1 THEN 'https://api.dicebear.com/10.x/initials/svg?seed=GymPro-Admin&backgroundColor=f97316&fontFamily=Arial'
+    WHEN role_id = 2 THEN CONCAT('https://api.dicebear.com/10.x/lorelei/svg?seed=gympro-pt-', RIGHT('00' + CAST(id - 1 AS VARCHAR(2)), 2), '&backgroundColor=e2e8f0')
+    ELSE CONCAT('https://api.dicebear.com/10.x/adventurer-neutral/svg?seed=gympro-member-', RIGHT('000' + CAST(id - 16 AS VARCHAR(3)), 3), '&backgroundColor=e2e8f0')
+END;
 
 -- 3. Insert PT Profiles
 INSERT INTO pt_profiles (user_id, specialization, bio, certificates, rating_score, max_members) VALUES (2, N'Tăng cơ (Bulking)', N'Huấn luyện viên với 6 năm kinh nghiệm, chuyên sâu về tăng cơ (bulking).', N'Chứng chỉ PT Quốc tế NASM', 4.7, 5);
@@ -586,31 +596,31 @@ WHERE status IN ('ACTIVE', 'PAUSED')
   AND end_date < CAST(GETDATE() AS DATE);
 
 -- 9. Insert Exercises
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Bench Press', N'Ngực', N'Bài tập bench press tập trung nhóm cơ ngực, thực hiện đúng kỹ thuật để tránh chấn thương.', 16, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Incline Dumbbell Press', N'Ngực', N'Bài tập incline dumbbell press tập trung nhóm cơ ngực, thực hiện đúng kỹ thuật để tránh chấn thương.', 4, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Push Up', N'Ngực', N'Bài tập push up tập trung nhóm cơ ngực, thực hiện đúng kỹ thuật để tránh chấn thương.', 12, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Pull Up', N'Lưng', N'Bài tập pull up tập trung nhóm cơ lưng, thực hiện đúng kỹ thuật để tránh chấn thương.', 12, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Lat Pulldown', N'Lưng', N'Bài tập lat pulldown tập trung nhóm cơ lưng, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Deadlift', N'Lưng', N'Bài tập deadlift tập trung nhóm cơ lưng, thực hiện đúng kỹ thuật để tránh chấn thương.', 10, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Barbell Row', N'Lưng', N'Bài tập barbell row tập trung nhóm cơ lưng, thực hiện đúng kỹ thuật để tránh chấn thương.', 9, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Squat', N'Chân', N'Bài tập squat tập trung nhóm cơ chân, thực hiện đúng kỹ thuật để tránh chấn thương.', 2, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Leg Press', N'Chân', N'Bài tập leg press tập trung nhóm cơ chân, thực hiện đúng kỹ thuật để tránh chấn thương.', 7, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Lunges', N'Chân', N'Bài tập lunges tập trung nhóm cơ chân, thực hiện đúng kỹ thuật để tránh chấn thương.', 12, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Leg Curl', N'Chân', N'Bài tập leg curl tập trung nhóm cơ chân, thực hiện đúng kỹ thuật để tránh chấn thương.', 12, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Overhead Press', N'Vai', N'Bài tập overhead press tập trung nhóm cơ vai, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Lateral Raise', N'Vai', N'Bài tập lateral raise tập trung nhóm cơ vai, thực hiện đúng kỹ thuật để tránh chấn thương.', 14, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Face Pull', N'Vai', N'Bài tập face pull tập trung nhóm cơ vai, thực hiện đúng kỹ thuật để tránh chấn thương.', 10, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Bicep Curl', N'Tay', N'Bài tập bicep curl tập trung nhóm cơ tay, thực hiện đúng kỹ thuật để tránh chấn thương.', 7, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Tricep Pushdown', N'Tay', N'Bài tập tricep pushdown tập trung nhóm cơ tay, thực hiện đúng kỹ thuật để tránh chấn thương.', 13, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Hammer Curl', N'Tay', N'Bài tập hammer curl tập trung nhóm cơ tay, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Plank', N'Bụng', N'Bài tập plank tập trung nhóm cơ bụng, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Crunch', N'Bụng', N'Bài tập crunch tập trung nhóm cơ bụng, thực hiện đúng kỹ thuật để tránh chấn thương.', 4, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Hanging Leg Raise', N'Bụng', N'Bài tập hanging leg raise tập trung nhóm cơ bụng, thực hiện đúng kỹ thuật để tránh chấn thương.', 6, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Running (Treadmill)', N'Cardio', N'Bài tập running (treadmill) tập trung nhóm cơ cardio, thực hiện đúng kỹ thuật để tránh chấn thương.', 8, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Cycling', N'Cardio', N'Bài tập cycling tập trung nhóm cơ cardio, thực hiện đúng kỹ thuật để tránh chấn thương.', 4, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Jump Rope', N'Cardio', N'Bài tập jump rope tập trung nhóm cơ cardio, thực hiện đúng kỹ thuật để tránh chấn thương.', 14, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Burpee', N'Toàn thân', N'Bài tập burpee tập trung nhóm cơ toàn thân, thực hiện đúng kỹ thuật để tránh chấn thương.', 10, 1);
-INSERT INTO exercises (name, muscle_group, description, created_by, is_active) VALUES (N'Kettlebell Swing', N'Toàn thân', N'Bài tập kettlebell swing tập trung nhóm cơ toàn thân, thực hiện đúng kỹ thuật để tránh chấn thương.', 9, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Bench Press', N'Ngực', N'Nằm chắc trên ghế, giữ bả vai thu về sau, bàn chân bám sàn và hạ thanh đòn có kiểm soát về giữa ngực. Không bật thanh đòn khỏi ngực; chọn mức tạ cho phép duy trì cổ tay và khuỷu tay ổn định.', 'https://www.youtube.com/watch?v=SCVCLChPQFY', 16, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Incline Dumbbell Press', N'Ngực', N'Đặt ghế dốc vừa phải, giữ ngực mở và ép hai bả vai vào ghế. Hạ tạ đến khi khuỷu tay thấp hơn vai một chút rồi đẩy lên theo đường vòng cung tự nhiên, tránh va hai quả tạ.', 'https://www.youtube.com/watch?v=8iPEnn-ltC8', 4, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Push Up', N'Ngực', N'Giữ cơ thể thành một đường thẳng từ đầu đến gót chân, siết bụng và mông. Hạ ngực gần sàn với khuỷu tay chếch khoảng 30–45 độ, sau đó đẩy người lên mà không võng lưng.', 'https://www.youtube.com/watch?v=IODxDxX7oi4', 12, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Pull Up', N'Lưng', N'Bắt đầu ở tư thế treo chủ động, kéo bả vai xuống trước khi kéo ngực hướng lên xà. Giữ thân người ổn định, không vung chân; hạ chậm đến khi tay gần duỗi hết.', 'https://www.youtube.com/watch?v=eGo4IYlbE5g', 12, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Lat Pulldown', N'Lưng', N'Ngồi vững, hơi ngả thân và kéo thanh về phần trên ngực bằng chuyển động của khuỷu tay. Không kéo sau gáy hoặc giật người; trả thanh lên chậm để cơ xô được kéo giãn.', 'https://www.youtube.com/watch?v=CAwf7n6Luuc', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Deadlift', N'Lưng', N'Đặt thanh đòn trên giữa bàn chân, giữ lưng trung lập và tạo lực căng trước khi nhấc. Đẩy sàn bằng chân, đưa hông về trước khi đứng thẳng; không ngửa lưng ở vị trí khóa.', 'https://www.youtube.com/watch?v=ZaTM37cfiDs', 10, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Barbell Row', N'Lưng', N'Gập hông, giữ cột sống trung lập và thân người ổn định. Kéo thanh về vùng bụng dưới bằng khuỷu tay, siết lưng ở cuối biên độ rồi hạ tạ có kiểm soát, không dùng đà từ lưng dưới.', 'https://www.youtube.com/watch?v=Nqh7q3zDCoQ', 9, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Squat', N'Chân', N'Đặt chân ở độ rộng thoải mái, giữ bàn chân bám sàn và đầu gối đi cùng hướng mũi chân. Hạ hông trong biên độ kiểm soát, giữ thân chắc rồi đẩy sàn để đứng lên.', 'https://www.youtube.com/watch?v=gcNh17Ckjgg', 2, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Leg Press', N'Chân', N'Đặt lưng và hông sát đệm, bàn chân ổn định trên bàn đạp. Hạ bàn đạp đến khi vẫn giữ được hông trên ghế, sau đó đẩy lên nhưng không khóa cứng đầu gối.', 'https://www.youtube.com/watch?v=IZxyjW7MPJQ', 7, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Lunges', N'Chân', N'Bước chân đủ dài để hai đầu gối gập tự nhiên, giữ thân người thẳng và trọng tâm ổn định. Hạ gối sau gần sàn, sau đó đẩy qua toàn bộ bàn chân trước để trở về vị trí ban đầu.', 'https://www.youtube.com/watch?v=QOVaHwm-Q6U', 12, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Leg Curl', N'Chân', N'Điều chỉnh trục máy ngang khớp gối và đệm nằm ngay trên gót chân. Gập gối có kiểm soát, siết cơ đùi sau ở cuối biên độ rồi trả tạ chậm, không nhấc hông khỏi đệm.', 'https://www.youtube.com/watch?v=1Tq3QdYUuHs', 12, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Overhead Press', N'Vai', N'Giữ thân người chắc, cổ tay thẳng trên khuỷu tay và thanh đòn gần cơ thể. Đẩy tạ qua đầu theo đường thẳng, không ưỡn lưng quá mức; hạ tạ có kiểm soát về vai.', 'https://www.youtube.com/watch?v=2yjwXTZQDDI', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Lateral Raise', N'Vai', N'Giữ khuỷu tay hơi cong, nâng tạ sang hai bên đến gần ngang vai bằng lực cơ vai. Dùng mức tạ vừa phải, không nhún người và hạ tạ chậm để duy trì kiểm soát.', 'https://www.youtube.com/watch?v=3VcKaXpzqRo', 14, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Face Pull', N'Vai', N'Kéo dây về phía trán, tách hai đầu dây và xoay cánh tay ra ngoài. Giữ vai thấp, ngực mở và không ngả người quá nhiều; ưu tiên cảm nhận vai sau và lưng trên.', 'https://www.youtube.com/watch?v=rep-qVOkqgk', 10, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Bicep Curl', N'Tay', N'Giữ khuỷu tay gần thân và cổ tay trung lập. Gập khuỷu để nâng tạ mà không đẩy vai ra trước, siết cơ tay trước ở đỉnh rồi hạ chậm đến gần duỗi hết tay.', 'https://www.youtube.com/watch?v=ykJmrZ5v0Oo', 7, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Tricep Pushdown', N'Tay', N'Cố định khuỷu tay sát thân, kéo tay cầm xuống đến khi cánh tay gần duỗi thẳng. Chỉ di chuyển cẳng tay, không dùng trọng lượng cơ thể; trả cáp lên chậm và giữ vai thư giãn.', 'https://www.youtube.com/watch?v=2-LAMcpzODU', 13, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Hammer Curl', N'Tay', N'Cầm tạ với lòng bàn tay hướng vào nhau, giữ khuỷu tay cố định cạnh thân. Nâng tạ không dùng đà, dừng ngắn ở đỉnh rồi hạ có kiểm soát để tác động cơ cánh tay và cẳng tay.', 'https://www.youtube.com/watch?v=zC3nLlEvin4', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Plank', N'Bụng', N'Đặt khuỷu tay dưới vai, siết bụng và mông để giữ đầu, lưng và chân trên một đường thẳng. Thở đều, không võng lưng hoặc nâng hông quá cao; dừng khi không còn giữ được tư thế.', 'https://www.youtube.com/watch?v=pSHjTRCQxIw', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Crunch', N'Bụng', N'Nằm co gối, áp lưng dưới xuống sàn và nâng phần vai bằng lực cơ bụng. Không kéo cổ bằng tay; cuộn thân trong biên độ ngắn rồi hạ chậm, giữ căng vùng bụng.', 'https://www.youtube.com/watch?v=Xyd_fa5zoEU', 4, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Hanging Leg Raise', N'Bụng', N'Treo người chắc trên xà, giữ vai chủ động và hạn chế đung đưa. Cuộn xương chậu để nâng gối hoặc chân bằng cơ bụng, sau đó hạ chậm; bắt đầu bằng phiên bản co gối nếu cần.', 'https://www.youtube.com/watch?v=Pr1ieGZ5atk', 6, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Running (Treadmill)', N'Cardio', N'Khởi động bằng đi bộ nhanh, sau đó tăng tốc dần theo khả năng. Giữ thân thẳng, bước chân tự nhiên và không bám tay vịn; giảm tốc từ từ ở cuối buổi thay vì dừng đột ngột.', 'https://www.youtube.com/watch?v=_kGESn8ArrU', 8, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Cycling', N'Cardio', N'Điều chỉnh yên để đầu gối vẫn hơi cong khi bàn đạp ở vị trí thấp nhất. Giữ lưng trung lập, đạp tròn và tăng kháng lực từ từ; tránh để hông lắc sang hai bên.', 'https://www.youtube.com/watch?v=4Hl1WAGKjMc', 4, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Jump Rope', N'Cardio', N'Giữ khuỷu tay gần thân, xoay dây chủ yếu bằng cổ tay và bật nhảy thấp trên mũi bàn chân. Bắt đầu bằng nhịp chậm, nghỉ khi bắp chân mất kiểm soát và ưu tiên bề mặt có độ đàn hồi.', 'https://www.youtube.com/watch?v=1BZM2Vre5oc', 14, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Burpee', N'Toàn thân', N'Từ tư thế đứng, chống tay xuống sàn, đưa chân về sau vào tư thế plank rồi trở lại và bật lên. Giữ bụng chắc khi về plank; có thể bỏ phần chống đẩy hoặc bật nhảy để giảm độ khó.', 'https://www.youtube.com/watch?v=auBLPXO8Fww', 10, 1);
+INSERT INTO exercises (name, muscle_group, description, video_url, created_by, is_active) VALUES (N'Kettlebell Swing', N'Toàn thân', N'Đây là chuyển động gập hông, không phải squat. Đưa tạ về sau giữa hai chân rồi duỗi hông mạnh để tạ bay đến ngang ngực; giữ tay thư giãn, lưng trung lập và không nâng tạ bằng vai.', 'https://www.youtube.com/watch?v=YSxHifyI6s8', 9, 1);
 
 -- 10. Insert PT Notes
 INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES (4, 53, N'Buổi tập hôm nay hội viên thực hiện tốt các bài tập được giao, cần tăng dần khối lượng tạ.', '2026-01-20 19:44:00');
@@ -761,21 +771,21 @@ INNER JOIN (
 ) AS review_summary ON review_summary.pt_id = profile.user_id;
 
 -- 14. Insert Blogs
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (4, N'5 bài tập ngực hiệu quả nhất cho người mới', N'Bài viết chia sẻ kiến thức về chủ đề: 5 bài tập ngực hiệu quả nhất cho người mới. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-03-03 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (5, N'Chế độ dinh dưỡng tăng cơ giảm mỡ khoa học', N'Bài viết chia sẻ kiến thức về chủ đề: chế độ dinh dưỡng tăng cơ giảm mỡ khoa học. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-15 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (11, N'Hướng dẫn tập Squat đúng kỹ thuật, tránh chấn thương', N'Bài viết chia sẻ kiến thức về chủ đề: hướng dẫn tập squat đúng kỹ thuật, tránh chấn thương. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-04-28 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (16, N'Lợi ích của Yoga đối với sức khỏe tinh thần', N'Bài viết chia sẻ kiến thức về chủ đề: lợi ích của yoga đối với sức khỏe tinh thần. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-21 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (2, N'Cách xây dựng lịch tập gym cho người bận rộn', N'Bài viết chia sẻ kiến thức về chủ đề: cách xây dựng lịch tập gym cho người bận rộn. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-02-23 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (9, N'Top 10 thực phẩm giàu protein cho dân gym', N'Bài viết chia sẻ kiến thức về chủ đề: top 10 thực phẩm giàu protein cho dân gym. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-03-31 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (11, N'Vì sao bạn nên khởi động trước khi tập nặng?', N'Bài viết chia sẻ kiến thức về chủ đề: vì sao bạn nên khởi động trước khi tập nặng?. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'DRAFT', '2026-06-03 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (11, N'Cardio vào buổi sáng hay buổi tối tốt hơn?', N'Bài viết chia sẻ kiến thức về chủ đề: cardio vào buổi sáng hay buổi tối tốt hơn?. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-04 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (13, N'Cách phục hồi cơ bắp nhanh sau buổi tập nặng', N'Bài viết chia sẻ kiến thức về chủ đề: cách phục hồi cơ bắp nhanh sau buổi tập nặng. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'DRAFT', '2026-07-07 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (6, N'Những sai lầm phổ biến khi tập Gym mới bắt đầu', N'Bài viết chia sẻ kiến thức về chủ đề: những sai lầm phổ biến khi tập gym mới bắt đầu. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-07-08 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (14, N'Bí quyết duy trì động lực tập luyện lâu dài', N'Bài viết chia sẻ kiến thức về chủ đề: bí quyết duy trì động lực tập luyện lâu dài. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-06-18 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (11, N'So sánh Gym truyền thống và Calisthenics', N'Bài viết chia sẻ kiến thức về chủ đề: so sánh gym truyền thống và calisthenics. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-01 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (13, N'Hướng dẫn uống nước đúng cách khi tập luyện', N'Bài viết chia sẻ kiến thức về chủ đề: hướng dẫn uống nước đúng cách khi tập luyện. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-01-25 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (6, N'Vai trò của giấc ngủ trong quá trình tăng cơ', N'Bài viết chia sẻ kiến thức về chủ đề: vai trò của giấc ngủ trong quá trình tăng cơ. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-05-14 00:00:00');
-INSERT INTO blogs (author_id, title, content, status, created_at) VALUES (10, N'Tổng quan các gói tập tại GymPro và quyền lợi', N'Bài viết chia sẻ kiến thức về chủ đề: tổng quan các gói tập tại gympro và quyền lợi. Nội dung được biên soạn bởi đội ngũ huấn luyện viên GymPro nhằm giúp hội viên tập luyện an toàn và hiệu quả hơn.', 'PUBLISHED', '2026-05-24 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (4, N'5 bài tập ngực hiệu quả cho người mới', CONCAT(N'Một buổi tập ngực tốt không cần quá nhiều động tác. Người mới nên ưu tiên kỹ thuật, biên độ kiểm soát và khả năng tiến bộ đều đặn thay vì chạy theo mức tạ.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Năm lựa chọn dễ áp dụng gồm Bench Press để phát triển sức mạnh tổng thể; Incline Dumbbell Press nhấn vào phần ngực trên; Push Up giúp làm chủ trọng lượng cơ thể; Chest Press Machine tạo quỹ đạo ổn định; Cable Fly bổ sung chuyển động khép tay. Hãy chọn ba đến bốn bài, thực hiện hai đến ba hiệp mỗi bài và dừng hiệp khi vẫn còn giữ được kỹ thuật tốt.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Khởi động vai và ngực trước buổi tập, giữ bả vai ổn định, không bật tạ khỏi ngực. Nếu xuất hiện đau nhói ở vai hoặc khuỷu tay, hãy dừng bài và trao đổi với PT.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/strength-training/art-20046670'), 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-03-03 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (5, N'Chế độ dinh dưỡng tăng cơ giảm mỡ khoa học', CONCAT(N'Tăng cơ và giảm mỡ là quá trình cần phối hợp giữa tập kháng lực, tổng năng lượng phù hợp và khẩu phần có đủ chất. Không có một thực phẩm riêng lẻ nào quyết định kết quả.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Hãy xây dựng mỗi bữa quanh một nguồn đạm như thịt nạc, cá, trứng, sữa, đậu hũ hoặc các loại đậu; bổ sung rau, trái cây và nguồn tinh bột ít tinh chế. Với người tập luyện khỏe mạnh, tài liệu của ISSN cho biết khoảng 1,4–2,0 g protein trên mỗi kg cân nặng mỗi ngày thường đáp ứng mục tiêu duy trì và phát triển cơ. Con số cụ thể vẫn cần điều chỉnh theo thể trạng và mục tiêu năng lượng.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Để giảm mỡ, chọn mức thâm hụt năng lượng vừa phải và theo dõi xu hướng cân nặng trong nhiều tuần. Đừng cắt bỏ hoàn toàn tinh bột hoặc chất béo; ưu tiên chế độ có thể duy trì lâu dài, ngủ đủ và tập đều.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://pubmed.ncbi.nlm.nih.gov/28642676/'), 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-01-15 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (11, N'Hướng dẫn tập Squat đúng kỹ thuật, tránh chấn thương', CONCAT(N'Squat là chuyển động nền tảng cho chân và hông, nhưng không có một độ rộng chân duy nhất phù hợp với mọi người. Mục tiêu là tìm tư thế giúp bàn chân bám sàn, đầu gối ổn định và cột sống được kiểm soát.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Bắt đầu với chân rộng gần bằng vai và mũi chân xoay nhẹ ra ngoài. Hít vào, siết thân người, đồng thời gập gối và hông để hạ xuống. Đầu gối nên đi cùng hướng mũi chân; trọng lượng phân bố trên toàn bàn chân. Đứng lên bằng cách đẩy sàn, giữ ngực và hông chuyển động đồng bộ.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Người mới nên tập Bodyweight Squat hoặc Goblet Squat trước khi dùng thanh đòn. Tăng tải từ từ và chỉ hạ sâu trong biên độ vẫn kiểm soát được. Đau nhói không phải dấu hiệu bình thường; khi đó hãy dừng lại và nhờ PT kiểm tra kỹ thuật.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/weight-training/art-20045842'), 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-04-28 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (16, N'Lợi ích của Yoga đối với sức khỏe tinh thần', CONCAT(N'Yoga kết hợp tư thế, nhịp thở và sự tập trung. Khi luyện tập đều đặn với cường độ phù hợp, hoạt động này có thể hỗ trợ quản lý căng thẳng, cân bằng, giấc ngủ và sức khỏe cảm xúc.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Người mới có thể bắt đầu bằng buổi 15–20 phút với các tư thế cơ bản, tập trung vào nhịp thở chậm và chuyển động có kiểm soát. Không cần ép cơ thể đạt hình dáng giống người hướng dẫn; phạm vi chuyển động nên phù hợp với khả năng hiện tại.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Yoga nhìn chung an toàn khi được hướng dẫn đúng, nhưng vẫn có nguy cơ chấn thương. Người có bệnh nền, đang mang thai hoặc có vấn đề cơ xương khớp nên hỏi chuyên gia y tế và báo cho giáo viên trước buổi tập. Yoga là phương thức hỗ trợ sức khỏe, không thay thế điều trị chuyên môn.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.nccih.nih.gov/health/tips/things-you-should-know-about-yoga'), 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-01-21 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (2, N'Cách xây dựng lịch tập gym cho người bận rộn', CONCAT(N'Lịch tập hiệu quả nhất là lịch bạn có thể duy trì. Với người bận rộn, hai hoặc ba buổi toàn thân mỗi tuần thường thực tế hơn một lịch chia quá nhiều ngày.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Mỗi buổi 40–60 phút có thể gồm một động tác chân, một động tác đẩy, một động tác kéo, một bài cho hông và một bài core. Ưu tiên bài đa khớp, chuẩn bị sẵn trang phục và đặt lịch tập như một cuộc hẹn. Nếu chỉ có 20 phút, hãy tập một phiên ngắn thay vì bỏ cả buổi.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'CDC khuyến nghị người trưởng thành tích lũy ít nhất 150 phút hoạt động aerobic mức vừa mỗi tuần và tập tăng cường cơ ít nhất hai ngày. Bạn có thể chia nhỏ thời lượng trong tuần; hoạt động ít vẫn tốt hơn không vận động. Hãy dành ngày nghỉ phù hợp cho nhóm cơ vừa tập.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.cdc.gov/physical-activity-basics/guidelines/adults.html'), 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-02-23 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (9, N'10 thực phẩm giàu protein dễ đưa vào thực đơn', CONCAT(N'Protein hỗ trợ sửa chữa và duy trì mô cơ, nhưng khẩu phần tốt vẫn cần đa dạng. Mười lựa chọn dễ tìm gồm ức gà, thịt bò nạc, cá, trứng, sữa chua Hy Lạp, sữa, đậu hũ, đậu lăng, đậu gà và cá ngừ.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Hãy phân bổ nguồn đạm qua các bữa thay vì dồn toàn bộ vào buổi tối. Kết hợp protein với rau, trái cây, tinh bột và chất béo phù hợp giúp bữa ăn cân bằng hơn. Khi chọn thực phẩm đóng hộp, nên xem lượng natri và khẩu phần trên nhãn.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Whey có thể tiện lợi nhưng không bắt buộc nếu thực đơn đã đáp ứng nhu cầu. Người có bệnh thận, bệnh chuyển hóa hoặc chế độ ăn đặc biệt cần trao đổi với bác sĩ hoặc chuyên gia dinh dưỡng trước khi tăng mạnh lượng protein.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://pubmed.ncbi.nlm.nih.gov/28642676/'), 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-03-31 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (11, N'Vì sao bạn nên khởi động trước khi tập nặng?', CONCAT(N'Khởi động giúp cơ thể chuyển dần từ trạng thái nghỉ sang vận động bằng cách tăng nhiệt độ cơ và lưu lượng máu. Một phần khởi động tốt cũng cho bạn cơ hội kiểm tra mức độ sẵn sàng của khớp và kỹ thuật trong ngày.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Hãy dành 5–10 phút cho vận động nhẹ, sau đó thực hiện các chuyển động gần giống bài chính. Trước Squat có thể dùng squat không tạ và vài hiệp tăng dần; trước Bench Press có thể xoay vai, kích hoạt lưng trên và nâng thanh nhẹ. Mỗi hiệp khởi động nên chuẩn bị cho hiệp làm việc, không làm bạn kiệt sức.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Giãn cơ tĩnh kéo dài ngay trước khi nâng nặng không phải lúc nào cũng cần thiết. Ưu tiên khởi động động và tăng tải theo từng bước. Nếu một chuyển động gây đau bất thường, không nên cố vượt qua chỉ vì đã lên lịch tập.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/exercise/art-20045517'), 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80', 'DRAFT', '2026-06-03 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (11, N'Cardio buổi sáng hay buổi tối tốt hơn?', CONCAT(N'Không có khung giờ duy nhất tốt nhất cho tất cả mọi người. Thời điểm phù hợp là thời điểm bạn tỉnh táo, có thể duy trì đều và không làm ảnh hưởng đáng kể đến giấc ngủ hoặc buổi tập sức mạnh.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Cardio buổi sáng có ưu điểm là dễ hoàn thành trước khi lịch làm việc phát sinh. Cardio buổi tối có thể phù hợp với người có nhiệt độ cơ thể và mức năng lượng cao hơn vào cuối ngày. Nếu tập gần giờ ngủ khiến bạn khó thư giãn, hãy giảm cường độ hoặc chuyển buổi tập sớm hơn.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Thay vì tranh luận về giờ tập, hãy theo dõi ba yếu tố: mức năng lượng, hiệu suất và khả năng duy trì trong vài tuần. Mục tiêu sức khỏe tổng quát quan trọng hơn việc chọn sáng hay tối; bạn có thể chia nhỏ thời gian vận động trong tuần.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.cdc.gov/physical-activity-basics/guidelines/adults.html'), 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-01-04 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (13, N'Cách phục hồi cơ bắp sau buổi tập nặng', CONCAT(N'Phục hồi không chỉ là nằm nghỉ. Cơ thể cần thời gian, dinh dưỡng, nước và giấc ngủ để thích nghi với kích thích tập luyện. Đau cơ nhẹ sau buổi tập có thể xảy ra, nhưng đau nhói, sưng rõ hoặc giảm khả năng vận động cần được chú ý.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Sau buổi tập, hãy ăn một bữa cân bằng có protein và carbohydrate, uống nước theo cảm giác khát và mức mất mồ hôi. Tránh tập nặng cùng một nhóm cơ vào hai ngày liên tiếp; có thể đi bộ nhẹ hoặc thực hiện vận động phục hồi nếu cảm thấy dễ chịu.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Theo dõi hiệu suất, giấc ngủ và mức mệt qua nhiều ngày. Nếu sức mạnh liên tục giảm, nhịp tim nghỉ tăng hoặc mất hứng thú tập, hãy giảm tải và trao đổi với PT. Phục hồi tốt giúp bạn duy trì tiến bộ thay vì chỉ hoàn thành thật nhiều buổi.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/strength-training/art-20046670'), 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80', 'DRAFT', '2026-07-07 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (6, N'Những sai lầm phổ biến khi mới tập Gym', CONCAT(N'Người mới thường muốn thấy kết quả nhanh nên dễ tăng tạ quá sớm, tập quá nhiều buổi hoặc sao chép lịch của người có kinh nghiệm. Điều này làm kỹ thuật xuống cấp và khiến việc duy trì trở nên khó khăn.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Hãy tránh năm lỗi chính: bỏ qua khởi động; dùng đà thay cho cơ mục tiêu; nín thở khi nâng tạ; chỉ tập nhóm cơ yêu thích; và tiếp tục khi xuất hiện đau nhói. Bắt đầu với mức tạ có thể kiểm soát khoảng 12–15 lần, học biên độ đúng rồi mới tăng dần.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Ghi lại bài tập, số hiệp, số lần và cảm nhận sau buổi tập. Một chương trình đơn giản được thực hiện đều sẽ tốt hơn chương trình phức tạp nhưng liên tục thay đổi. Khi chưa chắc về tư thế, hãy nhờ PT quan sát trực tiếp.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/weight-training/art-20045842'), 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-07-08 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (14, N'Bí quyết duy trì động lực tập luyện lâu dài', CONCAT(N'Động lực thay đổi theo từng ngày, vì vậy thói quen và môi trường mới là nền tảng giúp bạn đi đường dài. Đừng đặt mục tiêu chỉ dựa trên con số cân nặng; hãy thêm mục tiêu hành vi có thể kiểm soát.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Ví dụ: hoàn thành ba buổi tập mỗi tuần, đi bộ sau bữa tối hoặc chuẩn bị đồ tập từ tối hôm trước. Chọn bài tập bạn thấy phù hợp, đặt lịch cố định và theo dõi những tiến bộ nhỏ như kỹ thuật tốt hơn, thêm một lần lặp hoặc ngủ ngon hơn.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Khi bỏ lỡ một buổi, hãy quay lại ở cơ hội gần nhất thay vì chờ đến tuần mới. Có bạn tập hoặc PT giúp tăng trách nhiệm, nhưng lịch tập vẫn cần phù hợp cuộc sống của bạn. Một mức vận động nhỏ được duy trì đều vẫn mang lại lợi ích.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.cdc.gov/physical-activity-basics/guidelines/adults.html'), 'https://images.unsplash.com/photo-1534258936925-c58bed479fcb?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-06-18 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (11, N'Gym truyền thống và Calisthenics: nên chọn gì?', CONCAT(N'Gym truyền thống dùng tạ và máy để điều chỉnh tải tương đối chính xác; Calisthenics dùng trọng lượng cơ thể và chú trọng khả năng kiểm soát chuyển động. Cả hai đều có thể phát triển sức mạnh nếu chương trình có tiến triển phù hợp.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Gym thuận lợi khi mục tiêu là tăng tải từng bước hoặc tập trung một nhóm cơ. Calisthenics linh hoạt về địa điểm, ít thiết bị và tạo động lực qua các kỹ năng như pull-up, dip hay handstand. Tuy nhiên, một số kỹ năng nâng cao vẫn cần tiến trình lâu dài và kỹ thuật tốt.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Bạn không bắt buộc phải chọn một bên. Có thể dùng Squat và Press với tạ để tăng sức mạnh, kết hợp Push Up, Pull Up và Plank để cải thiện kiểm soát cơ thể. Lựa chọn tốt nhất phụ thuộc mục tiêu, sở thích, chấn thương và thiết bị sẵn có.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.mayoclinic.org/healthy-lifestyle/fitness/in-depth/strength-training/art-20046670'), 'https://images.unsplash.com/photo-1599058917212-d750089bc07e?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-01-01 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (13, N'Hướng dẫn uống nước khi tập luyện', CONCAT(N'Nhu cầu nước thay đổi theo cơ thể, thời tiết, thời lượng và cường độ vận động. Vì vậy không nên áp dụng một con số cố định cho mọi buổi tập.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Hãy bắt đầu buổi tập trong trạng thái không khát, mang theo nước và uống từng ngụm trong quá trình tập. Với buổi tập thông thường dưới một giờ, nước lọc thường là lựa chọn phù hợp. Khi tập kéo dài, thời tiết nóng hoặc ra nhiều mồ hôi, đồ uống có điện giải có thể hữu ích tùy trường hợp.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Màu nước tiểu vàng nhạt và cân nặng trước–sau buổi tập có thể giúp theo dõi tình trạng bù nước, nhưng không phải công cụ chẩn đoán. Tránh uống một lượng quá lớn trong thời gian ngắn. Người có bệnh tim, thận hoặc được giới hạn dịch cần tuân theo hướng dẫn y tế riêng.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://pubmed.ncbi.nlm.nih.gov/17277604/'), 'https://images.unsplash.com/photo-1523362628745-0c100150b504?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-01-25 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (6, N'Vai trò của giấc ngủ trong quá trình tăng cơ', CONCAT(N'Tập luyện tạo ra kích thích, còn sự thích nghi diễn ra trong quá trình phục hồi. Giấc ngủ hỗ trợ cơ thể sửa chữa mô, điều hòa năng lượng và duy trì khả năng tập trung cho buổi tập tiếp theo.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'CDC khuyến nghị người trưởng thành từ 18–60 tuổi ngủ từ 7 giờ mỗi ngày. Chất lượng cũng quan trọng: cố gắng giữ giờ ngủ và thức ổn định, hạn chế màn hình và chất kích thích gần giờ ngủ, đồng thời giữ phòng ngủ tối, yên và mát.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nếu thường xuyên thiếu ngủ, hãy giảm kỳ vọng về cường độ thay vì cố bù bằng caffeine hoặc tập quá sức. Khi khó ngủ kéo dài, ngáy lớn hoặc buồn ngủ ban ngày ảnh hưởng sinh hoạt, nên trao đổi với nhân viên y tế. Dinh dưỡng và chương trình tập tốt không thể thay thế giấc ngủ.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn tham khảo: https://www.cdc.gov/sleep/about/index.html'), 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-05-14 00:00:00');
+INSERT INTO blogs (author_id, title, content, thumbnail, status, created_at) VALUES (10, N'Tổng quan các gói tập tại GymPro và quyền lợi', CONCAT(N'GymPro cung cấp nhiều gói để hội viên chọn theo thời gian và nhu cầu tập luyện. Trước khi đăng ký, hãy xem rõ thời hạn, số lần bảo lưu, quyền gia hạn và việc gói có kèm huấn luyện viên cá nhân hay không.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Gói ngắn hạn phù hợp khi bạn muốn trải nghiệm hoặc lịch sinh hoạt chưa ổn định. Gói dài hạn thường thuận lợi cho mục tiêu cần nhiều tháng, nhưng chỉ nên chọn khi bạn có kế hoạch sử dụng thực tế. Các quyền lợi chính thức và giá thanh toán luôn là thông tin hiển thị trên màn hình xác nhận giao dịch tại thời điểm mua.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Sau khi kích hoạt, hội viên có thể theo dõi ngày bắt đầu, ngày hết hạn, số ngày còn lại, PT phụ trách và lượt bảo lưu trong mục Quản lý gói tập. Nếu thông tin không khớp giao dịch, hãy giữ mã giao dịch và liên hệ quản trị viên để được kiểm tra.', CHAR(13), CHAR(10), CHAR(13), CHAR(10), N'Nguồn: Quy định và dữ liệu gói tập nội bộ GymPro.'), 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1200&q=80', 'PUBLISHED', '2026-05-24 00:00:00');
 -- 15. Insert PT Schedules (lich tap linh hoat: schedule_date, start_time, end_time)
 -- recurring_group_id: cac buoi cung nhom co cung UUID
 -- PT id=2 (pt1) voi member id=59
@@ -926,6 +936,571 @@ INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_
 INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (44, NULL, N'Lịch hẹn với PT', N'Bạn có lịch hẹn tập với PT vào ngày mai, vui lòng đến đúng giờ.', 1, '2026-06-16 00:00:00');
 INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (21, 1, N'Gói tập sắp hết hạn', N'Gói tập của bạn sẽ hết hạn trong 7 ngày tới, vui lòng gia hạn để tiếp tục sử dụng dịch vụ.', 1, '2026-07-08 00:00:00');
 INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES (78, NULL, N'Xác nhận thanh toán thành công', N'Giao dịch của bạn đã được xác nhận thành công. Cảm ơn bạn đã tin tưởng GymPro.', 1, '2026-05-11 00:00:00');
+
+-- ============================================================
+-- DU LIEU NGHIEP VU BO SUNG: CHINH SACH, SALE, DANH GIA, BAO LUU
+-- ============================================================
+
+-- Chuan hoa trang thai lich cu theo mo hinh SCHEDULED/COMPLETED/CANCELLED/NO_SHOW.
+UPDATE pt_schedules SET status = 'SCHEDULED' WHERE status = 'ACTIVE';
+
+INSERT INTO policy_versions (policy_type, version_number, title, content, is_active, effective_at)
+VALUES
+('MEMBERSHIP_TERMS', 1, N'Điều khoản thành viên GymPro',
+ N'1. Gói tập chỉ được kích hoạt sau khi GymPro xác nhận thanh toán. 2. Hội viên chịu trách nhiệm cung cấp thông tin chính xác và tuân thủ nội quy an toàn. 3. Bảo lưu áp dụng theo loại gói và thời lượng đã mua; số ngày bảo lưu hợp lệ được cộng lại 100%. 4. Gói tập không tự ý hủy để hoàn tiền; hội viên có thể dùng chức năng chuyển nhượng theo chính sách hiện hành. 5. GymPro lưu phiên bản điều khoản, thời điểm và thông tin kỹ thuật của lần đồng ý để đối chiếu giao dịch.', 1, '2026-08-01'),
+('TRANSFER_POLICY', 1, N'Chính sách chuyển nhượng gói tập',
+ N'1. Mỗi tài khoản được chuyển nhượng thành công tối đa 3 lần. 2. Mỗi lần phải chuyển toàn bộ thời gian còn lại và chỉ được có một yêu cầu đang chờ. 3. Số ngày khấu trừ bằng 10% số ngày còn lại, tối thiểu 3 ngày và tối đa 30 ngày. 4. Người nhận có 60 ngày để xác nhận. Trong thời gian chờ, gói người gửi vẫn hoạt động và tiếp tục giảm ngày. 5. Cùng loại gói sẽ được cộng ngày; khác loại gói sẽ ghi đè và làm mất toàn bộ gói hiện tại của người nhận sau khi xác nhận OTP.', 1, '2026-08-01'),
+('HOLD_POLICY', 1, N'Chính sách bảo lưu GymPro',
+ N'Bảo lưu chỉ áp dụng cho gói Premium và VIP theo thời lượng mua. Khi kết thúc bảo lưu, hội viên được giữ nguyên 100% số ngày chưa sử dụng. Hệ thống tự kích hoạt lại khi hết thời hạn đã đăng ký bảo lưu.', 1, '2026-08-01'),
+('PRIVACY_POLICY', 1, N'Chính sách quyền riêng tư GymPro',
+ N'GymPro chỉ xử lý dữ liệu tài khoản và dữ liệu thể chất nhằm cung cấp dịch vụ. Dữ liệu thể chất chỉ được gửi đến AI khi hội viên chủ động đồng ý trong từng cuộc trò chuyện.', 1, '2026-08-01');
+
+-- Premium (package 2).
+INSERT INTO package_hold_policies (package_id, min_duration_days, max_duration_days, max_hold_times, max_days_per_hold, max_total_hold_days) VALUES
+(2, 30, 89, 1, 7, 7),
+(2, 90, 179, 1, 14, 14),
+(2, 180, 364, 2, 30, 60),
+(2, 365, NULL, 3, 60, 180);
+-- VIP (package 3).
+INSERT INTO package_hold_policies (package_id, min_duration_days, max_duration_days, max_hold_times, max_days_per_hold, max_total_hold_days) VALUES
+(3, 30, 89, 1, 14, 14),
+(3, 90, 179, 1, 30, 30),
+(3, 180, 364, 2, 30, 60),
+(3, 365, NULL, 3, 60, 180);
+
+-- Gan snapshot chinh sach bao luu cho cac membership seed hien co.
+UPDATE m SET
+    hold_max_times = ISNULL(p.max_hold_times, 0),
+    hold_max_days_per_time = ISNULL(p.max_days_per_hold, 0),
+    hold_max_total_days = ISNULL(p.max_total_hold_days, 0)
+FROM memberships m
+OUTER APPLY (
+    SELECT TOP 1 hp.max_hold_times, hp.max_days_per_hold, hp.max_total_hold_days
+    FROM package_hold_policies hp
+    WHERE hp.package_id = m.package_id
+      AND hp.min_duration_days <= m.duration_days
+      AND (hp.max_duration_days IS NULL OR hp.max_duration_days >= m.duration_days)
+      AND hp.is_active = 1
+    ORDER BY hp.min_duration_days DESC
+) p;
+
+UPDATE memberships SET
+    hold_count = CASE WHEN hold_count > hold_max_times THEN hold_max_times ELSE hold_count END,
+    total_hold_days = CASE WHEN total_hold_days > hold_max_total_days THEN hold_max_total_days ELSE total_hold_days END;
+UPDATE memberships SET
+    hold_until = DATEADD(DAY, hold_max_days_per_time, paused_at),
+    end_date = DATEADD(DAY, hold_max_days_per_time, end_date)
+WHERE status = 'PAUSED' AND paused_at IS NOT NULL AND hold_max_days_per_time > 0;
+
+-- Tai khoan SALE demo. Mat khau: 123456.
+INSERT INTO users (role_id, email, password, full_name, phone, avatar, status, provider)
+VALUES ((SELECT id FROM roles WHERE name = 'SALE'), 'sale1@gympro.com',
+'$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi',
+N'Nguyễn Minh Anh', '0908123456', 'https://i.pravatar.cc/300?img=47', 1, 'LOCAL');
+DECLARE @sale_user_id INT = SCOPE_IDENTITY();
+INSERT INTO sales_profiles (user_id, level_number, successful_customers, is_online, max_concurrent_chats)
+VALUES (@sale_user_id, 2, 12, 1, 3);
+DECLARE @sale_profile_id INT = SCOPE_IDENTITY();
+INSERT INTO sales_referral_codes (sales_profile_id, code, description, discount_percent, one_time_per_member, is_active)
+VALUES (@sale_profile_id, 'MINHANH10', N'Mã ưu đãi cấp 2 của nhân viên Nguyễn Minh Anh', 10, 1, 1);
+
+-- Danh gia dich vu phuc vu trang quan ly va khu vuc cam nhan tren trang chu.
+-- Tao co dinh 16 danh gia de Admin co 3 trang du lieu (7 ban ghi/trang).
+;WITH confirmed_reviews AS (
+    SELECT TOP (16) t.id transaction_id, m.user_id member_id,
+           ROW_NUMBER() OVER (ORDER BY t.created_at DESC, t.id DESC) rn
+    FROM transactions t
+    JOIN memberships m ON m.id = t.membership_id
+    WHERE t.status = 'CONFIRMED'
+    ORDER BY t.created_at DESC, t.id DESC
+)
+INSERT INTO service_reviews (member_id, transaction_id, rating_star, comment, display_name, is_featured, created_at, updated_at)
+SELECT member_id, transaction_id,
+       CASE WHEN rn IN (4, 8, 12, 15) THEN 4 WHEN rn = 16 THEN 3 ELSE 5 END,
+       CASE rn
+         WHEN 1 THEN N'Lịch tập rõ ràng, PT theo sát và điều chỉnh bài tập theo thể trạng. Tôi cảm nhận được tiến bộ sau từng tuần.'
+         WHEN 2 THEN N'Quy trình đăng ký minh bạch, theo dõi gói tập và thực đơn rất thuận tiện. Nhân viên hỗ trợ nhanh và lịch sự.'
+         WHEN 3 THEN N'Tôi thích cách GymPro gom lịch tập, hồ sơ thể chất và tư vấn vào một nơi. Giao diện dễ dùng và thông tin rất trực quan.'
+         WHEN 4 THEN N'PT hướng dẫn kỹ tư thế, chủ động giảm mức tạ khi tôi đau vai và luôn ghi chú kết quả sau buổi tập.'
+         WHEN 5 THEN N'Khâu đăng ký gói nhanh, giá và thời hạn được trình bày rõ ràng. Email xác nhận giao dịch cũng đầy đủ thông tin.'
+         WHEN 6 THEN N'Thực đơn theo ngày tập khá thực tế, nguyên liệu dễ tìm và lượng calories phù hợp với mục tiêu giảm cân của tôi.'
+         WHEN 7 THEN N'Tôi có thể xem lịch, hồ sơ thể chất và trao đổi với AI ngay trên điện thoại nên việc theo dõi tiến độ thuận tiện hơn.'
+         WHEN 8 THEN N'Nhân viên tư vấn nhiệt tình và không gây áp lực mua gói. Tôi mong phòng gym bổ sung thêm khung giờ cuối tuần.'
+         WHEN 9 THEN N'Chức năng bảo lưu trình bày rõ số ngày còn lại, giúp tôi yên tâm khi phải nghỉ tập do đi công tác.'
+         WHEN 10 THEN N'PT sắp xếp lịch linh hoạt, bài tập có độ khó tăng dần và luôn hỏi tình trạng sức khỏe trước khi bắt đầu.'
+         WHEN 11 THEN N'Trang quản lý gói giúp tôi kiểm tra ngày hết hạn, số lần bảo lưu và lịch sử giao dịch mà không phải hỏi lễ tân.'
+         WHEN 12 THEN N'Trải nghiệm nhìn chung tốt, thao tác thanh toán dễ hiểu. Một vài thời điểm tải ảnh bài viết còn hơi chậm.'
+         WHEN 13 THEN N'AI tư vấn dựa trên hồ sơ thể chất khá sát mục tiêu của tôi và vẫn nhắc nên trao đổi với PT khi có chấn thương.'
+         WHEN 14 THEN N'Tôi đánh giá cao việc lịch của từng học viên có màu riêng, nhìn một lượt là nhận ra ngay buổi tập của mình.'
+         WHEN 15 THEN N'Các bài tập có video minh họa dễ theo dõi. Tôi muốn có thêm nhiều bài giãn cơ dành cho người ngồi văn phòng.'
+         ELSE N'Sau gần hai tháng tập, sức bền của tôi cải thiện rõ rệt. Quy trình hỗ trợ và thông báo lịch tập đều chuyên nghiệp.'
+       END,
+       CASE WHEN rn IN (8, 14) THEN 0 ELSE 1 END,
+       CASE WHEN rn IN (1, 3, 6, 10, 14) THEN 1 ELSE 0 END,
+       DATEADD(HOUR, -13 * rn, CAST('2026-09-05 20:00:00' AS DATETIME2)),
+       DATEADD(HOUR, -13 * rn, CAST('2026-09-05 20:00:00' AS DATETIME2))
+FROM confirmed_reviews;
+
+IF (SELECT COUNT(*) FROM service_reviews) < 16
+    THROW 51001, N'Seed data cần tối thiểu 16 đánh giá dịch vụ để phục vụ demo.', 1;
+
+-- Du lieu mau cho thong ke bai tap cua PT1 trong tuan dau thang 8/2026.
+UPDATE pt_schedules SET status = 'COMPLETED', actual_note = N'Học viên hoàn thành đúng kỹ thuật và đủ khối lượng.', completed_at = DATEADD(HOUR, 2, CAST(schedule_date AS DATETIME2))
+WHERE pt_id = 2 AND member_id IN (59, 21, 45) AND schedule_date BETWEEN '2026-08-03' AND '2026-08-04';
+UPDATE pt_schedules SET status = 'NO_SHOW', actual_note = N'Học viên báo vắng sát giờ.'
+WHERE pt_id = 2 AND member_id = 84 AND schedule_date = '2026-08-05';
+INSERT INTO schedule_exercises (schedule_id, exercise_id, set_count, rep_count, weight_kg, duration_minutes, note)
+SELECT s.id, (SELECT TOP 1 id FROM exercises ORDER BY id), 4, 10, 30, NULL, N'Hoàn thành đủ số hiệp'
+FROM pt_schedules s
+WHERE s.pt_id = 2 AND s.status = 'COMPLETED' AND s.schedule_date BETWEEN '2026-08-03' AND '2026-08-04';
+
+-- ============================================================
+-- KICH BAN DEMO BAO VE: 03/09/2026 - 08/09/2026
+-- Moc du lieu co dinh giup dashboard on dinh khi demo tren may khac.
+-- ============================================================
+DECLARE @demo_date DATE = '2026-09-05';
+DECLARE @demo_admin_id INT = (SELECT id FROM users WHERE email = 'admin@gympro.com');
+DECLARE @demo_pt1_id INT = (SELECT id FROM users WHERE email = 'pt1@gympro.com');
+DECLARE @demo_member1_id INT = (SELECT id FROM users WHERE email = 'member1@gympro.com');
+DECLARE @demo_member2_id INT = (SELECT id FROM users WHERE email = 'member2@gympro.com');
+DECLARE @demo_member3_id INT = (SELECT id FROM users WHERE email = 'member3@gympro.com');
+DECLARE @demo_member4_id INT = (SELECT id FROM users WHERE email = 'member4@gympro.com');
+DECLARE @demo_member5_id INT = (SELECT id FROM users WHERE email = 'member5@gympro.com');
+DECLARE @demo_member10_id INT = (SELECT id FROM users WHERE email = 'member10@gympro.com');
+DECLARE @demo_member11_id INT = (SELECT id FROM users WHERE email = 'member11@gympro.com');
+DECLARE @demo_member29_id INT = (SELECT id FROM users WHERE email = 'member29@gympro.com');
+DECLARE @demo_member43_id INT = (SELECT id FROM users WHERE email = 'member43@gympro.com');
+DECLARE @demo_member68_id INT = (SELECT id FROM users WHERE email = 'member68@gympro.com');
+DECLARE @demo_basic_id INT = (SELECT id FROM packages WHERE name = 'BASIC');
+DECLARE @demo_premium_id INT = (SELECT id FROM packages WHERE name = 'PREMIUM');
+DECLARE @demo_vip_id INT = (SELECT id FROM packages WHERE name = 'VIP');
+DECLARE @demo_terms_id INT = (SELECT id FROM policy_versions WHERE policy_type = 'MEMBERSHIP_TERMS' AND is_active = 1);
+DECLARE @demo_transfer_policy_id INT = (SELECT id FROM policy_versions WHERE policy_type = 'TRANSFER_POLICY' AND is_active = 1);
+
+-- Don dep cac trang thai cu da het han de dashboard khong con hien goi ACTIVE/PENDING sai.
+UPDATE transactions
+SET status = 'CANCELLED', version = version + 1
+WHERE status = 'PENDING' AND created_at < '2026-08-01';
+
+UPDATE memberships
+SET status = 'CANCELLED', version = version + 1
+WHERE status = 'PENDING' AND created_at < '2026-08-01';
+
+UPDATE memberships
+SET status = 'EXPIRED', version = version + 1
+WHERE status = 'ACTIVE' AND end_date < @demo_date;
+
+-- Khuyen mai phuc vu kich ban thanh toan trong dot bao ve.
+INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active)
+VALUES
+('BAOVE15', 15, NULL, '2026-09-01', '2026-09-15', 100, 18, 1),
+('VIPSEP20', 20, @demo_vip_id, '2026-09-01', '2026-09-30', 50, 7, 1);
+DECLARE @demo_promotion_id INT = (SELECT id FROM promotions WHERE code = 'BAOVE15');
+
+-- Ho so the chat co du thong tin de demo AI, thuc don va quyen xem cua PT1.
+UPDATE member_profiles SET height_cm = 168, weight_kg = 72.5, date_of_birth = '2001-04-12', biological_sex = 'FEMALE',
+    chest_cm = 92, waist_cm = 78, hip_cm = 99, body_fat_percentage = 29.4, body_fat_source = 'ESTIMATED',
+    activity_level = 'LIGHT', fitness_goal = 'WEIGHT_LOSS', target_weight_kg = 65,
+    training_experience = N'Đã tập không liên tục khoảng 6 tháng, ưu tiên bài máy và cardio nhẹ.',
+    injury_history = N'Từng đau nhẹ đầu gối phải khi chạy nhanh.', medical_conditions = N'Không có bệnh nền; hạn chế động tác bật nhảy cường độ cao.'
+WHERE user_id = @demo_member1_id;
+
+UPDATE member_profiles SET height_cm = 175, weight_kg = 78.2, date_of_birth = '1999-08-21', biological_sex = 'MALE',
+    chest_cm = 101, waist_cm = 86, hip_cm = 98, body_fat_percentage = 20.1, body_fat_source = 'ESTIMATED',
+    activity_level = 'MODERATE', fitness_goal = 'MUSCLE_GAIN', target_weight_kg = 82,
+    training_experience = N'Đã tập 1 năm, nắm được kỹ thuật các bài compound cơ bản.',
+    injury_history = N'Không có chấn thương đáng kể.', medical_conditions = N'Không có hạn chế vận động.'
+WHERE user_id = @demo_member5_id;
+
+UPDATE member_profiles SET height_cm = 162, weight_kg = 61.4, date_of_birth = '2002-11-03', biological_sex = 'FEMALE',
+    chest_cm = 88, waist_cm = 72, hip_cm = 96, body_fat_percentage = 27.8, body_fat_source = 'MANUAL',
+    activity_level = 'LIGHT', fitness_goal = 'HEALTH_IMPROVEMENT', target_weight_kg = 58,
+    training_experience = N'Mới tập dưới 3 tháng, cần PT hướng dẫn kỹ thuật và nhịp thở.',
+    injury_history = N'Căng cơ lưng dưới vào năm 2025, hiện đã hồi phục.', medical_conditions = N'Tránh nâng tạ tối đa và cần khởi động lưng kỹ.'
+WHERE user_id = @demo_member29_id;
+
+UPDATE member_profiles SET height_cm = 180, weight_kg = 84.6, date_of_birth = '1998-02-16', biological_sex = 'MALE',
+    chest_cm = 108, waist_cm = 88, hip_cm = 102, body_fat_percentage = 18.6, body_fat_source = 'ESTIMATED',
+    activity_level = 'HIGH', fitness_goal = 'MUSCLE_GAIN', target_weight_kg = 88,
+    training_experience = N'Đã tập hơn 2 năm, đang theo chương trình tăng cơ có kiểm soát.',
+    injury_history = N'Từng viêm gân vai trái; hiện tập bình thường với mức tạ vừa.', medical_conditions = N'Hạn chế đẩy vai quá đầu khi có dấu hiệu đau.'
+WHERE user_id = @demo_member43_id;
+
+UPDATE member_profiles SET height_cm = 171, weight_kg = 69.8, date_of_birth = '2000-06-25', biological_sex = 'MALE',
+    chest_cm = 96, waist_cm = 80, hip_cm = 94, body_fat_percentage = 17.9, body_fat_source = 'ESTIMATED',
+    activity_level = 'MODERATE', fitness_goal = 'MAINTENANCE', target_weight_kg = 70,
+    training_experience = N'Đã tập đều 8 tháng, mục tiêu duy trì sức mạnh và vóc dáng.',
+    injury_history = N'Không có chấn thương.', medical_conditions = N'Không có hạn chế vận động.'
+WHERE user_id = @demo_member68_id;
+
+-- Member2: goi dang hoat dong de demo tao yeu cau chuyen nhuong cho member1.
+DECLARE @demo_transfer_source_id INT = (
+    SELECT TOP 1 id FROM memberships
+    WHERE user_id = @demo_member2_id
+    ORDER BY id DESC
+);
+UPDATE memberships SET package_id = @demo_premium_id, pt_id = NULL, start_date = '2026-08-15', end_date = '2026-12-13',
+    status = 'ACTIVE', pause_reason = NULL, duration_days = 120, daily_price = 50000,
+    hold_count = 0, paused_at = NULL, total_hold_days = 0, hold_until = NULL,
+    hold_max_times = 1, hold_max_days_per_time = 14, hold_max_total_days = 14, version = version + 1
+WHERE id = @demo_transfer_source_id;
+
+INSERT INTO policy_acceptances
+    (user_id, policy_version_id, transaction_id, acceptance_context, accepted_at, accepted_ip, accepted_user_agent)
+VALUES
+    (@demo_member2_id, @demo_transfer_policy_id, NULL, 'TRANSFER_SEND', '2026-09-02 08:59:00',
+     '127.0.0.1', N'Chrome Demo - GymPro Defense');
+
+-- Member3: goi dang bao luu, con day du gioi han de demo chinh sach.
+INSERT INTO memberships
+    (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price,
+     hold_count, paused_at, total_hold_days, hold_until, hold_max_times, hold_max_days_per_time, hold_max_total_days, created_at)
+VALUES
+    (@demo_member3_id, @demo_premium_id, @demo_pt1_id, '2026-08-01', '2026-12-29', 'PAUSED',
+     N'Đi công tác ngắn hạn từ 29/08 đến 12/09', 120, 50000, 1, '2026-08-29', 14, '2026-09-12', 1, 14, 14,
+     '2026-08-01 08:15:00');
+
+-- Member4: giao dich mua VIP dang cho Admin duyet trong buoi demo.
+INSERT INTO memberships
+    (user_id, package_id, pt_id, start_date, end_date, status, duration_days, daily_price,
+     hold_max_times, hold_max_days_per_time, hold_max_total_days, created_at)
+VALUES
+    (@demo_member4_id, @demo_vip_id, @demo_pt1_id, '2026-09-05', '2026-12-03', 'PENDING', 90, 83000,
+     1, 30, 30, '2026-09-04 20:05:00');
+DECLARE @demo_pending_membership_id INT = SCOPE_IDENTITY();
+
+INSERT INTO transactions
+    (membership_id, promotion_id, requested_duration_days, requested_package_id, requested_pt_id,
+     operation_applied, amount, original_amount, payment_method, status, type, accepted_terms,
+     terms_accepted_at, terms_version, accepted_ip, accepted_user_agent, customer_discount_percent, created_at)
+VALUES
+    (@demo_pending_membership_id, @demo_promotion_id, 90, @demo_vip_id, @demo_pt1_id,
+     0, 6349500, 7470000, 'BANK', 'PENDING', 'NEW', 1,
+     '2026-09-04 20:04:00', 1, '127.0.0.1', N'Chrome Demo - GymPro Defense', 15, '2026-09-04 20:05:00');
+DECLARE @demo_pending_transaction_id INT = SCOPE_IDENTITY();
+
+INSERT INTO policy_acceptances
+    (user_id, policy_version_id, transaction_id, acceptance_context, accepted_at, accepted_ip, accepted_user_agent)
+VALUES
+    (@demo_member4_id, @demo_terms_id, @demo_pending_transaction_id, 'PURCHASE', '2026-09-04 20:04:00',
+     '127.0.0.1', N'Chrome Demo - GymPro Defense');
+
+-- Lich su giao dich moi: gia han thanh cong, nang cap thanh cong va mot giao dich bi huy.
+DECLARE @demo_member5_membership_id INT = (
+    SELECT TOP 1 id FROM memberships WHERE user_id = @demo_member5_id AND status = 'ACTIVE' ORDER BY id DESC
+);
+DECLARE @demo_member29_membership_id INT = (
+    SELECT TOP 1 id FROM memberships WHERE user_id = @demo_member29_id AND status = 'ACTIVE' ORDER BY id DESC
+);
+DECLARE @demo_member68_membership_id INT = (
+    SELECT TOP 1 id FROM memberships WHERE user_id = @demo_member68_id AND status = 'ACTIVE' ORDER BY id DESC
+);
+
+INSERT INTO transactions
+    (membership_id, requested_duration_days, requested_package_id, requested_pt_id, operation_applied,
+     amount, original_amount, payment_method, status, type, confirmed_by, accepted_terms, terms_accepted_at,
+     terms_version, accepted_ip, accepted_user_agent, customer_discount_percent, created_at)
+VALUES
+    (@demo_member5_membership_id, 30, @demo_premium_id, @demo_pt1_id, 1,
+     1350000, 1500000, 'BANK', 'CONFIRMED', 'RENEW', @demo_admin_id, 1, '2026-08-20 09:20:00',
+     1, '127.0.0.1', N'Chrome 127 / Windows 11', 10, '2026-08-20 09:21:00');
+DECLARE @demo_renew_transaction_id INT = SCOPE_IDENTITY();
+
+INSERT INTO transactions
+    (membership_id, requested_duration_days, requested_package_id, requested_pt_id, operation_applied,
+     amount, original_amount, payment_method, status, type, confirmed_by, accepted_terms, terms_accepted_at,
+     terms_version, accepted_ip, accepted_user_agent, customer_discount_percent, created_at)
+VALUES
+    (@demo_member29_membership_id, 90, @demo_vip_id, @demo_pt1_id, 1,
+     6723000, 7470000, 'ONLINE', 'CONFIRMED', 'UPGRADE', @demo_admin_id, 1, '2026-08-25 14:10:00',
+     1, '127.0.0.1', N'Chrome Mobile Demo', 10, '2026-08-25 14:12:00');
+DECLARE @demo_upgrade_transaction_id INT = SCOPE_IDENTITY();
+UPDATE memberships SET package_id = @demo_vip_id, daily_price = 83000, version = version + 1
+WHERE id = @demo_member29_membership_id;
+
+INSERT INTO transactions
+    (membership_id, requested_duration_days, requested_package_id, requested_pt_id, operation_applied,
+     amount, original_amount, payment_method, status, type, accepted_terms, terms_accepted_at,
+     terms_version, accepted_ip, accepted_user_agent, customer_discount_percent, created_at)
+VALUES
+    (@demo_member68_membership_id, 30, @demo_premium_id, @demo_pt1_id, 0,
+     1275000, 1500000, 'BANK', 'CANCELLED', 'RENEW', 1, '2026-09-02 19:40:00',
+     1, '127.0.0.1', N'Chrome Demo - GymPro Defense', 15, '2026-09-02 19:42:00');
+
+INSERT INTO policy_acceptances
+    (user_id, policy_version_id, transaction_id, acceptance_context, accepted_at, accepted_ip, accepted_user_agent)
+VALUES
+    (@demo_member5_id, @demo_terms_id, @demo_renew_transaction_id, 'PURCHASE', '2026-08-20 09:20:00', '127.0.0.1', N'Chrome 127 / Windows 11'),
+    (@demo_member29_id, @demo_terms_id, @demo_upgrade_transaction_id, 'PURCHASE', '2026-08-25 14:10:00', '127.0.0.1', N'Chrome Mobile Demo');
+
+-- Mot ca chuyen nhuong da hoan tat de xem lich su nghiep vu.
+INSERT INTO memberships
+    (user_id, package_id, pt_id, start_date, end_date, status, duration_days, daily_price, created_at)
+VALUES
+    (@demo_member10_id, @demo_basic_id, NULL, '2026-06-01', '2026-10-31', 'TRANSFERRED', 150, 16000, '2026-06-01 08:00:00');
+DECLARE @demo_accepted_source_id INT = SCOPE_IDENTITY();
+
+INSERT INTO memberships
+    (user_id, package_id, pt_id, start_date, end_date, status, duration_days, daily_price, created_at)
+VALUES
+    (@demo_member11_id, @demo_basic_id, NULL, '2026-08-25', '2026-10-20', 'ACTIVE', 57, 16000, '2026-08-25 10:15:00');
+
+INSERT INTO membership_transfers
+    (source_membership_id, sender_id, recipient_id, status, remaining_days_at_request, remaining_days_at_accept,
+     deducted_days, transferred_days, expires_at, created_at, accepted_at)
+VALUES
+    (@demo_accepted_source_id, @demo_member10_id, @demo_member11_id, 'ACCEPTED', 70, 64,
+     7, 57, '2026-10-18 09:00:00', '2026-08-19 09:00:00', '2026-08-25 10:15:00');
+
+INSERT INTO policy_acceptances
+    (user_id, policy_version_id, transaction_id, acceptance_context, accepted_at, accepted_ip, accepted_user_agent)
+VALUES
+    (@demo_member10_id, @demo_transfer_policy_id, NULL, 'TRANSFER_SEND', '2026-08-19 08:59:00', '127.0.0.1', N'Chrome 127 / Windows 11'),
+    (@demo_member11_id, @demo_transfer_policy_id, NULL, 'TRANSFER_RECEIVE', '2026-08-25 10:14:00', '127.0.0.1', N'Edge 127 / Windows 11');
+
+-- Sale cap 2: 12 khach hang thanh cong, co du hoa hong o ba trang thai.
+INSERT INTO sales_referral_codes
+    (sales_profile_id, code, description, discount_percent, one_time_per_member, is_active, expires_at)
+VALUES
+    (@sale_profile_id, 'MINHANHVIP10', N'Ưu đãi 10% dành cho khách hàng VIP của Minh Anh', 10, 1, 1, '2026-12-31 23:59:59'),
+    (@sale_profile_id, 'MINHANHOLD10', N'Mã chiến dịch cũ đã đóng để demo quản lý trạng thái', 10, 0, 0, '2026-08-31 23:59:59');
+DECLARE @demo_sale_code_id INT = (SELECT id FROM sales_referral_codes WHERE code = 'MINHANH10');
+
+DECLARE @demo_sale_transactions TABLE (
+    rn INT IDENTITY(1,1), transaction_id INT PRIMARY KEY, member_id INT, amount DECIMAL(12,0)
+);
+;WITH one_transaction_per_member AS (
+    SELECT t.id transaction_id, m.user_id member_id, t.amount, t.created_at,
+           ROW_NUMBER() OVER (PARTITION BY m.user_id ORDER BY t.created_at DESC, t.id DESC) member_rn
+    FROM transactions t
+    JOIN memberships m ON m.id = t.membership_id
+    WHERE t.status = 'CONFIRMED'
+      AND t.promotion_id IS NULL
+      AND NOT EXISTS (SELECT 1 FROM sales_code_redemptions r WHERE r.transaction_id = t.id)
+)
+INSERT INTO @demo_sale_transactions (transaction_id, member_id, amount)
+SELECT TOP (12) transaction_id, member_id, amount
+FROM one_transaction_per_member
+WHERE member_rn = 1
+ORDER BY created_at DESC, transaction_id DESC;
+
+UPDATE t SET sale_code_id = @demo_sale_code_id
+FROM transactions t
+JOIN @demo_sale_transactions d ON d.transaction_id = t.id;
+
+INSERT INTO sales_code_redemptions
+    (sale_code_id, member_id, transaction_id, status, created_at, confirmed_at)
+SELECT @demo_sale_code_id, member_id, transaction_id, 'CONFIRMED',
+       DATEADD(DAY, -rn, CAST('2026-08-30 10:00:00' AS DATETIME2)),
+       DATEADD(DAY, -rn, CAST('2026-08-30 10:30:00' AS DATETIME2))
+FROM @demo_sale_transactions;
+
+INSERT INTO commission_records
+    (transaction_id, sales_profile_id, base_amount, commission_rate, commission_amount,
+     status, payable_at, paid_at, created_at)
+SELECT transaction_id, @sale_profile_id, amount, 4, ROUND(amount * 0.04, 0),
+       CASE WHEN rn <= 4 THEN 'PAID' WHEN rn <= 8 THEN 'PAYABLE' ELSE 'PENDING' END,
+       CASE WHEN rn <= 8 THEN DATEADD(DAY, 7, CAST('2026-08-30 10:30:00' AS DATETIME2)) END,
+       CASE WHEN rn <= 4 THEN DATEADD(DAY, 10, CAST('2026-08-30 10:30:00' AS DATETIME2)) END,
+       DATEADD(DAY, -rn, CAST('2026-08-30 10:30:00' AS DATETIME2))
+FROM @demo_sale_transactions;
+
+UPDATE sales_profiles SET level_number = 2, successful_customers = 12, is_online = 1
+WHERE id = @sale_profile_id;
+
+-- Lam moi dong thoi gian bai viet de trang chu/Admin co noi dung gan ngay bao ve,
+-- van giu nguyen tieu de, noi dung, tac gia va anh minh hoa da bien soan.
+;WITH recent_blogs AS (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY id DESC) rn
+    FROM blogs
+    WHERE status = 'PUBLISHED'
+)
+UPDATE b
+SET created_at = DATEADD(DAY, -r.rn, CAST('2026-09-05 07:30:00' AS DATETIME2))
+FROM blogs b
+JOIN recent_blogs r ON r.id = b.id
+WHERE r.rn <= 8;
+
+;WITH recent_drafts AS (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY id DESC) rn
+    FROM blogs
+    WHERE status = 'DRAFT'
+)
+UPDATE b
+SET created_at = DATEADD(DAY, -r.rn, CAST('2026-09-03 16:00:00' AS DATETIME2))
+FROM blogs b
+JOIN recent_drafts r ON r.id = b.id
+WHERE r.rn <= 3;
+
+-- Lich PT1 day du theo tuan/thang: hoan thanh, vang, huy, sap toi va lich lap.
+DELETE FROM pt_schedules
+WHERE pt_id = @demo_pt1_id AND schedule_date BETWEEN '2026-08-17' AND '2026-09-12';
+
+INSERT INTO pt_schedules
+    (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id,
+     status, actual_note, completed_at, created_at)
+VALUES
+(@demo_pt1_id, @demo_member5_id,  '2026-08-17', '07:00', '08:30', N'Ngực - tay sau, tăng tải có kiểm soát', NULL, 'COMPLETED', N'Hoàn thành toàn bộ bài, Bench Press tăng thêm 2,5 kg.', '2026-08-17 08:32:00', '2026-08-14 09:00:00'),
+(@demo_pt1_id, @demo_member29_id, '2026-08-18', '18:00', '19:00', N'Full body làm quen kỹ thuật', NULL, 'COMPLETED', N'Thực hiện tốt, cần giữ lưng trung lập khi Squat.', '2026-08-18 19:03:00', '2026-08-14 09:05:00'),
+(@demo_pt1_id, @demo_member43_id, '2026-08-20', '16:00', '17:30', N'Lưng - tay trước', NULL, 'COMPLETED', N'Hoàn thành đủ khối lượng, vai trái không đau.', '2026-08-20 17:33:00', '2026-08-15 10:00:00'),
+(@demo_pt1_id, @demo_member68_id, '2026-08-22', '09:00', '10:00', N'Cardio và core', NULL, 'NO_SHOW', N'Học viên báo vắng sát giờ do việc gia đình.', NULL, '2026-08-16 08:00:00'),
+(@demo_pt1_id, @demo_member5_id,  '2026-08-24', '07:00', '08:30', N'Chân - mông', 'pt1-member5-sep-2026', 'COMPLETED', N'Hoàn thành tốt, giảm tải Leg Press ở hiệp cuối.', '2026-08-24 08:34:00', '2026-08-20 09:00:00'),
+(@demo_pt1_id, @demo_member29_id, '2026-08-26', '18:00', '19:00', N'Cardio nhẹ và thân dưới', NULL, 'COMPLETED', N'Đầu gối ổn định, nhịp tim trong vùng mục tiêu.', '2026-08-26 19:02:00', '2026-08-21 10:00:00'),
+(@demo_pt1_id, @demo_member43_id, '2026-08-28', '16:00', '17:30', N'Push day', NULL, 'CANCELLED', N'PT hủy và đã báo trước do lịch họp chuyên môn.', NULL, '2026-08-22 08:00:00'),
+(@demo_pt1_id, @demo_member68_id, '2026-08-29', '09:00', '10:00', N'Full body duy trì', NULL, 'COMPLETED', N'Kỹ thuật ổn định, mức gắng sức RPE 7/10.', '2026-08-29 10:02:00', '2026-08-23 08:00:00'),
+(@demo_pt1_id, @demo_member5_id,  '2026-08-31', '07:00', '08:30', N'Ngực - vai - tay sau', 'pt1-member5-sep-2026', 'COMPLETED', N'Bench Press đạt mục tiêu tuần, chưa cần tăng tải.', '2026-08-31 08:31:00', '2026-08-27 09:00:00'),
+(@demo_pt1_id, @demo_member29_id, '2026-09-02', '18:00', '19:00', N'Thân dưới và phục hồi lưng', NULL, 'COMPLETED', N'Hoàn thành tốt, không xuất hiện đau lưng dưới.', '2026-09-02 19:03:00', '2026-08-29 10:00:00'),
+(@demo_pt1_id, @demo_member43_id, '2026-09-03', '16:00', '17:30', N'Pull day tăng cơ', NULL, 'COMPLETED', N'Tăng 5 kg Deadlift, biên độ và nhịp thở tốt.', '2026-09-03 17:32:00', '2026-08-30 08:00:00'),
+(@demo_pt1_id, @demo_member68_id, '2026-09-04', '09:00', '10:00', N'Cardio ngắt quãng và core', NULL, 'COMPLETED', N'Hoàn thành 8 vòng interval và 3 hiệp Plank.', '2026-09-04 10:02:00', '2026-08-30 08:05:00'),
+(@demo_pt1_id, @demo_member5_id,  '2026-09-07', '07:00', '08:30', N'Chân - mông, theo dõi tiến độ tuần', 'pt1-member5-sep-2026', 'SCHEDULED', NULL, NULL, '2026-09-01 09:00:00'),
+(@demo_pt1_id, @demo_member29_id, '2026-09-07', '18:00', '19:00', N'Full body cơ bản', NULL, 'SCHEDULED', NULL, NULL, '2026-09-01 09:05:00'),
+(@demo_pt1_id, @demo_member43_id, '2026-09-08', '16:00', '17:30', N'Ngực - vai, hạn chế biên độ vai trái', NULL, 'SCHEDULED', NULL, NULL, '2026-09-01 09:10:00'),
+(@demo_pt1_id, @demo_member68_id, '2026-09-09', '09:00', '10:00', N'Cardio và mobility', NULL, 'SCHEDULED', NULL, NULL, '2026-09-01 09:15:00'),
+(@demo_pt1_id, @demo_member5_id,  '2026-09-11', '07:00', '08:30', N'Ngực - tay sau', 'pt1-member5-sep-2026', 'SCHEDULED', NULL, NULL, '2026-09-01 09:20:00');
+
+-- Bai tap chi tiet cho cac buoi da hoan thanh, phuc vu thong ke tuan/thang.
+INSERT INTO schedule_exercises
+    (schedule_id, exercise_id, set_count, rep_count, weight_kg, duration_minutes, note)
+SELECT s.id, e.id, v.set_count, v.rep_count, v.weight_kg, v.duration_minutes, v.note
+FROM (VALUES
+    (@demo_member5_id,  CAST('2026-08-17' AS DATE), CAST('07:00' AS TIME), N'Bench Press', 4, 8, 55.0, NULL, N'RPE 8/10'),
+    (@demo_member5_id,  CAST('2026-08-17' AS DATE), CAST('07:00' AS TIME), N'Tricep Pushdown', 3, 12, 20.0, NULL, N'Kiểm soát pha hạ'),
+    (@demo_member29_id, CAST('2026-08-18' AS DATE), CAST('18:00' AS TIME), N'Squat', 3, 10, 20.0, NULL, N'Tập trung kỹ thuật'),
+    (@demo_member43_id, CAST('2026-08-20' AS DATE), CAST('16:00' AS TIME), N'Deadlift', 4, 6, 70.0, NULL, N'Không đau vai'),
+    (@demo_member5_id,  CAST('2026-08-24' AS DATE), CAST('07:00' AS TIME), N'Leg Press', 4, 10, 90.0, NULL, N'Giảm tải hiệp cuối'),
+    (@demo_member29_id, CAST('2026-08-26' AS DATE), CAST('18:00' AS TIME), N'Cycling', NULL, NULL, NULL, 25, N'Nhịp tim vùng 2'),
+    (@demo_member68_id, CAST('2026-08-29' AS DATE), CAST('09:00' AS TIME), N'Kettlebell Swing', 4, 15, 16.0, NULL, N'RPE 7/10'),
+    (@demo_member5_id,  CAST('2026-08-31' AS DATE), CAST('07:00' AS TIME), N'Bench Press', 4, 8, 57.5, NULL, N'Đạt mục tiêu tuần'),
+    (@demo_member29_id, CAST('2026-09-02' AS DATE), CAST('18:00' AS TIME), N'Leg Curl', 3, 12, 25.0, NULL, N'Không đau lưng'),
+    (@demo_member43_id, CAST('2026-09-03' AS DATE), CAST('16:00' AS TIME), N'Deadlift', 4, 6, 75.0, NULL, N'Tăng 5 kg'),
+    (@demo_member43_id, CAST('2026-09-03' AS DATE), CAST('16:00' AS TIME), N'Barbell Row', 4, 10, 45.0, NULL, N'Giữ thân người ổn định'),
+    (@demo_member68_id, CAST('2026-09-04' AS DATE), CAST('09:00' AS TIME), N'Running (Treadmill)', NULL, NULL, NULL, 24, N'8 vòng interval'),
+    (@demo_member68_id, CAST('2026-09-04' AS DATE), CAST('09:00' AS TIME), N'Plank', 3, NULL, NULL, 2, N'Mỗi hiệp 2 phút')
+) v(member_id, schedule_date, start_time, exercise_name, set_count, rep_count, weight_kg, duration_minutes, note)
+JOIN pt_schedules s ON s.pt_id = @demo_pt1_id AND s.member_id = v.member_id
+    AND s.schedule_date = v.schedule_date AND s.start_time = v.start_time AND s.status = 'COMPLETED'
+JOIN exercises e ON e.name = v.exercise_name;
+
+INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES
+(@demo_pt1_id, @demo_member5_id, N'Tiến độ tháng 8 tốt. Tuần bảo vệ giữ Bench Press 57,5 kg, ưu tiên đủ biên độ trước khi tăng tải.', '2026-09-01 08:00:00'),
+(@demo_pt1_id, @demo_member29_id, N'Đầu gối và lưng dưới ổn định. Duy trì cardio vùng 2 và tăng tải Squat từng 2,5 kg.', '2026-09-02 19:10:00'),
+(@demo_pt1_id, @demo_member43_id, N'Vai trái không đau trong hai tuần gần nhất. Vẫn tránh Overhead Press mức tạ cao.', '2026-09-03 17:40:00'),
+(@demo_pt1_id, @demo_member68_id, N'Thể lực duy trì tốt; có thể tăng interval từ 8 lên 10 vòng vào tuần sau.', '2026-09-04 10:10:00');
+
+-- Thuc don hoan chinh cho member VIP cua PT1.
+DELETE FROM diets WHERE member_id = @demo_member43_id
+  AND (day_type IN ('TRAINING_DAY', 'REST_DAY') OR diet_date = '2026-09-08');
+INSERT INTO diets
+    (pt_id, member_id, day_type, diet_date, title, breakfast, snack_morning, lunch,
+     snack_afternoon, dinner, calories, protein_g, carbs_g, fat_g, note, created_at)
+VALUES
+(@demo_pt1_id, @demo_member43_id, 'TRAINING_DAY', NULL, N'Thực đơn tăng cơ ngày tập',
+ N'80 g yến mạch, 250 ml sữa ít béo, 2 quả trứng và 1 quả chuối.',
+ N'1 hũ sữa chua Hy Lạp và 15 g hạnh nhân.',
+ N'180 g cơm, 180 g ức gà áp chảo, rau xanh và canh.',
+ N'1 lát bánh mì nguyên cám, 1 quả chuối trước tập; whey sau tập nếu thiếu đạm.',
+ N'200 g khoai lang, 180 g cá hồi và salad.', 2550, 175, 300, 72,
+ N'Uống 2,5-3 lít nước; có thể đổi nguồn đạm tương đương, không bỏ bữa sau tập.', '2026-09-01 08:30:00'),
+(@demo_pt1_id, @demo_member43_id, 'REST_DAY', NULL, N'Thực đơn phục hồi ngày nghỉ',
+ N'3 quả trứng, 2 lát bánh mì nguyên cám và rau củ.',
+ N'1 quả táo và 200 ml sữa không đường.',
+ N'150 g cơm, 180 g thịt bò nạc và rau luộc.',
+ N'1 hũ sữa chua Hy Lạp.',
+ N'150 g khoai lang, 180 g cá trắng và salad.', 2250, 170, 230, 70,
+ N'Giảm tinh bột so với ngày tập nhưng giữ đủ protein để phục hồi.', '2026-09-01 08:32:00'),
+(@demo_pt1_id, @demo_member43_id, 'SPECIFIC_DATE', '2026-09-08', N'Thực đơn cho buổi tập chiều 08/09',
+ N'Yến mạch, trứng và chuối.', N'Sữa chua Hy Lạp.',
+ N'Cơm, ức gà và rau xanh.', N'Chuối trước tập; sữa ít béo sau tập.',
+ N'Khoai lang, cá hồi và salad.', 2500, 175, 290, 70,
+ N'Ăn bữa trưa trước buổi tập ít nhất 3 giờ; bữa phụ trước tập 45-60 phút.', '2026-09-04 11:00:00');
+
+-- Danh gia PT1: chi them nhung cap member/PT chua tung danh gia.
+INSERT INTO reviews (member_id, pt_id, rating_star, comment, created_at)
+SELECT v.member_id, @demo_pt1_id, v.rating_star, v.comment, v.created_at
+FROM (VALUES
+    (@demo_member5_id, 5, N'PT theo sát mức tạ từng tuần, giải thích kỹ thuật rõ ràng và điều chỉnh lịch linh hoạt.', CAST('2026-08-31 20:00:00' AS DATETIME2)),
+    (@demo_member29_id, 4, N'Buổi tập phù hợp người mới và PT chú ý tình trạng lưng dưới của tôi.', CAST('2026-09-02 20:00:00' AS DATETIME2)),
+    (@demo_member68_id, 5, N'Lịch tập thực tế, có ghi nhận kết quả sau buổi nên tôi dễ theo dõi tiến bộ.', CAST('2026-09-04 20:00:00' AS DATETIME2))
+) v(member_id, rating_star, comment, created_at)
+WHERE NOT EXISTS (
+    SELECT 1 FROM reviews r WHERE r.member_id = v.member_id AND r.pt_id = @demo_pt1_id
+);
+
+-- Thong bao moi de dashboard member/Admin/PT co du trang thai da doc/chua doc.
+INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES
+(@demo_member1_id, NULL, N'Bạn có gói tập đang chờ nhận', N'Member2 đã gửi yêu cầu chuyển nhượng gói Premium. Yêu cầu có hiệu lực đến 01/11/2026.', 0, '2026-09-02 09:01:00'),
+(@demo_member3_id, @demo_admin_id, N'Bảo lưu đã được ghi nhận', N'Gói Premium đang bảo lưu đến hết ngày 12/09/2026 và sẽ tự động hoạt động trở lại.', 0, '2026-08-29 08:30:00'),
+(@demo_member4_id, @demo_admin_id, N'Giao dịch đang chờ xác nhận', N'Yêu cầu mua gói VIP 90 ngày đã được tiếp nhận. GymPro sẽ thông báo sau khi đối soát.', 0, '2026-09-04 20:06:00'),
+(@demo_member5_id, @demo_admin_id, N'Gia hạn thành công', N'Giao dịch gia hạn Premium 30 ngày đã được xác nhận; biên nhận đã gửi về email đăng ký.', 1, '2026-08-20 09:30:00'),
+(@demo_member29_id, @demo_admin_id, N'Nâng cấp gói VIP thành công', N'Gói tập của bạn đã được nâng cấp lên VIP và tiếp tục do PT Trần Đức Việt phụ trách.', 0, '2026-08-25 14:20:00'),
+(@demo_member43_id, @demo_pt1_id, N'Lịch tập ngày 08/09', N'Bạn có buổi tập Push lúc 16:00 ngày 08/09. Vui lòng đến sớm 10 phút để khởi động vai.', 0, '2026-09-04 08:00:00'),
+(@demo_pt1_id, @demo_admin_id, N'Lịch tuần bảo vệ đã sẵn sàng', N'Bạn có 4 học viên đang quản lý và 4 buổi tập đã lên lịch trong tuần 07-11/09.', 0, '2026-09-05 07:00:00'),
+(@sale_user_id, @demo_admin_id, N'Cấp Sale đã được cập nhật', N'Bạn đã đạt cấp 2 với 12 khách hàng thành công. Mức ưu đãi hiện tại là 10%.', 0, '2026-08-30 11:00:00');
+
+-- Hoi thoai AI/Sale: dang cho, Sale dang tham gia va da dong.
+INSERT INTO ai_conversations
+    (user_id, title, physical_data_consent, sale_data_consent, handoff_status, assigned_sale_id,
+     handoff_at, closed_at, created_at, updated_at)
+VALUES
+    (@demo_member1_id, N'Tư vấn chọn gói cho mục tiêu giảm cân', 1, 1, 'WAITING_SALE', NULL,
+     '2026-09-05 08:10:00', NULL, '2026-09-05 08:05:00', '2026-09-05 08:10:00');
+DECLARE @demo_waiting_chat_id INT = SCOPE_IDENTITY();
+
+INSERT INTO ai_messages
+    (conversation_id, role, sender_user_id, content, model, input_tokens, output_tokens, total_tokens, created_at)
+VALUES
+(@demo_waiting_chat_id, 'USER', @demo_member1_id, N'Tôi muốn giảm khoảng 7 kg nhưng đầu gối từng đau nhẹ. Gói nào phù hợp?', NULL, NULL, NULL, NULL, '2026-09-05 08:05:00'),
+(@demo_waiting_chat_id, 'ASSISTANT', NULL, N'Dựa trên hồ sơ thể chất, bạn nên ưu tiên lộ trình giảm cân với cardio ít tác động và tập sức mạnh có PT hướng dẫn. Tôi có thể chuyển cuộc trò chuyện cho nhân viên Sale để tư vấn gói và ưu đãi phù hợp.', 'gemini-3.5-flash-lite', 420, 128, 548, '2026-09-05 08:06:00'),
+(@demo_waiting_chat_id, 'USER', @demo_member1_id, N'Đồng ý, tôi muốn được tư vấn trực tiếp.', NULL, NULL, NULL, NULL, '2026-09-05 08:09:00'),
+(@demo_waiting_chat_id, 'SYSTEM', NULL, N'Cuộc trò chuyện đang chờ nhân viên Sale tiếp nhận.', NULL, NULL, NULL, NULL, '2026-09-05 08:10:00');
+
+INSERT INTO ai_conversations
+    (user_id, title, physical_data_consent, sale_data_consent, handoff_status, assigned_sale_id,
+     handoff_at, closed_at, created_at, updated_at)
+VALUES
+    (@demo_member5_id, N'Tư vấn gia hạn gói Premium', 1, 1, 'SALE_JOINED', @sale_user_id,
+     '2026-09-04 19:00:00', NULL, '2026-09-04 18:50:00', '2026-09-04 19:08:00');
+DECLARE @demo_joined_chat_id INT = SCOPE_IDENTITY();
+
+INSERT INTO ai_messages
+    (conversation_id, role, sender_user_id, content, model, input_tokens, output_tokens, total_tokens, created_at)
+VALUES
+(@demo_joined_chat_id, 'USER', @demo_member5_id, N'Tôi đang dùng Premium và muốn gia hạn, hiện có ưu đãi nào không?', NULL, NULL, NULL, NULL, '2026-09-04 18:50:00'),
+(@demo_joined_chat_id, 'ASSISTANT', NULL, N'Bạn đang có gói Premium và mục tiêu tăng cơ. Tôi sẽ mời nhân viên Sale kiểm tra ưu đãi phù hợp.', 'gemini-3.5-flash-lite', 310, 82, 392, '2026-09-04 18:51:00'),
+(@demo_joined_chat_id, 'SYSTEM', NULL, N'Nhân viên Sale Nguyễn Minh Anh đã tham gia cuộc trò chuyện.', NULL, NULL, NULL, NULL, '2026-09-04 19:00:00'),
+(@demo_joined_chat_id, 'SALE', @sale_user_id, N'Chào anh, hiện mã MINHANH10 giảm 10% và chỉ dùng một lần cho mỗi tài khoản. Em có thể hướng dẫn anh tạo giao dịch gia hạn ngay.', NULL, NULL, NULL, NULL, '2026-09-04 19:02:00'),
+(@demo_joined_chat_id, 'USER', @demo_member5_id, N'Cảm ơn bạn, tôi sẽ đăng ký gia hạn 30 ngày.', NULL, NULL, NULL, NULL, '2026-09-04 19:08:00');
+
+INSERT INTO ai_conversations
+    (user_id, title, physical_data_consent, sale_data_consent, handoff_status, assigned_sale_id,
+     handoff_at, closed_at, created_at, updated_at)
+VALUES
+    (@demo_member29_id, N'Tư vấn nâng cấp VIP', 1, 1, 'CLOSED', @sale_user_id,
+     '2026-08-25 13:45:00', '2026-08-25 14:30:00', '2026-08-25 13:35:00', '2026-08-25 14:30:00');
+DECLARE @demo_closed_chat_id INT = SCOPE_IDENTITY();
+
+INSERT INTO ai_messages
+    (conversation_id, role, sender_user_id, content, model, input_tokens, output_tokens, total_tokens, created_at)
+VALUES
+(@demo_closed_chat_id, 'USER', @demo_member29_id, N'VIP khác Premium ở điểm nào và có phù hợp người mới không?', NULL, NULL, NULL, NULL, '2026-08-25 13:35:00'),
+(@demo_closed_chat_id, 'ASSISTANT', NULL, N'VIP phù hợp nếu bạn cần PT theo sát cùng thực đơn cá nhân hóa. Với tiền sử lưng dưới, việc được điều chỉnh bài tập trực tiếp sẽ hữu ích.', 'gemini-3.5-flash-lite', 360, 105, 465, '2026-08-25 13:36:00'),
+(@demo_closed_chat_id, 'SALE', @sale_user_id, N'Gói VIP 90 ngày đang có ưu đãi 10%. Em đã giải thích chi phí, chính sách bảo lưu và điều khoản chuyển nhượng.', NULL, NULL, NULL, NULL, '2026-08-25 13:48:00'),
+(@demo_closed_chat_id, 'SYSTEM', NULL, N'Cuộc trò chuyện đã được đóng sau khi khách hàng hoàn tất nâng cấp.', NULL, NULL, NULL, NULL, '2026-08-25 14:30:00');
+
+-- Dat yeu cau dang cho o cuoi batch de day la trang thai nghiep vu moi nhat khi demo.
+INSERT INTO membership_transfers
+    (source_membership_id, sender_id, recipient_id, status, remaining_days_at_request, expires_at, created_at)
+VALUES
+    (@demo_transfer_source_id, @demo_member2_id, @demo_member1_id, 'PENDING_RECIPIENT',
+     DATEDIFF(DAY, '2026-09-02', '2026-12-13'), '2026-11-01 09:00:00', '2026-09-02 09:00:00');
+
+IF NOT EXISTS (
+    SELECT 1 FROM membership_transfers
+    WHERE source_membership_id = @demo_transfer_source_id AND status = 'PENDING_RECIPIENT'
+)
+    THROW 50020, 'Seed demo transfer request was not created.', 1;
+
+PRINT N'Đã nạp kịch bản demo GymPro cho giai đoạn bảo vệ 03/09/2026 - 08/09/2026.';
 
 -- ============================================================
 -- HET FILE

@@ -35,6 +35,12 @@ docs/
 uploads/
 source/frontend/test-results/
 source/frontend/playwright-report/
+.ms/
+bao_cao/
+.codex_work/
+.m2/
+erd/
+migrations/
 
 ### Environment variables / secrets ###
 .env

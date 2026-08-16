@@ -17,4 +17,11 @@ public interface AiConversationRepository extends JpaRepository<AiConversation, 
     Optional<AiConversation> findByIdAndUser_Id(Integer id, Integer userId);
 
     List<AiConversation> findByUpdatedAtBefore(LocalDateTime cutoff);
+
+    List<AiConversation> findByAssignedSale_IdAndHandoffStatusInOrderByUpdatedAtDesc(
+            Integer saleId, List<String> statuses);
+
+    long countByAssignedSale_IdAndHandoffStatusIn(Integer saleId, List<String> statuses);
+
+    List<AiConversation> findByHandoffStatusOrderByHandoffAtAsc(String status);
 }

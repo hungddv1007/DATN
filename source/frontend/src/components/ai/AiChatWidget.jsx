@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { confirmDialog } from '../../utils/dialog';
 import {
   Bot,
   ChevronDown,
@@ -118,7 +119,7 @@ const AiChatWidget = () => {
 
   const handleDeleteConversation = async () => {
     if (!activeConversation || sending) return;
-    if (!window.confirm('Bạn có chắc muốn xóa toàn bộ hội thoại này?')) return;
+    if (!await confirmDialog('Bạn có chắc muốn xóa toàn bộ hội thoại này?', { confirmText: 'Xóa hội thoại', danger: true })) return;
 
     setLoading(true);
     setError('');
@@ -147,7 +148,7 @@ const AiChatWidget = () => {
     const consent = event.target.checked;
     if (
       consent &&
-      !window.confirm(
+      !await confirmDialog(
         'Cho phép GymPro gửi các chỉ số trong hồ sơ thể chất của bạn tới Gemini để cá nhân hóa câu trả lời khi có liên quan? Không gửi email, số điện thoại hoặc thông tin đăng nhập.',
       )
     ) {
@@ -171,6 +172,16 @@ const AiChatWidget = () => {
   const sendMessage = async (text) => {
     const cleanText = text.trim();
     if (!cleanText || !activeConversation || sending) return;
+
+    if (['SALE_ASSIGNED', 'SALE_JOINED'].includes(activeConversation.handoffStatus)) {
+      setSending(true); setError('');
+      try {
+        const saved = await aiChatService.sendHumanMessage(activeConversation.id, cleanText);
+        setMessages(current => [...current, saved]); setInput(''); scrollToBottom();
+      } catch (err) { setError(err.response?.data?.message || err.message); }
+      finally { setSending(false); }
+      return;
+    }
 
     localMessageIdRef.current += 1;
     const localId = localMessageIdRef.current;
@@ -255,6 +266,49 @@ const AiChatWidget = () => {
     setIsOpen(false);
   };
 
+  const requestSale = async () => {
+    if (!activeConversation || sending) return;
+    if (!await confirmDialog('Cho phép nhân viên Sale xem nội dung cuộc trò chuyện này để tư vấn trực tiếp?', { confirmText: 'Cho phép' })) return;
+    try {
+      const updated = await aiChatService.requestHandoff(activeConversation.id);
+      setActiveConversation(updated);
+      setConversations(current => current.map(c => c.id === updated.id ? updated : c));
+      setMessages(await aiChatService.getMessages(updated.id));
+    } catch (err) { setError(err.response?.data?.message || err.message); }
+  };
+
+  useEffect(() => {
+    const conversationId = activeConversation?.id;
+    const humanChatActive = ['WAITING_SALE', 'SALE_ASSIGNED', 'SALE_JOINED']
+      .includes(activeConversation?.handoffStatus);
+    if (!isOpen || !initialized || !conversationId || !humanChatActive) return undefined;
+
+    let cancelled = false;
+    const refreshHumanChat = async () => {
+      try {
+        const [items, history] = await Promise.all([
+          aiChatService.getConversations(),
+          aiChatService.getMessages(conversationId),
+        ]);
+        if (cancelled) return;
+        setConversations(items);
+        const current = items.find(item => item.id === conversationId);
+        if (current) setActiveConversation(current);
+        setMessages(history);
+        scrollToBottom();
+      } catch {
+        // Poll tiếp ở chu kỳ sau; lỗi gửi chủ động vẫn được hiển thị riêng.
+      }
+    };
+
+    const timer = window.setInterval(refreshHumanChat, 3000);
+    refreshHumanChat();
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [activeConversation?.handoffStatus, activeConversation?.id, initialized, isOpen]);
+
   if (!shouldRender) return null;
 
   return (
@@ -321,6 +375,11 @@ const AiChatWidget = () => {
               <ShieldCheck size={15} />
               Dùng hồ sơ thể chất để cá nhân hóa
             </label>
+            <button type="button" className="ai-sale-handoff" onClick={requestSale}
+              disabled={!activeConversation || ['WAITING_SALE','SALE_ASSIGNED','SALE_JOINED'].includes(activeConversation?.handoffStatus)}>
+              {activeConversation?.handoffStatus === 'WAITING_SALE' ? 'Đang chờ tư vấn viên'
+                : activeConversation?.assignedSaleName ? `Đang chat với ${activeConversation.assignedSaleName}` : 'Chat với nhân viên Sale'}
+            </button>
           </div>
 
           <div className="ai-chat-messages" ref={messageListRef}>
@@ -350,10 +409,10 @@ const AiChatWidget = () => {
               <div
                 key={message.id}
                 className={`ai-chat-message ${
-                  message.role === 'USER' ? 'user' : 'assistant'
+                  message.role === 'USER' ? 'user' : message.role === 'SALE' ? 'sale' : 'assistant'
                 }`}
               >
-                {message.role === 'ASSISTANT' && (
+                {['ASSISTANT','SALE','SYSTEM'].includes(message.role) && (
                   <span className="ai-message-avatar"><Bot size={15} /></span>
                 )}
                 <div className="ai-message-bubble">
@@ -393,12 +452,12 @@ const AiChatWidget = () => {
               }}
               maxLength={2000}
               rows={1}
-              placeholder="Hỏi GymPro AI..."
-              disabled={sending || !activeConversation}
+              placeholder={activeConversation?.assignedSaleName ? `Nhắn ${activeConversation.assignedSaleName}...` : 'Hỏi GymPro AI...'}
+              disabled={sending || !activeConversation || activeConversation?.handoffStatus === 'WAITING_SALE'}
             />
             <button
               type="submit"
-              disabled={!input.trim() || sending || !activeConversation}
+              disabled={!input.trim() || sending || !activeConversation || activeConversation?.handoffStatus === 'WAITING_SALE'}
               aria-label="Gửi tin nhắn"
             >
               <Send size={18} />

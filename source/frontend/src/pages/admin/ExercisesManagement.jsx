@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import exerciseService from '../../services/exerciseService';
+import { confirmDialog } from '../../utils/dialog';
 import fileService from '../../services/fileService';
 import { Edit, Trash2, Plus, PlayCircle, Upload } from 'lucide-react';
 import AdminPagination from '../../components/admin/AdminPagination';
@@ -62,7 +63,7 @@ const ExercisesManagement = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bài tập này?')) return;
+    if (!await confirmDialog('Bạn có chắc chắn muốn xóa bài tập này?', { confirmText: 'Xóa', danger: true })) return;
     try {
       await exerciseService.deleteExercise(id);
       alert('Xóa thành công!');

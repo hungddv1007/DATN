@@ -25,6 +25,10 @@ public class AiMessage {
     @Column(name = "role", nullable = false, length = 20)
     private String role;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_user_id")
+    private User senderUser;
+
     @Column(name = "content", nullable = false, columnDefinition = "NVARCHAR(MAX)")
     private String content;
 

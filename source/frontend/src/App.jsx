@@ -18,6 +18,7 @@ const MemberDashboard = lazy(() => import('./pages/member/MemberDashboard'));
 const BuyPackagePage = lazy(() => import('./pages/member/BuyPackagePage'));
 const MemberTransactions = lazy(() => import('./pages/member/MemberTransactions'));
 const MembershipManagePage = lazy(() => import('./pages/member/MembershipManagePage'));
+const MembershipTransferPage = lazy(() => import('./pages/member/MembershipTransferPage'));
 const MemberSchedulePage = lazy(() => import('./pages/member/MemberSchedulePage'));
 const MemberDietPage = lazy(() => import('./pages/member/MemberDietPage'));
 const MemberPhysicalProfilePage = lazy(() => import('./pages/member/MemberPhysicalProfilePage'));
@@ -35,8 +36,12 @@ const PromotionsManagement = lazy(() => import('./pages/admin/PromotionsManageme
 const BlogsManagement = lazy(() => import('./pages/admin/BlogsManagement'));
 const ExercisesManagement = lazy(() => import('./pages/admin/ExercisesManagement'));
 const DiscountsManagement = lazy(() => import('./pages/admin/DiscountsManagement'));
+const BusinessManagementPage = lazy(() => import('./pages/admin/BusinessManagementPage'));
+const ServiceReviewsManagement = lazy(() => import('./pages/admin/ServiceReviewsManagement'));
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 const NotificationComposePage = lazy(() => import('./pages/common/NotificationComposePage'));
+const SaleDashboardPage = lazy(() => import('./pages/sale/SaleDashboardPage'));
+import GlobalAlert from './components/common/GlobalAlert';
 
 import './index.css';
 
@@ -99,6 +104,11 @@ function App() {
               <MemberDietPage />
             </ProtectedRoute>
           } />
+          <Route path="/member/membership-transfer" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MembershipTransferPage />
+            </ProtectedRoute>
+          } />
           <Route path="/member/physical-profile" element={
             <ProtectedRoute allowedRoles={['MEMBER']}>
               <MemberPhysicalProfilePage />
@@ -139,6 +149,11 @@ function App() {
           <Route path="/pt/notifications" element={
             <ProtectedRoute allowedRoles={['PT']}>
               <NotificationComposePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/sale" element={
+            <ProtectedRoute allowedRoles={['SALE']}>
+              <SaleDashboardPage />
             </ProtectedRoute>
           } />
           {/* === Admin (cần đăng nhập + role ADMIN) === */}
@@ -182,6 +197,16 @@ function App() {
               <DiscountsManagement />
             </ProtectedRoute>
           } />
+          <Route path="/admin/business" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <BusinessManagementPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/service-reviews" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ServiceReviewsManagement />
+            </ProtectedRoute>
+          } />
           <Route path="/admin/notifications" element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <NotificationComposePage />
@@ -190,6 +215,7 @@ function App() {
           </Routes>
           <AiChatWidget />
         </Suspense>
+        <GlobalAlert />
       </AuthProvider>
     </BrowserRouter>
   );

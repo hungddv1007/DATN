@@ -1,0 +1,138 @@
+.transfer-page{max-width:1180px;margin:0 auto;padding:42px 20px 80px;color:#eaf0fa}.transfer-lead{color:#94a3b8}.transfer-panel{background:#172236;border:1px solid #2a3951;border-radius:14px;padding:22px;margin-top:22px}.transfer-columns{display:grid;grid-template-columns:1fr 1fr;gap:20px}.transfer-form{display:grid;gap:18px;min-width:0}.transfer-form input:not([type="checkbox"]){width:100%;box-sizing:border-box;padding:13px;border-radius:8px;border:1px solid #40516c;background:#0f172a;color:white}.transfer-page button{border:0;border-radius:8px;padding:11px 16px;background:#ff6b00;color:#fff;font-weight:700;cursor:pointer}.transfer-page button.secondary{background:#334155}.policy-check{display:flex;gap:9px;align-items:center}.policy-check button{padding:0;background:none;color:#fb923c;text-decoration:underline}.transfer-item{display:grid;gap:8px;padding:16px 0;border-bottom:1px solid #334155}.transfer-item span,.transfer-item em{color:#aab6ca}.transfer-warning,.transfer-error{color:#fecaca;background:#7f1d1d;padding:10px;border-radius:8px}.transfer-item div{display:flex;gap:8px}.transfer-auth-divider{display:flex;align-items:center;gap:12px;color:#94a3b8;font-size:.78rem;text-align:center}.transfer-auth-divider::before,.transfer-auth-divider::after{content:"";height:1px;flex:1;background:#334155}.transfer-google-button{display:flex;min-height:42px;align-items:center;justify-content:center}@media(max-width:760px){.transfer-columns{grid-template-columns:1fr}}
+
+.transfer-section-description {
+  margin: -4px 0 18px;
+  color: #94a3b8;
+  line-height: 1.55;
+}
+
+.transfer-create-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 290px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
+}
+
+.transfer-sender-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 22px 18px;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, .62);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.transfer-sender-summary span {
+  color: #94a3b8;
+  font-size: .82rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.transfer-sender-summary strong { color: #f8fafc; }
+.transfer-sender-summary small { margin-top: 5px; color: #93c5fd; overflow-wrap: anywhere; }
+
+.transfer-sender-avatar {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin: 16px 0 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border: 3px solid rgba(251, 146, 60, .2);
+  border-radius: 50%;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.transfer-step-status {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: auto;
+  padding: 14px;
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, .7);
+  border-radius: 9px;
+  text-align: left;
+}
+
+.transfer-step-status b { color: #fb923c; font-size: .82rem; }
+.transfer-step-status p { margin: 6px 0 0; color: #94a3b8; font-size: .78rem; line-height: 1.5; }
+
+.transfer-field {
+  display: grid;
+  gap: 7px;
+}
+
+.transfer-field label {
+  color: #e2e8f0;
+  font-size: .92rem;
+  font-weight: 700;
+}
+
+.transfer-field small {
+  color: #94a3b8;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+.transfer-form input:not([type="checkbox"]):focus {
+  border-color: #f97316;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .14);
+}
+
+.transfer-form input:not([type="checkbox"]):disabled {
+  color: #cbd5e1;
+  background: #263247;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.policy-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  accent-color: #f97316;
+}
+
+.transfer-verified-note {
+  padding: 11px 13px;
+  color: #bbf7d0;
+  background: rgba(22, 101, 52, .28);
+  border: 1px solid rgba(74, 222, 128, .25);
+  border-radius: 9px;
+  font-size: .86rem;
+}
+
+.transfer-submit-button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 2px;
+  box-shadow: 0 8px 22px rgba(249, 115, 22, .16);
+}
+
+.transfer-submit-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  .transfer-create-layout { grid-template-columns: 1fr; }
+  .transfer-sender-summary { align-items: flex-start; text-align: left; }
+  .transfer-sender-avatar { display: none; }
+  .transfer-step-status { margin-top: 16px; }
+}
+
+@media (max-width: 760px) {
+  .transfer-sender-summary { grid-template-columns: 1fr; }
+  .transfer-panel { padding: 18px 16px; }
+}
