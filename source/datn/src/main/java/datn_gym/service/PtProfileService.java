@@ -148,6 +148,7 @@ public class PtProfileService {
                 .certificates(profile.getCertificates())
                 .ratingScore(profile.getRatingScore())
                 .totalMembers(totalMembers)
+                .maxMembers(profile.getMaxMembers() != null ? profile.getMaxMembers() : 5)
                 .totalReviews(totalReviews)
                 .build();
     }

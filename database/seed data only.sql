@@ -1263,7 +1263,7 @@ INSERT INTO sales_referral_codes
     (sales_profile_id, code, description, discount_percent, one_time_per_member, is_active, expires_at)
 VALUES
     (@sale_profile_id, 'MINHANHVIP10', N'Ưu đãi 10% dành cho khách hàng VIP của Minh Anh', 10, 1, 1, '2026-12-31 23:59:59'),
-    (@sale_profile_id, 'MINHANHOLD10', N'Mã chiến dịch cũ đã đóng để demo quản lý trạng thái', 10, 0, 0, '2026-08-31 23:59:59');
+    (@sale_profile_id, 'MINHANHPLUS10', N'Mã ưu đãi linh hoạt của nhân viên Nguyễn Minh Anh', 10, 0, 1, NULL);
 DECLARE @demo_sale_code_id INT = (SELECT id FROM sales_referral_codes WHERE code = 'MINHANH10');
 
 DECLARE @demo_sale_transactions TABLE (
@@ -1454,56 +1454,6 @@ INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_
 (@demo_member43_id, @demo_pt1_id, N'Lịch tập ngày 08/09', N'Bạn có buổi tập Push lúc 16:00 ngày 08/09. Vui lòng đến sớm 10 phút để khởi động vai.', 0, '2026-09-04 08:00:00'),
 (@demo_pt1_id, @demo_admin_id, N'Lịch tuần bảo vệ đã sẵn sàng', N'Bạn có 4 học viên đang quản lý và 4 buổi tập đã lên lịch trong tuần 07-11/09.', 0, '2026-09-05 07:00:00'),
 (@sale_user_id, @demo_admin_id, N'Cấp Sale đã được cập nhật', N'Bạn đã đạt cấp 2 với 12 khách hàng thành công. Mức ưu đãi hiện tại là 10%.', 0, '2026-08-30 11:00:00');
-
--- Hoi thoai AI/Sale: dang cho, Sale dang tham gia va da dong.
-INSERT INTO ai_conversations
-    (user_id, title, physical_data_consent, sale_data_consent, handoff_status, assigned_sale_id,
-     handoff_at, closed_at, created_at, updated_at)
-VALUES
-    (@demo_member1_id, N'Tư vấn chọn gói cho mục tiêu giảm cân', 1, 1, 'WAITING_SALE', NULL,
-     '2026-09-05 08:10:00', NULL, '2026-09-05 08:05:00', '2026-09-05 08:10:00');
-DECLARE @demo_waiting_chat_id INT = SCOPE_IDENTITY();
-
-INSERT INTO ai_messages
-    (conversation_id, role, sender_user_id, content, model, input_tokens, output_tokens, total_tokens, created_at)
-VALUES
-(@demo_waiting_chat_id, 'USER', @demo_member1_id, N'Tôi muốn giảm khoảng 7 kg nhưng đầu gối từng đau nhẹ. Gói nào phù hợp?', NULL, NULL, NULL, NULL, '2026-09-05 08:05:00'),
-(@demo_waiting_chat_id, 'ASSISTANT', NULL, N'Dựa trên hồ sơ thể chất, bạn nên ưu tiên lộ trình giảm cân với cardio ít tác động và tập sức mạnh có PT hướng dẫn. Tôi có thể chuyển cuộc trò chuyện cho nhân viên Sale để tư vấn gói và ưu đãi phù hợp.', 'gemini-3.5-flash-lite', 420, 128, 548, '2026-09-05 08:06:00'),
-(@demo_waiting_chat_id, 'USER', @demo_member1_id, N'Đồng ý, tôi muốn được tư vấn trực tiếp.', NULL, NULL, NULL, NULL, '2026-09-05 08:09:00'),
-(@demo_waiting_chat_id, 'SYSTEM', NULL, N'Cuộc trò chuyện đang chờ nhân viên Sale tiếp nhận.', NULL, NULL, NULL, NULL, '2026-09-05 08:10:00');
-
-INSERT INTO ai_conversations
-    (user_id, title, physical_data_consent, sale_data_consent, handoff_status, assigned_sale_id,
-     handoff_at, closed_at, created_at, updated_at)
-VALUES
-    (@demo_member5_id, N'Tư vấn gia hạn gói Premium', 1, 1, 'SALE_JOINED', @sale_user_id,
-     '2026-09-04 19:00:00', NULL, '2026-09-04 18:50:00', '2026-09-04 19:08:00');
-DECLARE @demo_joined_chat_id INT = SCOPE_IDENTITY();
-
-INSERT INTO ai_messages
-    (conversation_id, role, sender_user_id, content, model, input_tokens, output_tokens, total_tokens, created_at)
-VALUES
-(@demo_joined_chat_id, 'USER', @demo_member5_id, N'Tôi đang dùng Premium và muốn gia hạn, hiện có ưu đãi nào không?', NULL, NULL, NULL, NULL, '2026-09-04 18:50:00'),
-(@demo_joined_chat_id, 'ASSISTANT', NULL, N'Bạn đang có gói Premium và mục tiêu tăng cơ. Tôi sẽ mời nhân viên Sale kiểm tra ưu đãi phù hợp.', 'gemini-3.5-flash-lite', 310, 82, 392, '2026-09-04 18:51:00'),
-(@demo_joined_chat_id, 'SYSTEM', NULL, N'Nhân viên Sale Nguyễn Minh Anh đã tham gia cuộc trò chuyện.', NULL, NULL, NULL, NULL, '2026-09-04 19:00:00'),
-(@demo_joined_chat_id, 'SALE', @sale_user_id, N'Chào anh, hiện mã MINHANH10 giảm 10% và chỉ dùng một lần cho mỗi tài khoản. Em có thể hướng dẫn anh tạo giao dịch gia hạn ngay.', NULL, NULL, NULL, NULL, '2026-09-04 19:02:00'),
-(@demo_joined_chat_id, 'USER', @demo_member5_id, N'Cảm ơn bạn, tôi sẽ đăng ký gia hạn 30 ngày.', NULL, NULL, NULL, NULL, '2026-09-04 19:08:00');
-
-INSERT INTO ai_conversations
-    (user_id, title, physical_data_consent, sale_data_consent, handoff_status, assigned_sale_id,
-     handoff_at, closed_at, created_at, updated_at)
-VALUES
-    (@demo_member29_id, N'Tư vấn nâng cấp VIP', 1, 1, 'CLOSED', @sale_user_id,
-     '2026-08-25 13:45:00', '2026-08-25 14:30:00', '2026-08-25 13:35:00', '2026-08-25 14:30:00');
-DECLARE @demo_closed_chat_id INT = SCOPE_IDENTITY();
-
-INSERT INTO ai_messages
-    (conversation_id, role, sender_user_id, content, model, input_tokens, output_tokens, total_tokens, created_at)
-VALUES
-(@demo_closed_chat_id, 'USER', @demo_member29_id, N'VIP khác Premium ở điểm nào và có phù hợp người mới không?', NULL, NULL, NULL, NULL, '2026-08-25 13:35:00'),
-(@demo_closed_chat_id, 'ASSISTANT', NULL, N'VIP phù hợp nếu bạn cần PT theo sát cùng thực đơn cá nhân hóa. Với tiền sử lưng dưới, việc được điều chỉnh bài tập trực tiếp sẽ hữu ích.', 'gemini-3.5-flash-lite', 360, 105, 465, '2026-08-25 13:36:00'),
-(@demo_closed_chat_id, 'SALE', @sale_user_id, N'Gói VIP 90 ngày đang có ưu đãi 10%. Em đã giải thích chi phí, chính sách bảo lưu và điều khoản chuyển nhượng.', NULL, NULL, NULL, NULL, '2026-08-25 13:48:00'),
-(@demo_closed_chat_id, 'SYSTEM', NULL, N'Cuộc trò chuyện đã được đóng sau khi khách hàng hoàn tất nâng cấp.', NULL, NULL, NULL, NULL, '2026-08-25 14:30:00');
 
 -- Dat yeu cau dang cho o cuoi batch de day la trang thai nghiep vu moi nhat khi demo.
 INSERT INTO membership_transfers

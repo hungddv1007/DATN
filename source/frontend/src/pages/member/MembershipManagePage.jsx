@@ -216,7 +216,8 @@ const MembershipManagePage = () => {
     setError('');
     try {
       const selectedPkg = packages.find(p => p.id === parseInt(upgradePkgId));
-      if (selectedPkg?.canChoosePt && !upgradePtId) {
+      const currentPkg = packages.find(p => p.id === membership?.packageId);
+      if (selectedPkg?.canChoosePt && !currentPkg?.hasPt && !upgradePtId) {
         setError("Vui lòng chọn Huấn luyện viên cá nhân (PT) cho gói nâng cấp!");
         setActionLoading(false);
         return;
@@ -226,7 +227,7 @@ const MembershipManagePage = () => {
         extraDays: parseInt(upgradeExtraDays) || 0,
         promotionCode: upgradePromo || null,
         paymentMethod: upgradePayMethod,
-        ptId: upgradePtId ? parseInt(upgradePtId) : null
+        ptId: !currentPkg?.hasPt && upgradePtId ? parseInt(upgradePtId) : null
       });
       setShowUpgradeModal(false);
       if (upgradePayMethod === 'MOMO') {
@@ -257,6 +258,8 @@ const MembershipManagePage = () => {
   }
 
   const upgradeOptions = packages.filter(p => membership && p.dailyPrice > membership.dailyPrice && p.isActive);
+  const currentPackage = packages.find(p => membership && p.id === membership.packageId);
+  const canSelectPtForUpgrade = currentPackage && !currentPackage.hasPt;
   const priceDisplay = getMembershipPriceDisplay(membership, history);
 
   return (
@@ -535,7 +538,7 @@ const MembershipManagePage = () => {
                     </select>
                   </div>
 
-                  {upgradePkgId && packages.find(p => p.id === parseInt(upgradePkgId))?.canChoosePt && (
+                  {upgradePkgId && canSelectPtForUpgrade && packages.find(p => p.id === parseInt(upgradePkgId))?.canChoosePt && (
                     <div className="form-group">
                       <label>Chọn Huấn luyện viên cá nhân (PT)</label>
                       <select 
@@ -544,11 +547,16 @@ const MembershipManagePage = () => {
                         required
                       >
                         <option value="">-- Vui lòng chọn một Huấn luyện viên --</option>
-                        {pts.map(pt => (
-                          <option key={pt.id} value={pt.id}>
-                            {pt.fullName} - {pt.specialization} (Đánh giá: {pt.ratingScore || 'Chưa có'}/5)
-                          </option>
-                        ))}
+                        {pts.map(pt => {
+                          const currentMembers = pt.totalMembers ?? 0;
+                          const maxMembers = pt.maxMembers ?? 5;
+                          const isFull = currentMembers >= maxMembers;
+                          return (
+                            <option key={pt.id} value={pt.id} disabled={isFull}>
+                              {pt.fullName} - {pt.specialization} (Đánh giá: {pt.ratingScore || 'Chưa có'}/5) (Số học viên {currentMembers}/{maxMembers}){isFull ? ' — Đã đủ học viên' : ''}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   )}

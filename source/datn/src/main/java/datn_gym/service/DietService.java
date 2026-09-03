@@ -34,6 +34,7 @@ public class DietService {
         private static final String REST_DAY = "REST_DAY";
         private static final String SPECIFIC_DATE = "SPECIFIC_DATE";
         private static final Set<String> VALID_DAY_TYPES = Set.of(TRAINING_DAY, REST_DAY, SPECIFIC_DATE);
+        private static final List<String> TRAINING_SCHEDULE_STATUSES = List.of("SCHEDULED", "COMPLETED");
 
         // ================================================================
         // PT: QUẢN LÝ THỰC ĐƠN
@@ -282,8 +283,8 @@ public class DietService {
         /** Kiểm tra ngày có lịch tập không — dùng pt_schedules */
         private boolean isTrainingDay(Integer memberId, LocalDate date) {
                 var schedules = ptScheduleRepository
-                                .findByMemberIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
-                                                memberId, date, date, "ACTIVE");
+                                .findByMemberIdAndScheduleDateBetweenAndStatusInOrderByScheduleDateAscStartTimeAsc(
+                                                memberId, date, date, TRAINING_SCHEDULE_STATUSES);
                 return schedules != null && !schedules.isEmpty();
         }
 
