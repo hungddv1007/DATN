@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,6 +88,31 @@ class DietServiceTest {
         DietResponse result = dietService.getMyDietForDate(member.getEmail(), date);
 
         assertFalse(result.getIsTrainingDay());
+    }
+
+    @Test
+    void ptDietListMarksSpecificDateUsingTheActualSchedule() {
+        LocalDate date = LocalDate.of(2026, 9, 5);
+        User member = User.builder().id(29).email("member29@gympro.com").build();
+        User pt = User.builder().id(8).email("pt@gympro.com").fullName("PT Test").build();
+        Diet specificDiet = Diet.builder().id(3).member(member).pt(pt)
+                .dayType("SPECIFIC_DATE").dietDate(date).title("Thực đơn riêng").build();
+        PtSchedule schedule = PtSchedule.builder().status("SCHEDULED").scheduleDate(date).build();
+        when(userService.getUserByEmail(pt.getEmail())).thenReturn(pt);
+        when(membershipRepository.existsVipMembershipByPtAndMember(pt.getId(), member.getId()))
+                .thenReturn(true);
+        when(dietRepository.findByPt_IdAndMember_IdOrderByCreatedAtDesc(pt.getId(), member.getId()))
+                .thenReturn(List.of(specificDiet));
+        when(ptScheduleRepository
+                .findByMemberIdAndScheduleDateBetweenAndStatusInOrderByScheduleDateAscStartTimeAsc(
+                        member.getId(), date, date, List.of("SCHEDULED", "COMPLETED")))
+                .thenReturn(List.of(schedule));
+
+        DietResponse result = dietService.getDietsByMember(pt.getEmail(), member.getId()).getFirst();
+
+        assertEquals("SPECIFIC_DATE", result.getDayType());
+        assertEquals(date, result.getDietDate());
+        assertTrue(result.getIsTrainingDay());
     }
 
     private void prepareDietLookup(User member, LocalDate date, String dayType, Diet diet) {
