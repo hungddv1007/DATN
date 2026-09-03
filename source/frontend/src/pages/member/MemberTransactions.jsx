@@ -131,7 +131,7 @@ const MemberTransactions = () => {
                         <div className="tx-final">{formatCurrency(item.finalAmount)}</div>
                       )}
                       <div className="tx-method">
-                        Phương thức: <strong>{item.paymentMethod === 'BANK' ? 'Chuyển khoản' : item.paymentMethod === 'CASH' ? 'Tiền mặt' : item.paymentMethod}</strong>
+                        Phương thức: <strong>{item.paymentMethod === 'BANK' ? 'Chuyển khoản' : item.paymentMethod === 'CASH' ? 'Tiền mặt' : item.paymentMethod === 'MOMO' ? 'MoMo' : item.paymentMethod}</strong>
                       </div>
                       {item.transactionStatus === 'CONFIRMED' && <button className="btn-buy"
                         disabled={reviewedIds.has(item.transactionId)} onClick={() => reviewTransaction(item)}>

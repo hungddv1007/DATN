@@ -7,11 +7,35 @@ import {
   WalletCards,
 } from 'lucide-react';
 import AdminLayout from '../../components/layout/AdminLayout';
+import AdminPagination from '../../components/admin/AdminPagination';
+import useClientPagination from '../../hooks/useClientPagination';
 import api from '../../services/api';
 import { confirmDialog } from '../../utils/dialog';
 import './AdminManagement.css';
 
 const money = value => `${new Intl.NumberFormat('vi-VN').format(value || 0)} ₫`;
+
+const waitingTooltip = (payableAt, nowMs) => {
+  if (!payableAt) return 'Chưa xác định được thời điểm đủ điều kiện chi trả.';
+  if (nowMs === 0) return 'Đang đồng bộ thời gian chờ...';
+  const payableDate = new Date(payableAt);
+  const remainingMs = payableDate.getTime() - nowMs;
+  const eligibleAt = payableDate.toLocaleString('vi-VN', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+  if (remainingMs <= 0) {
+    return `Đủ điều kiện từ: ${eligibleAt}\nĐã hết thời gian chờ, hệ thống đang cập nhật trạng thái.`;
+  }
+
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const countdown = `${days} ngày ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  return `Đủ điều kiện lúc: ${eligibleAt}\nCòn lại: ${countdown}`;
+};
 
 const commissionLabels = {
   PENDING: 'Đang chờ',
@@ -26,6 +50,7 @@ const BusinessManagementPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [nowMs, setNowMs] = useState(0);
   const [form, setForm] = useState({ email: '', password: '123456', fullName: '', phone: '' });
 
   const load = useCallback(async () => {
@@ -47,6 +72,12 @@ const BusinessManagementPage = () => {
     load().catch(err => setError(err.response?.data?.message || 'Không thể tải dữ liệu'));
   }, [load]);
 
+  useEffect(() => {
+    if (!commissions.some(item => item.status === 'PENDING')) return undefined;
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [commissions]);
+
   const summary = useMemo(() => ({
     activeSales: sales.filter(sale => sale.status).length,
     pendingCommission: commissions
@@ -56,6 +87,13 @@ const BusinessManagementPage = () => {
       .filter(item => item.status === 'PAID')
       .reduce((total, item) => total + Number(item.commissionAmount || 0), 0),
   }), [sales, commissions]);
+
+  const {
+    page: commissionPage,
+    setPage: setCommissionPage,
+    totalPages: commissionTotalPages,
+    pageItems: visibleCommissions,
+  } = useClientPagination(commissions);
 
   const create = async event => {
     event.preventDefault();
@@ -79,8 +117,8 @@ const BusinessManagementPage = () => {
 
   const markPaid = async commission => {
     const confirmed = await confirmDialog(
-      `Xác nhận đã chi trả ${money(commission.commissionAmount)} cho giao dịch #${commission.transactionId}?`,
-      { confirmText: 'Đã chi trả' },
+      `Xác nhận chi trả ${money(commission.commissionAmount)} cho nhân viên Sale ${commission.saleName} (${commission.saleEmail}), thuộc giao dịch #${commission.transactionId}?`,
+      { confirmText: 'Thanh toán' },
     );
     if (!confirmed) return;
 
@@ -174,24 +212,31 @@ const BusinessManagementPage = () => {
           </div>
           <div className="business-table-scroll">
             <table className="admin-table business-table">
-              <thead><tr><th>Giao dịch</th><th>Khách hàng</th><th>Doanh thu</th><th>Tỷ lệ</th><th>Hoa hồng</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+              <thead><tr><th>Giao dịch</th><th>Khách hàng</th><th>Nhân viên Sale</th><th>Doanh thu</th><th>Tỷ lệ</th><th>Hoa hồng</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
               <tbody>
-                {loading ? <tr><td colSpan="7" className="business-empty">Đang tải dữ liệu...</td></tr>
-                  : commissions.length === 0 ? <tr><td colSpan="7" className="business-empty">Chưa phát sinh hoa hồng.</td></tr>
-                    : commissions.map(item => (
+                {loading ? <tr><td colSpan="8" className="business-empty">Đang tải dữ liệu...</td></tr>
+                  : visibleCommissions.length === 0 ? <tr><td colSpan="8" className="business-empty">Chưa phát sinh hoa hồng.</td></tr>
+                    : visibleCommissions.map(item => (
                       <tr key={item.id}>
                         <td><strong className="business-code">#{item.transactionId}</strong></td>
-                        <td>{item.memberName}</td><td>{money(item.baseAmount)}</td><td>{item.commissionRate}%</td>
+                        <td>{item.memberName}</td>
+                        <td><div className="business-sale-commission"><strong>{item.saleName}</strong><small>{item.saleEmail}</small></div></td>
+                        <td>{money(item.baseAmount)}</td><td>{item.commissionRate}%</td>
                         <td><strong className="business-money">{money(item.commissionAmount)}</strong></td>
-                        <td><span className={`business-status status-${item.status?.toLowerCase()}`}>{commissionLabels[item.status] || item.status}</span></td>
-                        <td>{item.status !== 'PAID' && item.status !== 'REVERSED'
-                          ? <button className="business-action-btn action-pay" type="button" onClick={() => markPaid(item)}><BadgeCheck size={17} /> Xác nhận đã trả</button>
+                        <td><span
+                          className={`business-status status-${item.status?.toLowerCase()} ${item.status === 'PENDING' ? 'business-status-with-tooltip' : ''}`}
+                          data-tooltip={item.status === 'PENDING' ? waitingTooltip(item.payableAt, nowMs) : undefined}
+                          tabIndex={item.status === 'PENDING' ? 0 : undefined}
+                        >{commissionLabels[item.status] || item.status}</span></td>
+                        <td>{item.status === 'PAYABLE'
+                          ? <button className="business-action-btn action-pay" type="button" onClick={() => markPaid(item)}><BadgeCheck size={17} /> Thanh toán</button>
                           : <span className="business-muted">—</span>}</td>
                       </tr>
                     ))}
               </tbody>
             </table>
           </div>
+          <AdminPagination page={commissionPage} totalPages={commissionTotalPages} onPageChange={setCommissionPage} />
         </section>
 
       </div>

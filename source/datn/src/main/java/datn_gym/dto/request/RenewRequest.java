@@ -3,6 +3,7 @@ package datn_gym.dto.request;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import jakarta.validation.constraints.Pattern;
 
 @Data
 public class RenewRequest {
@@ -12,5 +13,6 @@ public class RenewRequest {
     private Integer durationDays;
 
     private String promotionCode;
+    @Pattern(regexp = "CASH|BANK|MOMO", message = "Phương thức thanh toán không hợp lệ")
     private String paymentMethod;
 }

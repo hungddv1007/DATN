@@ -125,7 +125,7 @@ const TransactionsManagement = () => {
                   </td>
                   <td>{tx.type === 'NEW' ? 'Đăng ký' : tx.type === 'RENEW' ? 'Gia hạn' : 'Nâng cấp'}</td>
                   <td style={{ fontWeight: 'bold', color: '#f1f5f9' }}>{formatCurrency(tx.amount)}</td>
-                  <td>{tx.paymentMethod}</td>
+                  <td>{tx.paymentMethod === 'BANK' ? 'Chuyển khoản' : tx.paymentMethod === 'CASH' ? 'Tiền mặt' : tx.paymentMethod === 'MOMO' ? 'MoMo' : tx.paymentMethod}</td>
                   <td>{formatDate(tx.createdAt)}</td>
                   <td>
                     <span className={`status-badge status-${tx.status.toLowerCase()}`}>
@@ -135,9 +135,9 @@ const TransactionsManagement = () => {
                   <td>
                     {tx.status === 'PENDING' && (
                       <div className="action-btns">
-                        <button className="btn-icon confirm" title="Duyệt" onClick={() => handleConfirm(tx.id)}>
+                        {tx.paymentMethod !== 'MOMO' ? <button className="btn-icon confirm" title="Duyệt" onClick={() => handleConfirm(tx.id)}>
                           <Check size={18} />
-                        </button>
+                        </button> : <small title="MoMo sẽ gửi IPN để xác nhận">Chờ IPN MoMo</small>}
                         <button className="btn-icon cancel" title="Từ chối" onClick={() => handleCancel(tx.id)}>
                           <X size={18} />
                         </button>

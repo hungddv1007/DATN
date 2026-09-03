@@ -7,7 +7,7 @@ import lombok.Data;
 @Builder
 public class StatisticsResponse {
     private long totalUsers;
-    private long newRegistrationsThisMonth;
+    private long transactionsThisMonth;
     private long monthlyRevenue;
     private long activePTs;
 

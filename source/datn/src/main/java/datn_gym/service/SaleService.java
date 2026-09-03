@@ -211,7 +211,9 @@ public class SaleService {
     @Transactional
     public CommissionResponse markCommissionPaid(Long id) {
         CommissionRecord c = commissionRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hoa hồng"));
-        if (!List.of("PENDING", "PAYABLE").contains(c.getStatus())) throw new IllegalArgumentException("Hoa hồng không thể thanh toán");
+        if (!"PAYABLE".equals(c.getStatus())) {
+            throw new IllegalArgumentException("Chỉ hoa hồng đã qua thời gian chờ mới có thể thanh toán");
+        }
         c.setStatus("PAID"); c.setPaidAt(LocalDateTime.now());
         return toCommission(commissionRepository.save(c));
     }
@@ -224,8 +226,11 @@ public class SaleService {
 
     private CommissionResponse toCommission(CommissionRecord c) {
         return CommissionResponse.builder().id(c.getId()).transactionId(c.getTransaction().getId())
-                .memberName(c.getTransaction().getMembership().getUser().getFullName()).baseAmount(c.getBaseAmount())
+                .memberName(c.getTransaction().getMembership().getUser().getFullName())
+                .saleName(c.getSalesProfile().getUser().getFullName())
+                .saleEmail(c.getSalesProfile().getUser().getEmail()).baseAmount(c.getBaseAmount())
                 .commissionRate(c.getCommissionRate()).commissionAmount(c.getCommissionAmount())
-                .status(c.getStatus()).createdAt(c.getCreatedAt()).paidAt(c.getPaidAt()).build();
+                .status(c.getStatus()).createdAt(c.getCreatedAt())
+                .payableAt(c.getPayableAt()).paidAt(c.getPaidAt()).build();
     }
 }

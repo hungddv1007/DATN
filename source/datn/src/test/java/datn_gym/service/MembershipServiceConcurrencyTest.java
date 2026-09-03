@@ -1,6 +1,7 @@
 package datn_gym.service;
 
 import datn_gym.dto.request.MembershipRequest;
+import datn_gym.config.MomoProperties;
 import datn_gym.dto.response.MembershipResponse;
 import datn_gym.entity.GymPackage;
 import datn_gym.entity.Membership;
@@ -65,7 +66,8 @@ class MembershipServiceConcurrencyTest {
                 holdPolicyRepository,
                 transferRepository,
                 policyService,
-                saleService);
+                saleService,
+                new MomoProperties(false, "https://test-payment.momo.vn", "", "", "", "", "", "GymPro", 15));
     }
 
     @Test

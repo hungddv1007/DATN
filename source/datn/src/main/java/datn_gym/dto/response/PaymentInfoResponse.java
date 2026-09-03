@@ -5,5 +5,7 @@ public record PaymentInfoResponse(
         String bankAccountNumber,
         String bankAccountHolder,
         String transferPrefix,
-        int pendingExpirationHours) {
+        int pendingExpirationHours,
+        boolean momoEnabled,
+        String momoEnvironment) {
 }

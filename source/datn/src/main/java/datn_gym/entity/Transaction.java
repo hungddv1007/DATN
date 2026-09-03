@@ -94,6 +94,36 @@ public class Transaction {
     @Builder.Default
     private Integer customerDiscountPercent = 0;
 
+    @Column(name = "gateway_order_id", length = 200)
+    private String gatewayOrderId;
+
+    @Column(name = "gateway_request_id", length = 50)
+    private String gatewayRequestId;
+
+    @Column(name = "gateway_transaction_id", length = 100)
+    private String gatewayTransactionId;
+
+    @Column(name = "gateway_pay_url", length = 1000)
+    private String gatewayPayUrl;
+
+    @Column(name = "gateway_deeplink", length = 1000)
+    private String gatewayDeeplink;
+
+    @Column(name = "gateway_qr_content", length = 2000)
+    private String gatewayQrContent;
+
+    @Column(name = "gateway_result_code")
+    private Integer gatewayResultCode;
+
+    @Column(name = "gateway_message", length = 500)
+    private String gatewayMessage;
+
+    @Column(name = "payment_expires_at")
+    private LocalDateTime paymentExpiresAt;
+
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

@@ -2,6 +2,7 @@ package datn_gym.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 @Data
@@ -25,7 +26,8 @@ public class MembershipRequest {
     @NotNull(message = "Thiếu phiên bản Điều khoản thành viên")
     private Integer termsVersionId;
 
-    // CASH | BANK | ONLINE
+    // CASH | BANK | MOMO
+    @Pattern(regexp = "CASH|BANK|MOMO", message = "Phương thức thanh toán không hợp lệ")
     private String paymentMethod;
 
     // ID của PT muốn chọn (chỉ gói VIP có canChoosePt = true)

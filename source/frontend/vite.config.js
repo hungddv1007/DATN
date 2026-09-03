@@ -16,6 +16,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // Cho phép đúng Dev Tunnel dùng trong buổi demo, tránh Vite từ chối Host header.
+    allowedHosts: ['qvsmt6pq-5173.asse.devtunnels.ms'],
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

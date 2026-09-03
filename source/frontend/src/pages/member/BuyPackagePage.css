@@ -223,6 +223,19 @@
   font-weight: 600;
 }
 
+.payment-method-card small {
+  display: block;
+  margin-top: 4px;
+  font-size: .7rem;
+  color: #94a3b8;
+}
+
+.payment-method-card.momo.selected {
+  border-color: #d946ef;
+  background: rgba(217, 70, 239, .1);
+  color: #f0abfc;
+}
+
 /* ============================================ */
 /* Price Breakdown                             */
 /* ============================================ */
@@ -360,6 +373,8 @@
 /* Responsive                                  */
 /* ============================================ */
 @media (max-width: 768px) {
+  .payment-methods { flex-wrap: wrap; }
+  .payment-method-card { min-width: 130px; }
   .package-summary {
     flex-direction: column;
     text-align: center;

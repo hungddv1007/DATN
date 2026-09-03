@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import PolicyDialog from '../../components/common/PolicyDialog';
 import packageService from '../../services/packageService';
@@ -7,7 +7,7 @@ import ptService from '../../services/ptService';
 import membershipService from '../../services/membershipService';
 import paymentService from '../../services/paymentService';
 import { getPolicy } from '../../services/policyService';
-import { CreditCard, Banknote, CheckCircle, Clock, Tag } from 'lucide-react';
+import { Banknote, CheckCircle, Clock, Smartphone, Tag } from 'lucide-react';
 import './BuyPackagePage.css';
 
 // Các mốc thời gian cố định
@@ -23,6 +23,7 @@ const DURATION_MILESTONES = [
 
 const BuyPackagePage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const pkgId = queryParams.get('pkgId');
 
@@ -39,7 +40,7 @@ const BuyPackagePage = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('BANK');
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [selectedPtId, setSelectedPtId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successData, setSuccessData] = useState(null);
@@ -100,6 +101,17 @@ const BuyPackagePage = () => {
     return applicable.length > 0 ? Math.max(...applicable.map(d => d.discountPercent)) : 0;
   };
 
+  const continueToMomo = async (transactionId) => {
+    try {
+      const momoPayment = await paymentService.initiateMomoPayment(transactionId);
+      if (!momoPayment.payUrl) throw new Error('MoMo không trả về đường dẫn thanh toán.');
+      window.location.assign(momoPayment.payUrl);
+    } catch {
+      // Trang trung gian cho phép thử tạo lại phiên hoặc hủy giao dịch đang chờ.
+      navigate(`/member/payment/momo?transactionId=${transactionId}`);
+    }
+  };
+
   const submitPurchase = async () => {
     if (gymPackage?.canChoosePt && !selectedPtId) {
       setError('Vui lòng chọn một Huấn luyện viên cá nhân!');
@@ -120,7 +132,11 @@ const BuyPackagePage = () => {
         paymentMethod: paymentMethod,
         ptId: selectedPtId ? parseInt(selectedPtId) : null
       });
-      setSuccessData(data);
+      if (paymentMethod === 'MOMO') {
+        await continueToMomo(data.transactionId);
+      } else {
+        setSuccessData(data);
+      }
     } catch (err) {
       const resData = err.response?.data;
       if (resData && typeof resData === 'object') {
@@ -207,25 +223,9 @@ const BuyPackagePage = () => {
               Tổng tiền: <strong>{formatCurrency(successData.finalAmount)}</strong>
             </p>
             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '8px', marginBottom: '30px', textAlign: 'left' }}>
-              {paymentMethod === 'BANK' ? (
-                paymentInfo?.bankAccountNumber ? (
-                  <p style={{ margin: 0, color: '#f1f5f9' }}>
-                    Vui lòng chuyển khoản theo thông tin sau:<br/><br/>
-                    Ngân hàng: <strong>{paymentInfo.bankName}</strong><br/>
-                    STK: <strong>{paymentInfo.bankAccountNumber}</strong><br/>
-                    Chủ TK: <strong>{paymentInfo.bankAccountHolder}</strong><br/>
-                    Nội dung: <strong>{paymentInfo.transferPrefix || 'GYMPRO'} {successData.transactionId}</strong>
-                  </p>
-                ) : (
-                  <p style={{ margin: 0, color: '#f1f5f9' }}>
-                    Thông tin chuyển khoản chưa được cấu hình. Vui lòng liên hệ quầy lễ tân.
-                  </p>
-                )
-              ) : (
-                <p style={{ margin: 0, color: '#f1f5f9' }}>
-                  Vui lòng thanh toán tiền mặt tại quầy lễ tân và cung cấp mã giao dịch <strong>#{successData.transactionId}</strong>.
-                </p>
-              )}
+              <p style={{ margin: 0, color: '#f1f5f9' }}>
+                Vui lòng thanh toán tiền mặt tại quầy lễ tân và cung cấp mã giao dịch <strong>#{successData.transactionId}</strong>.
+              </p>
             </div>
             <p style={{ color: '#f97316', fontSize: '0.9rem' }}>
               Gói tập sẽ được kích hoạt sau khi Admin xác nhận. Giao dịch chờ quá {paymentInfo?.pendingExpirationHours || 24} giờ sẽ tự động hủy.
@@ -340,19 +340,19 @@ const BuyPackagePage = () => {
                 <label>Phương thức thanh toán</label>
                 <div className="payment-methods">
                   <div 
-                    className={`payment-method-card ${paymentMethod === 'BANK' ? 'selected' : ''}`}
-                    onClick={() => setPaymentMethod('BANK')}
-                  >
-                    <CreditCard size={28} style={{ marginBottom: '8px' }} />
-                    <div>Chuyển khoản</div>
-                  </div>
-                  <div 
                     className={`payment-method-card ${paymentMethod === 'CASH' ? 'selected' : ''}`}
                     onClick={() => setPaymentMethod('CASH')}
                   >
                     <Banknote size={28} style={{ marginBottom: '8px' }} />
                     <div>Tiền mặt tại quầy</div>
                   </div>
+                  {paymentInfo?.momoEnabled && <div
+                    className={`payment-method-card momo ${paymentMethod === 'MOMO' ? 'selected' : ''}`}
+                    onClick={() => setPaymentMethod('MOMO')}
+                  >
+                    <Smartphone size={28} style={{ marginBottom: '8px' }} />
+                    <div>Thanh toán bằng Momo</div>
+                  </div>}
                 </div>
               </div>
 
@@ -397,14 +397,16 @@ const BuyPackagePage = () => {
           {showConfirmation && <div className="purchase-confirm-overlay"><div className="purchase-confirm">
             <h2>Xác nhận đăng ký và thanh toán</h2>
             <p>Gói <b>{gymPackage.name}</b> · {durationDays} ngày</p>
-            <p>Phương thức: <b>{paymentMethod === 'BANK' ? 'Chuyển khoản' : 'Tiền mặt tại quầy'}</b></p>
+            <p>Phương thức: <b>{paymentMethod === 'MOMO' ? 'Momo' : 'Tiền mặt tại quầy'}</b></p>
             <p>Mã áp dụng: <b>{discountCode.trim() || 'Không có'}</b></p>
             {purchasePreview?.codeDiscount > 0 && <p>
               {purchasePreview.codeType === 'SALE_REFERRAL' ? 'Ưu đãi mã giới thiệu' : 'Ưu đãi mã khuyến mãi'}:
               <b> -{purchasePreview.codeDiscount}%</b>
             </p>}
             <p className="confirm-total">Tổng thanh toán: {formatCurrency(purchasePreview?.finalAmount ?? afterDiscount)}</p>
-            <p className="confirm-note">Sau bước này hệ thống tạo giao dịch chờ duyệt. Gói chỉ kích hoạt khi Admin xác nhận đã thanh toán.</p>
+            {paymentMethod !== 'MOMO' && <p className="confirm-note">
+              Sau bước này hệ thống tạo giao dịch chờ duyệt. Gói chỉ kích hoạt khi Admin xác nhận đã thanh toán.
+            </p>}
             <div><button className="btn-dashboard" onClick={() => setShowConfirmation(false)}>Quay lại</button>
               <button className="btn-submit-buy" disabled={submitting} onClick={submitPurchase}>XÁC NHẬN TẠO GIAO DỊCH</button></div>
           </div></div>}

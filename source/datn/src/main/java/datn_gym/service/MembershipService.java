@@ -1,5 +1,6 @@
 package datn_gym.service;
 
+import datn_gym.config.MomoProperties;
 import datn_gym.dto.request.MembershipRequest;
 import datn_gym.dto.request.PauseMembershipRequest;
 import datn_gym.dto.request.RenewRequest;
@@ -37,6 +38,7 @@ public class MembershipService {
     private final MembershipTransferRepository transferRepository;
     private final PolicyService policyService;
     private final SaleService saleService;
+    private final MomoProperties momoProperties;
 
     // ================================================================
     // A. ĐĂNG KÝ GÓI MỚI (NEW)
@@ -506,6 +508,16 @@ public class MembershipService {
             Integer requestedDurationDays,
             GymPackage requestedPackage,
             User requestedPt) {
+        String normalizedPaymentMethod = paymentMethod == null || paymentMethod.isBlank()
+                ? "BANK"
+                : paymentMethod.trim().toUpperCase();
+        if (!List.of("BANK", "CASH", "MOMO").contains(normalizedPaymentMethod)) {
+            throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ.");
+        }
+        if ("MOMO".equals(normalizedPaymentMethod) && !momoProperties.isEnabled()) {
+            throw new IllegalStateException("Thanh toán MoMo hiện chưa được bật.");
+        }
+
         Transaction transaction = Transaction.builder()
                 .membership(membership)
                 .promotion(calc.promotion)
@@ -516,7 +528,7 @@ public class MembershipService {
                 .requestedPt(requestedPt)
                 .originalAmount(calc.grossAmount)
                 .amount(calc.finalAmount)
-                .paymentMethod(paymentMethod != null ? paymentMethod : "BANK")
+                .paymentMethod(normalizedPaymentMethod)
                 .type(type)
                 .status("PENDING")
                 .build();

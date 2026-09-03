@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -20,6 +21,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Intege
 
        List<Transaction> findByStatus(String status);
 
+       long countByStatusAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+                     String status,
+                     LocalDateTime startDate,
+                     LocalDateTime endDate);
+
        List<Transaction> findByStatusAndCreatedAtBefore(
                      String status,
                      LocalDateTime createdBefore);
@@ -27,6 +33,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Intege
        Page<Transaction> findByStatus(String status, Pageable pageable);
 
        Page<Transaction> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+       Optional<Transaction> findByIdAndMembership_User_Email(Integer id, String email);
+
+       Optional<Transaction> findByGatewayOrderId(String gatewayOrderId);
+
+       @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+       @Query("SELECT t FROM Transaction t WHERE t.gatewayOrderId = :orderId")
+       Optional<Transaction> findByGatewayOrderIdForUpdate(@Param("orderId") String orderId);
 
        @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE " +
                      "t.status = 'CONFIRMED' AND " +

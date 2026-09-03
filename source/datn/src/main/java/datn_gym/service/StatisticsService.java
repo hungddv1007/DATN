@@ -24,14 +24,18 @@ public class StatisticsService {
 
         // 2. Doanh thu tháng này (Tính từ các giao dịch thành công)
         LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LocalDateTime startOfNextMonth = startOfMonth.plusMonths(1);
         java.math.BigDecimal revenue = transactionRepository.calculateRevenueSince(startOfMonth);
         long monthlyRevenue = revenue != null ? revenue.longValue() : 0;
 
         // 3. Số PT đang hoạt động
         long activePTs = userRepository.countByRole_NameAndStatus("PT", true);
 
-        // 4. Số đăng ký tháng này
-        long newRegistrations = membershipRepository.countByCreatedAtAfter(startOfMonth);
+        // 4. Tính mọi giao dịch thành công trong tháng: đăng ký mới, gia hạn và nâng cấp.
+        // Giao dịch PENDING hoặc CANCELLED không được đưa vào thống kê.
+        long confirmedTransactions = transactionRepository
+                .countByStatusAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+                        "CONFIRMED", startOfMonth, startOfNextMonth);
 
         // 5. Dữ liệu phân bổ gói tập
         java.util.List<Object[]> packageStats = membershipRepository.countActiveMembershipsByPackage();
@@ -58,7 +62,7 @@ public class StatisticsService {
                 .totalUsers(totalUsers)
                 .monthlyRevenue(monthlyRevenue)
                 .activePTs(activePTs)
-                .newRegistrationsThisMonth(newRegistrations)
+                .transactionsThisMonth(confirmedTransactions)
                 .packageData(packageData)
                 .revenueData(revenueData)
                 .build();
