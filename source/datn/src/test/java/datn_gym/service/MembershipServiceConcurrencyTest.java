@@ -1,6 +1,7 @@
 package datn_gym.service;
 
 import datn_gym.dto.request.MembershipRequest;
+import datn_gym.dto.request.UpgradeRequest;
 import datn_gym.config.MomoProperties;
 import datn_gym.dto.response.MembershipResponse;
 import datn_gym.entity.GymPackage;
@@ -24,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -149,5 +151,46 @@ class MembershipServiceConcurrencyTest {
         assertThat(response.getTransactionId()).isEqualTo(202);
         assertThat(response.getStatus()).isEqualTo("PENDING");
         verify(transactionRepository).save(any(Transaction.class));
+    }
+
+    @Test
+    void upgradeFromPackageWithPtKeepsCurrentPtAndIgnoresNewSelection() {
+        String email = "member@gym.local";
+        User member = User.builder().id(10).email(email).fullName("Member").build();
+        User currentPt = User.builder().id(20).fullName("PT hiện tại").build();
+        GymPackage premium = GymPackage.builder()
+                .id(2).name("PREMIUM").dailyPrice(BigDecimal.valueOf(50_000))
+                .hasPt(true).canChoosePt(true).minDays(30).isActive(true).build();
+        GymPackage vip = GymPackage.builder()
+                .id(3).name("VIP").dailyPrice(BigDecimal.valueOf(83_000))
+                .hasPt(true).canChoosePt(true).minDays(30).isActive(true).build();
+        Membership membership = Membership.builder()
+                .id(30).user(member).gymPackage(premium).pt(currentPt)
+                .dailyPrice(premium.getDailyPrice()).durationDays(60)
+                .startDate(LocalDate.now().minusDays(30)).endDate(LocalDate.now().plusDays(30))
+                .status("ACTIVE").build();
+        UpgradeRequest request = new UpgradeRequest();
+        request.setNewPackageId(vip.getId());
+        request.setExtraDays(0);
+        request.setPaymentMethod("CASH");
+        request.setPtId(999);
+
+        when(userRepository.findByEmailForMembershipUpdate(email)).thenReturn(Optional.of(member));
+        when(membershipRepository.findByUser_IdAndStatusAndEndDateGreaterThanEqual(
+                member.getId(), "ACTIVE", LocalDate.now())).thenReturn(Optional.of(membership));
+        when(gymPackageRepository.findById(vip.getId())).thenReturn(Optional.of(vip));
+        when(discountRepository.findBestDiscount(vip.getId(), 30)).thenReturn(Optional.empty());
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction transaction = invocation.getArgument(0);
+            transaction.setId(301);
+            assertThat(transaction.getRequestedPt()).isSameAs(currentPt);
+            return transaction;
+        });
+
+        MembershipResponse response = service.upgradeMembership(email, request);
+
+        assertThat(response.getTransactionId()).isEqualTo(301);
+        verify(userRepository, never()).findById(999);
+        verify(ptProfileRepository, never()).findByUser_Id(999);
     }
 }

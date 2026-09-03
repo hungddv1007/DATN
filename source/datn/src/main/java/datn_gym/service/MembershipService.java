@@ -179,8 +179,18 @@ public class MembershipService {
         PriceCalc calc = calculatePrice(newPackage, totalNewDays,
                 request.getPromotionCode(), null, credit, member, true);
 
-        // Xử lý PT mới (nếu gói mới có canChoosePt)
-        User pt = resolvePt(newPackage, request.getPtId());
+        // Member đang dùng gói có PT phải tiếp tục với PT hiện tại khi nâng cấp.
+        // Chỉ gói hiện tại không có PT (BASIC) mới được chọn PT cho gói mới.
+        User pt;
+        if (Boolean.TRUE.equals(oldPackage.getHasPt())) {
+            pt = membership.getPt();
+            if (pt == null) {
+                throw new IllegalArgumentException(
+                        "Gói hiện tại chưa được gán PT. Vui lòng liên hệ Admin trước khi nâng cấp!");
+            }
+        } else {
+            pt = resolvePt(newPackage, request.getPtId());
+        }
 
         Transaction transaction = createTransaction(
                 membership, calc, request.getPaymentMethod(), "UPGRADE",
@@ -414,7 +424,11 @@ public class MembershipService {
     }
 
     private User resolvePt(GymPackage gymPackage, Integer ptId) {
-        if (Boolean.TRUE.equals(gymPackage.getCanChoosePt()) && ptId != null) {
+        if (Boolean.TRUE.equals(gymPackage.getCanChoosePt())) {
+            if (ptId == null) {
+                throw new IllegalArgumentException(
+                        "Vui lòng chọn Huấn luyện viên cá nhân (PT) cho gói " + gymPackage.getName() + "!");
+            }
             User pt = userRepository.findById(ptId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy PT"));
             if (!"PT".equals(pt.getRole().getName())) {

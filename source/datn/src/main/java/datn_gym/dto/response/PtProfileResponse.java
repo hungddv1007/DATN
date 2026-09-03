@@ -23,5 +23,6 @@ public class PtProfileResponse {
 
     // Thống kê bổ sung
     private Integer totalMembers;    // Số hội viên đang được giao
+    private Integer maxMembers;      // Số hội viên tối đa PT có thể nhận
     private Integer totalReviews;    // Tổng số đánh giá
 }

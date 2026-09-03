@@ -312,11 +312,16 @@ const BuyPackagePage = () => {
                     required
                   >
                     <option value="">-- Vui lòng chọn một Huấn luyện viên --</option>
-                    {pts.map(pt => (
-                      <option key={pt.id} value={pt.id}>
-                        {pt.fullName} - {pt.specialization} (Đánh giá: {pt.ratingScore || 'Chưa có'}/5)
-                      </option>
-                    ))}
+                    {pts.map(pt => {
+                      const currentMembers = pt.totalMembers ?? 0;
+                      const maxMembers = pt.maxMembers ?? 5;
+                      const isFull = currentMembers >= maxMembers;
+                      return (
+                        <option key={pt.id} value={pt.id} disabled={isFull}>
+                          {pt.fullName} - {pt.specialization} (Đánh giá: {pt.ratingScore || 'Chưa có'}/5) (Số học viên {currentMembers}/{maxMembers}){isFull ? ' — Đã đủ học viên' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               )}
