@@ -70,7 +70,10 @@ const PtMemberDetail = () => {
   // Diet state
   const [trainingDiet, setTrainingDiet] = useState(null);
   const [restDiet, setRestDiet] = useState(null);
-  const [editingDiet, setEditingDiet] = useState(null); // 'TRAINING_DAY' | 'REST_DAY' | null
+  const [specificDiets, setSpecificDiets] = useState([]);
+  const [selectedDietDate, setSelectedDietDate] = useState(() => toISODate(new Date()));
+  const [specificDietKind, setSpecificDietKind] = useState('TRAINING_DAY');
+  const [editingDiet, setEditingDiet] = useState(null); // TRAINING_DAY | REST_DAY | SPECIFIC_DATE | null
   const [dietForm, setDietForm] = useState({ ...emptyDiet });
   const [dietLoading, setDietLoading] = useState(false);
   const [dietSaving, setDietSaving] = useState(false);
@@ -107,6 +110,9 @@ const PtMemberDetail = () => {
       const diets = res.data;
       setTrainingDiet(diets.find(d => d.dayType === 'TRAINING_DAY') || null);
       setRestDiet(diets.find(d => d.dayType === 'REST_DAY') || null);
+      setSpecificDiets(diets
+        .filter(d => d.dayType === 'SPECIFIC_DATE' && d.dietDate)
+        .sort((a, b) => b.dietDate.localeCompare(a.dietDate)));
     } catch (err) {
       console.error('Lỗi tải khẩu phần:', err);
     } finally {
@@ -153,31 +159,46 @@ const PtMemberDetail = () => {
     if (activeTab === 'training') fetchTrainingStats();
   }, [activeTab, fetchDiets, fetchPhysicalProfile, fetchTrainingStats]);
 
-  const startEditDiet = (type) => {
+  const selectedSpecificDiet = specificDiets.find(d => d.dietDate === selectedDietDate) || null;
+
+  const startEditDiet = (type, sourceDiet = null, sourceKind = null) => {
     setAnalysisResult(null);
     setAnalysisError(null);
     setDietGenerationError('');
     setDietGenerationSuccess('');
-    const existing = type === 'TRAINING_DAY' ? trainingDiet : restDiet;
-    if (existing) {
+    const existing = type === 'TRAINING_DAY'
+      ? trainingDiet
+      : type === 'REST_DAY'
+        ? restDiet
+        : selectedSpecificDiet;
+    const formSource = existing || sourceDiet;
+    if (formSource) {
       setDietForm({
-        title: existing.title || '',
-        breakfast: existing.breakfast || '',
-        snackMorning: existing.snackMorning || '',
-        lunch: existing.lunch || '',
-        snackAfternoon: existing.snackAfternoon || '',
-        dinner: existing.dinner || '',
-        calories: existing.calories || 0,
-        proteinG: existing.proteinG || 0,
-        carbsG: existing.carbsG || 0,
-        fatG: existing.fatG || 0,
-        note: existing.note || ''
+        title: formSource.title || '',
+        breakfast: formSource.breakfast || '',
+        snackMorning: formSource.snackMorning || '',
+        lunch: formSource.lunch || '',
+        snackAfternoon: formSource.snackAfternoon || '',
+        dinner: formSource.dinner || '',
+        calories: formSource.calories || 0,
+        proteinG: formSource.proteinG || 0,
+        carbsG: formSource.carbsG || 0,
+        fatG: formSource.fatG || 0,
+        note: formSource.note || ''
       });
     } else {
       setDietForm({
         ...emptyDiet,
-        title: type === 'TRAINING_DAY' ? 'Thực đơn ngày tập' : 'Thực đơn ngày nghỉ'
+        title: type === 'TRAINING_DAY'
+          ? 'Thực đơn ngày tập'
+          : type === 'REST_DAY'
+            ? 'Thực đơn ngày nghỉ'
+            : `Thực đơn ngày ${new Date(`${selectedDietDate}T00:00:00`).toLocaleDateString('vi-VN')}`
       });
+    }
+    if (type === 'SPECIFIC_DATE') {
+      setSpecificDietKind(sourceKind
+        || (existing?.isTrainingDay === false ? 'REST_DAY' : 'TRAINING_DAY'));
     }
     setEditingDiet(type);
   };
@@ -189,6 +210,7 @@ const PtMemberDetail = () => {
     setAnalysisError(null);
     setDietGenerationError('');
     setDietGenerationSuccess('');
+    setSpecificDietKind('TRAINING_DAY');
   };
 
   const handleAIGenerateDiet = async () => {
@@ -201,7 +223,8 @@ const PtMemberDetail = () => {
     setAnalysisError(null);
 
     try {
-      const generatedDiet = await generateDietFromPhysicalProfile(memberId, editingDiet);
+      const generationDayType = editingDiet === 'SPECIFIC_DATE' ? specificDietKind : editingDiet;
+      const generatedDiet = await generateDietFromPhysicalProfile(memberId, generationDayType);
       setDietForm(prev => ({
         ...prev,
         title: generatedDiet.title || prev.title,
@@ -231,14 +254,15 @@ const PtMemberDetail = () => {
   };
 
   const handleAIAnalyze = async () => {
-    const isRestDay = editingDiet === 'REST_DAY';
+    const analysisDayType = editingDiet === 'SPECIFIC_DATE' ? specificDietKind : editingDiet;
+    const isRestDay = analysisDayType === 'REST_DAY';
     const mealsData = {
       breakfastMeal: dietForm.breakfast || '',
       preworkoutMeal: isRestDay ? '' : (dietForm.snackMorning || ''),
       lunchMeal: dietForm.lunch || '',
       postworkoutMeal: isRestDay ? '' : (dietForm.snackAfternoon || ''),
       dinnerMeal: dietForm.dinner || '',
-      dayType: editingDiet || 'TRAINING_DAY',
+      dayType: analysisDayType || 'TRAINING_DAY',
     };
 
     const hasAnyMeal = [
@@ -279,14 +303,19 @@ const PtMemberDetail = () => {
   const handleSaveDiet = async (type) => {
     setDietSaving(true);
     try {
-      const existing = type === 'TRAINING_DAY' ? trainingDiet : restDiet;
+      const existing = type === 'TRAINING_DAY'
+        ? trainingDiet
+        : type === 'REST_DAY'
+          ? restDiet
+          : selectedSpecificDiet;
       if (existing) {
         await api.put(`/pt/diets/${existing.id}`, dietForm);
       } else {
         await api.post('/pt/diets', {
           ...dietForm,
           memberId: parseInt(memberId),
-          dayType: type
+          dayType: type,
+          dietDate: type === 'SPECIFIC_DATE' ? selectedDietDate : null
         });
       }
       await fetchDiets();
@@ -300,7 +329,7 @@ const PtMemberDetail = () => {
   };
 
   const handleDeleteDiet = async (dietId) => {
-    if (!await confirmDialog('Bạn có chắc muốn xóa mẫu thực đơn này?', { confirmText: 'Xóa thực đơn', danger: true })) return;
+    if (!await confirmDialog('Bạn có chắc muốn xóa thực đơn này?', { confirmText: 'Xóa thực đơn', danger: true })) return;
     try {
       await api.delete(`/pt/diets/${dietId}`);
       await fetchDiets();
@@ -400,6 +429,7 @@ const PtMemberDetail = () => {
 
   const renderDietPanel = (type, diet, bgGrad, icon, titleLabel) => {
     const isEditing = editingDiet === type;
+    const formDayType = type === 'SPECIFIC_DATE' ? specificDietKind : type;
 
     return (
       <div className="admin-table-container" style={{ marginTop: 0, overflow: 'visible' }}>
@@ -479,9 +509,9 @@ const PtMemberDetail = () => {
               </div>
 
               {renderMealInput('Bữa sáng', '🌅', 'breakfast')}
-              {type === 'TRAINING_DAY' && renderMealInput('Bữa phụ sáng / Pre-workout', '⚡', 'snackMorning')}
+              {formDayType === 'TRAINING_DAY' && renderMealInput('Bữa phụ sáng / Pre-workout', '⚡', 'snackMorning')}
               {renderMealInput('Bữa trưa', '☀️', 'lunch')}
-              {type === 'TRAINING_DAY' && renderMealInput('Bữa phụ chiều / Post-workout', '💪', 'snackAfternoon')}
+              {formDayType === 'TRAINING_DAY' && renderMealInput('Bữa phụ chiều / Post-workout', '💪', 'snackAfternoon')}
               {renderMealInput('Bữa tối', '🌙', 'dinner')}
 
               {/* Button AI */}
@@ -647,8 +677,10 @@ const PtMemberDetail = () => {
           ) : (
             // EMPTY STATE
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '10px' }}>{type === 'TRAINING_DAY' ? '🏋️' : '☕'}</div>
-              <p>Chưa có mẫu thực đơn {type === 'TRAINING_DAY' ? 'ngày tập' : 'ngày nghỉ'}.</p>
+              <div style={{ fontSize: '2rem', marginBottom: '10px' }}>{type === 'TRAINING_DAY' ? '🏋️' : type === 'REST_DAY' ? '☕' : '📅'}</div>
+              <p>{type === 'SPECIFIC_DATE'
+                ? 'Chưa có thực đơn riêng cho ngày đã chọn.'
+                : `Chưa có mẫu thực đơn ${type === 'TRAINING_DAY' ? 'ngày tập' : 'ngày nghỉ'}.`}</p>
               <button className="btn-submit" onClick={() => startEditDiet(type)}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
                 <Plus size={16} /> Tạo mẫu
@@ -884,19 +916,114 @@ const PtMemberDetail = () => {
         dietLoading ? (
           <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Đang tải thực đơn...</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            {renderDietPanel(
-              'TRAINING_DAY', trainingDiet,
-              'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(234,88,12,0.08))',
-              <Dumbbell size={18} style={{ color: '#f97316' }} />,
-              'Ngày Tập (Training Day)'
-            )}
-            {renderDietPanel(
-              'REST_DAY', restDiet,
-              'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.08))',
-              <Coffee size={18} style={{ color: '#3b82f6' }} />,
-              'Ngày Nghỉ (Rest Day)'
-            )}
+          <div className="pt-diet-workspace">
+            <section className="specific-diet-manager">
+              <div className="specific-diet-heading">
+                <div>
+                  <h3><Calendar size={19} /> Thực đơn theo ngày</h3>
+                  <p>Thực đơn riêng sẽ được ưu tiên hơn mẫu ngày tập hoặc ngày nghỉ.</p>
+                </div>
+                <span>{specificDiets.length} ngày đã thiết lập</span>
+              </div>
+
+              <div className="specific-diet-toolbar">
+                <label htmlFor="specific-diet-date">Chọn ngày áp dụng</label>
+                <input
+                  id="specific-diet-date"
+                  type="date"
+                  required
+                  value={selectedDietDate}
+                  onChange={event => {
+                    cancelEditDiet();
+                    setSelectedDietDate(event.target.value);
+                  }}
+                />
+                <div className={`specific-diet-status ${selectedSpecificDiet ? 'configured' : ''}`}>
+                  {selectedSpecificDiet
+                    ? `Đã có thực đơn riêng · ${selectedSpecificDiet.isTrainingDay ? 'Ngày tập' : 'Ngày nghỉ'}`
+                    : 'Chưa có thực đơn riêng'}
+                </div>
+              </div>
+
+              {specificDiets.length > 0 && (
+                <div className="specific-diet-days" aria-label="Các ngày đã có thực đơn riêng">
+                  {specificDiets.map(diet => (
+                    <button
+                      type="button"
+                      key={diet.id}
+                      className={diet.dietDate === selectedDietDate ? 'active' : ''}
+                      onClick={() => {
+                        cancelEditDiet();
+                        setSelectedDietDate(diet.dietDate);
+                      }}
+                    >
+                      {new Date(`${diet.dietDate}T00:00:00`).toLocaleDateString('vi-VN')}
+                      <small>{diet.isTrainingDay ? 'Ngày tập' : 'Ngày nghỉ'}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {selectedSpecificDiet || editingDiet === 'SPECIFIC_DATE' ? (
+                renderDietPanel(
+                  'SPECIFIC_DATE', selectedSpecificDiet,
+                  'linear-gradient(135deg, rgba(20,184,166,0.16), rgba(13,148,136,0.08))',
+                  <Calendar size={18} style={{ color: '#2dd4bf' }} />,
+                  `Thực đơn riêng · ${new Date(`${selectedDietDate}T00:00:00`).toLocaleDateString('vi-VN')}`
+                )
+              ) : (
+                <div className="specific-diet-empty">
+                  <Calendar size={30} />
+                  <strong>Ngày này đang dùng mẫu tự động</strong>
+                  <p>Bạn có thể tạo thực đơn trống hoặc sao chép một mẫu để chỉnh sửa nhanh.</p>
+                  <div>
+                    <button
+                      type="button"
+                      className="btn-submit"
+                      disabled={!selectedDietDate || !trainingDiet}
+                      onClick={() => startEditDiet('SPECIFIC_DATE', trainingDiet, 'TRAINING_DAY')}
+                    >
+                      <Dumbbell size={15} /> Sao chép mẫu ngày tập
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-submit specific-rest-copy"
+                      disabled={!selectedDietDate || !restDiet}
+                      onClick={() => startEditDiet('SPECIFIC_DATE', restDiet, 'REST_DAY')}
+                    >
+                      <Coffee size={15} /> Sao chép mẫu ngày nghỉ
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-cancel"
+                      disabled={!selectedDietDate}
+                      onClick={() => startEditDiet('SPECIFIC_DATE')}
+                    >
+                      <Plus size={15} /> Tạo thực đơn trống
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <div className="diet-template-heading">
+              <h3>Mẫu thực đơn tự động</h3>
+              <p>Được áp dụng khi ngày đó chưa có thực đơn riêng.</p>
+            </div>
+            <div className="diet-template-grid">
+              {renderDietPanel(
+                'TRAINING_DAY', trainingDiet,
+                'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(234,88,12,0.08))',
+                <Dumbbell size={18} style={{ color: '#f97316' }} />,
+                'Ngày Tập (Training Day)'
+              )}
+              {renderDietPanel(
+                'REST_DAY', restDiet,
+                'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.08))',
+                <Coffee size={18} style={{ color: '#3b82f6' }} />,
+                'Ngày Nghỉ (Rest Day)'
+              )}
+            </div>
           </div>
         )
       )}

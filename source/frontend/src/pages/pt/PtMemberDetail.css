@@ -107,6 +107,211 @@
   }
 }
 
+.pt-diet-workspace {
+  display: grid;
+  gap: 22px;
+}
+
+.specific-diet-manager {
+  overflow: hidden;
+  background: #161e2e;
+  border: 1px solid #2a3a53;
+  border-radius: 14px;
+}
+
+.specific-diet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, rgba(20,184,166,.13), rgba(15,23,42,.2));
+  border-bottom: 1px solid rgba(148,163,184,.12);
+}
+
+.specific-diet-heading h3,
+.diet-template-heading h3 {
+  margin: 0;
+  color: #f1f5f9;
+}
+
+.specific-diet-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.specific-diet-heading p,
+.diet-template-heading p {
+  margin: 5px 0 0;
+  color: #94a3b8;
+  font-size: .84rem;
+}
+
+.specific-diet-heading > span {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  color: #99f6e4;
+  background: rgba(20,184,166,.11);
+  border: 1px solid rgba(45,212,191,.25);
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.specific-diet-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 260px) 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.specific-diet-toolbar label {
+  color: #cbd5e1;
+  font-size: .85rem;
+  font-weight: 700;
+}
+
+.specific-diet-toolbar input[type="date"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  color: #f8fafc;
+  color-scheme: dark;
+  background: #0f172a;
+  border: 1px solid #3b4b65;
+  border-radius: 9px;
+  font: inherit;
+}
+
+.specific-diet-status {
+  justify-self: end;
+  color: #94a3b8;
+  font-size: .82rem;
+  font-weight: 600;
+}
+
+.specific-diet-status.configured {
+  color: #5eead4;
+}
+
+.specific-diet-days {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 20px 16px;
+}
+
+.specific-diet-days button {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 2px;
+  min-width: 106px;
+  padding: 8px 11px;
+  color: #cbd5e1;
+  text-align: left;
+  background: #111a2b;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.specific-diet-days button.active {
+  color: #f0fdfa;
+  background: rgba(13,148,136,.17);
+  border-color: #14b8a6;
+}
+
+.specific-diet-days small {
+  color: #7f91aa;
+}
+
+.specific-diet-days button.active small {
+  color: #5eead4;
+}
+
+.specific-diet-manager > .admin-table-container {
+  margin: 0 20px 20px !important;
+}
+
+.specific-diet-empty {
+  margin: 0 20px 20px;
+  padding: 30px 20px;
+  color: #7f91aa;
+  text-align: center;
+  background: rgba(15,23,42,.42);
+  border: 1px dashed #3b4b65;
+  border-radius: 11px;
+}
+
+.specific-diet-empty > strong,
+.specific-diet-empty > p {
+  display: block;
+}
+
+.specific-diet-empty > strong {
+  margin-top: 8px;
+  color: #dbeafe;
+}
+
+.specific-diet-empty > p {
+  margin: 5px 0 16px;
+  font-size: .84rem;
+}
+
+.specific-diet-empty > div {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.specific-diet-empty button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.specific-diet-empty button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.specific-diet-empty .specific-rest-copy {
+  background: #2563eb;
+}
+
+.diet-template-heading {
+  padding: 0 2px;
+}
+
+.diet-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 800px) {
+  .specific-diet-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .specific-diet-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .specific-diet-status {
+    justify-self: start;
+  }
+
+  .diet-template-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .pt-training-stats {
   overflow: hidden;
   background: #161e2e;

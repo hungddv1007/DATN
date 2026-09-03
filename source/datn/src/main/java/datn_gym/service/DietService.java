@@ -45,7 +45,13 @@ public class DietService {
                 User pt = userService.getUserByEmail(ptEmail);
                 validatePtCanManageDiet(pt.getId(), memberId);
                 return dietRepository.findByPt_IdAndMember_IdOrderByCreatedAtDesc(pt.getId(), memberId)
-                                .stream().map(this::toResponse).collect(Collectors.toList());
+                                .stream().map(diet -> {
+                                        DietResponse response = toResponse(diet);
+                                        if (SPECIFIC_DATE.equals(diet.getDayType()) && diet.getDietDate() != null) {
+                                                response.setIsTrainingDay(isTrainingDay(memberId, diet.getDietDate()));
+                                        }
+                                        return response;
+                                }).collect(Collectors.toList());
         }
 
         /** PT xem mẫu TRAINING_DAY hoặc REST_DAY của 1 member */
