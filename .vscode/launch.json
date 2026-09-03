@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-DatnApplication<datn>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "datn_gym.DatnApplication",
+            "projectName": "datn",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
