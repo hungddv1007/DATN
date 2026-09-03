@@ -146,6 +146,60 @@
   cursor: not-allowed;
 }
 
+.business-sale-commission {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 190px;
+}
+
+.business-sale-commission strong {
+  color: #f8fafc;
+}
+
+.business-sale-commission small {
+  color: #93c5fd;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.business-status-with-tooltip {
+  position: relative;
+  cursor: help;
+  outline: none;
+}
+
+.business-status-with-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 30;
+  width: max-content;
+  max-width: 310px;
+  padding: 10px 12px;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  background: #0f172a;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-line;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.business-status-with-tooltip:hover::after,
+.business-status-with-tooltip:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 /* =========================================
    MODAL STYLES (Thêm/Sửa)
    ========================================= */

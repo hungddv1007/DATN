@@ -62,8 +62,8 @@ const RegisterPage = () => {
       return;
     }
 
-    // Validate họ tên (chỉ được chứa chữ cái và khoảng trắng)
-    const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂÂÊÔƠưăâêôơ\s]+$/;
+    // Unicode Letter hỗ trợ đầy đủ chữ tiếng Việt có dấu và thống nhất với backend.
+    const nameRegex = /^[\p{L}\s'-]+$/u;
     if (!nameRegex.test(formData.fullName)) {
       setError('Họ và tên chỉ được chứa chữ cái và khoảng trắng!');
       return;

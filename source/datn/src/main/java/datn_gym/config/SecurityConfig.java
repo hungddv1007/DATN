@@ -77,6 +77,7 @@ public class SecurityConfig {
 
                 // 1. Auth - công khai hoàn toàn
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/public/payments/momo/ipn").permitAll()
                 
                 // File access
                 .requestMatchers("/api/files/download/**").permitAll()

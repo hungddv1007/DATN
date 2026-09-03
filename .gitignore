@@ -41,7 +41,7 @@ bao_cao/
 .m2/
 erd/
 migrations/
-
+tmp/
 ### Environment variables / secrets ###
 .env
 .env.*

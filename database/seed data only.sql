@@ -1267,7 +1267,8 @@ VALUES
 DECLARE @demo_sale_code_id INT = (SELECT id FROM sales_referral_codes WHERE code = 'MINHANH10');
 
 DECLARE @demo_sale_transactions TABLE (
-    rn INT IDENTITY(1,1), transaction_id INT PRIMARY KEY, member_id INT, amount DECIMAL(12,0)
+    rn INT IDENTITY(1,1), transaction_id INT PRIMARY KEY, member_id INT,
+    amount DECIMAL(12,0), confirmed_at DATETIME2
 );
 ;WITH one_transaction_per_member AS (
     SELECT t.id transaction_id, m.user_id member_id, t.amount, t.created_at,
@@ -1284,6 +1285,15 @@ FROM one_transaction_per_member
 WHERE member_rn = 1
 ORDER BY created_at DESC, transaction_id DESC;
 
+-- Moc thoi gian duoc chia theo 3 nhom de trang thai hoa hong nhat quan tai ngay demo 05/09/2026:
+-- PAID da qua han cho va da thanh toan; PAYABLE da qua 7 ngay; PENDING van con trong 7 ngay cho.
+UPDATE @demo_sale_transactions
+SET confirmed_at = CASE
+    WHEN rn <= 4 THEN DATEADD(DAY, rn - 20, CAST('2026-09-05 10:30:00' AS DATETIME2))
+    WHEN rn <= 8 THEN DATEADD(DAY, rn - 15, CAST('2026-09-05 10:30:00' AS DATETIME2))
+    ELSE DATEADD(DAY, rn - 12, CAST('2026-09-05 10:30:00' AS DATETIME2))
+END;
+
 UPDATE t SET sale_code_id = @demo_sale_code_id
 FROM transactions t
 JOIN @demo_sale_transactions d ON d.transaction_id = t.id;
@@ -1291,8 +1301,7 @@ JOIN @demo_sale_transactions d ON d.transaction_id = t.id;
 INSERT INTO sales_code_redemptions
     (sale_code_id, member_id, transaction_id, status, created_at, confirmed_at)
 SELECT @demo_sale_code_id, member_id, transaction_id, 'CONFIRMED',
-       DATEADD(DAY, -rn, CAST('2026-08-30 10:00:00' AS DATETIME2)),
-       DATEADD(DAY, -rn, CAST('2026-08-30 10:30:00' AS DATETIME2))
+       DATEADD(MINUTE, -30, confirmed_at), confirmed_at
 FROM @demo_sale_transactions;
 
 INSERT INTO commission_records
@@ -1300,10 +1309,19 @@ INSERT INTO commission_records
      status, payable_at, paid_at, created_at)
 SELECT transaction_id, @sale_profile_id, amount, 4, ROUND(amount * 0.04, 0),
        CASE WHEN rn <= 4 THEN 'PAID' WHEN rn <= 8 THEN 'PAYABLE' ELSE 'PENDING' END,
-       CASE WHEN rn <= 8 THEN DATEADD(DAY, 7, CAST('2026-08-30 10:30:00' AS DATETIME2)) END,
-       CASE WHEN rn <= 4 THEN DATEADD(DAY, 10, CAST('2026-08-30 10:30:00' AS DATETIME2)) END,
-       DATEADD(DAY, -rn, CAST('2026-08-30 10:30:00' AS DATETIME2))
+       DATEADD(DAY, 7, confirmed_at),
+       CASE WHEN rn <= 4 THEN DATEADD(DAY, 10, confirmed_at) END,
+       confirmed_at
 FROM @demo_sale_transactions;
+
+IF EXISTS (
+    SELECT 1 FROM commission_records
+    WHERE status IN ('PENDING', 'PAYABLE', 'PAID') AND payable_at IS NULL
+)
+    THROW 50021, N'Seed hoa hồng không hợp lệ: thiếu thời điểm đủ điều kiện chi trả.', 1;
+
+IF EXISTS (SELECT 1 FROM commission_records WHERE status = 'PAID' AND paid_at IS NULL)
+    THROW 50022, N'Seed hoa hồng không hợp lệ: trạng thái PAID thiếu thời điểm thanh toán.', 1;
 
 UPDATE sales_profiles SET level_number = 2, successful_customers = 12, is_online = 1
 WHERE id = @sale_profile_id;

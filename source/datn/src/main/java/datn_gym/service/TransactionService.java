@@ -59,19 +59,87 @@ public class TransactionService {
     @Transactional
     public TransactionResponse confirmTransaction(Integer transactionId, String adminEmail) {
         Transaction tx = getPendingTransaction(transactionId);
+        if ("MOMO".equals(tx.getPaymentMethod())) {
+            throw new IllegalArgumentException(
+                    "Giao dịch MoMo được xác nhận tự động bằng IPN, Admin không được duyệt thủ công.");
+        }
         User admin = getAdmin(adminEmail);
+
+        confirmPendingTransaction(tx, admin);
+        return toResponse(tx);
+    }
+
+    @Transactional
+    public void confirmMomoTransaction(
+            String orderId,
+            Long momoTransactionId,
+            Integer resultCode,
+            String message,
+            Long amount) {
+        Transaction tx = transactionRepository.findByGatewayOrderIdForUpdate(orderId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch MoMo"));
+        requireMatchingMomoTransaction(tx, amount);
+
+        if ("CONFIRMED".equals(tx.getStatus())) {
+            if (tx.getGatewayTransactionId() != null && momoTransactionId != null
+                    && !tx.getGatewayTransactionId().equals(String.valueOf(momoTransactionId))) {
+                throw new IllegalStateException("Giao dịch đã được xác nhận bởi một mã MoMo khác.");
+            }
+            return;
+        }
+        if (!"PENDING".equals(tx.getStatus())) {
+            throw new IllegalArgumentException("Giao dịch MoMo không còn chờ thanh toán.");
+        }
+
+        tx.setGatewayTransactionId(momoTransactionId == null ? null : String.valueOf(momoTransactionId));
+        tx.setGatewayResultCode(resultCode);
+        tx.setGatewayMessage(limit(message, 500));
+        tx.setPaidAt(LocalDateTime.now());
+        confirmPendingTransaction(tx, null);
+    }
+
+    @Transactional
+    public void failMomoTransaction(
+            String orderId,
+            Long momoTransactionId,
+            Integer resultCode,
+            String message,
+            Long amount) {
+        Transaction tx = transactionRepository.findByGatewayOrderIdForUpdate(orderId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch MoMo"));
+        requireMatchingMomoTransaction(tx, amount);
+        if (!"PENDING".equals(tx.getStatus())) return;
+
+        tx.setGatewayTransactionId(momoTransactionId == null ? null : String.valueOf(momoTransactionId));
+        tx.setGatewayResultCode(resultCode);
+        tx.setGatewayMessage(limit(message, 500));
+        cancelPendingTransaction(tx, null);
+    }
+
+    @Transactional
+    public void recordMomoQueryResult(String orderId, Integer resultCode, String message) {
+        Transaction tx = transactionRepository.findByGatewayOrderIdForUpdate(orderId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch MoMo"));
+        if (!"PENDING".equals(tx.getStatus())) return;
+        tx.setGatewayResultCode(resultCode);
+        tx.setGatewayMessage(limit(message, 500));
+        transactionRepository.save(tx);
+    }
+
+    private void confirmPendingTransaction(Transaction tx, User confirmedBy) {
 
         if (!Boolean.TRUE.equals(tx.getOperationApplied())) {
             applyPendingOperation(tx);
             tx.setOperationApplied(true);
         }
         tx.setStatus("CONFIRMED");
-        tx.setConfirmedBy(admin);
+        tx.setConfirmedBy(confirmedBy);
         transactionRepository.save(tx);
         saleService.confirmRedemptionAndCommission(tx);
         queueMembershipConfirmationEmail(tx);
-
-        return toResponse(tx);
     }
 
     /**
@@ -125,6 +193,22 @@ public class TransactionService {
      * Hủy RENEW/UPGRADE chỉ hủy yêu cầu thanh toán, không hủy gói đang dùng.
      * Với NEW, membership PENDING đi kèm mới được chuyển sang CANCELLED.
      */
+    @Transactional
+    public void cancelPendingMomoByMember(Integer transactionId, String memberEmail) {
+        Transaction tx = transactionRepository
+                .findByIdAndMembership_User_Email(transactionId, memberEmail)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy giao dịch của bạn."));
+        if (!"MOMO".equals(tx.getPaymentMethod())) {
+            throw new IllegalArgumentException("Giao dịch này không thanh toán qua MoMo.");
+        }
+        if (!"PENDING".equals(tx.getStatus())) {
+            throw new IllegalArgumentException("Chỉ có thể hủy giao dịch đang chờ thanh toán.");
+        }
+        tx.setGatewayMessage("Khách hàng đã hủy phiên thanh toán MoMo.");
+        cancelPendingTransaction(tx, null);
+    }
+
     @Transactional
     public TransactionResponse cancelTransaction(Integer transactionId, String adminEmail) {
         Transaction tx = getPendingTransaction(transactionId);
@@ -207,6 +291,15 @@ public class TransactionService {
         return userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy admin"));
+    }
+
+    private void requireMatchingMomoTransaction(Transaction tx, Long amount) {
+        if (!"MOMO".equals(tx.getPaymentMethod())) {
+            throw new IllegalArgumentException("Giao dịch không thuộc phương thức MoMo.");
+        }
+        if (amount == null || tx.getAmount().compareTo(BigDecimal.valueOf(amount)) != 0) {
+            throw new IllegalArgumentException("Số tiền callback MoMo không khớp giao dịch.");
+        }
     }
 
     private void applyPendingOperation(Transaction tx) {
@@ -302,5 +395,9 @@ public class TransactionService {
                         ? tx.getPromotion().getDiscountPercent() : tx.getCustomerDiscountPercent())
                 .acceptedTerms(tx.getAcceptedTerms()).termsVersion(tx.getTermsVersion())
                 .build();
+    }
+
+    private String limit(String value, int max) {
+        return value == null ? null : value.substring(0, Math.min(value.length(), max));
     }
 }

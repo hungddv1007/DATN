@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/layout/MainLayout';
 import membershipService from '../../services/membershipService';
 import packageService from '../../services/packageService';
 import ptService from '../../services/ptService';
+import paymentService from '../../services/paymentService';
 import { getMembershipPriceDisplay } from '../../utils/membershipPriceDisplay';
 import { confirmDialog, promptDialog } from '../../utils/dialog';
 import { Calendar, RefreshCw, ChevronUp, Pause, Play, ArrowRightLeft, ShieldCheck } from 'lucide-react';
@@ -21,6 +22,7 @@ const DURATION_MILESTONES = [
 ];
 
 const MembershipManagePage = () => {
+  const navigate = useNavigate();
   const [membership, setMembership] = useState(null);
   const [history, setHistory] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -28,6 +30,7 @@ const MembershipManagePage = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
+  const [paymentInfo, setPaymentInfo] = useState(null);
   
   // Modals state
   const [showRenewModal, setShowRenewModal] = useState(false);
@@ -36,7 +39,7 @@ const MembershipManagePage = () => {
   // Form state
   const [renewDays, setRenewDays] = useState(30);
   const [renewPromo, setRenewPromo] = useState('');
-  const [renewPayMethod, setRenewPayMethod] = useState('BANK');
+  const [renewPayMethod, setRenewPayMethod] = useState('CASH');
   const [renewPreview, setRenewPreview] = useState(null);
   const [renewPreviewError, setRenewPreviewError] = useState('');
 
@@ -44,7 +47,7 @@ const MembershipManagePage = () => {
   const [upgradeExtraDays, setUpgradeExtraDays] = useState(0);
   const [upgradePromo, setUpgradePromo] = useState('');
   const [upgradePtId, setUpgradePtId] = useState('');
-  const [upgradePayMethod, setUpgradePayMethod] = useState('BANK');
+  const [upgradePayMethod, setUpgradePayMethod] = useState('CASH');
   const [upgradePreview, setUpgradePreview] = useState(null);
   const [upgradePreviewError, setUpgradePreviewError] = useState('');
 
@@ -72,6 +75,12 @@ const MembershipManagePage = () => {
     } catch (err) {
       console.error('Lỗi tải danh sách cấu hình', err);
     }
+
+    try {
+      setPaymentInfo(await paymentService.getPublicPaymentInfo());
+    } catch (err) {
+      console.error('Lỗi tải cấu hình thanh toán', err);
+    }
     
     setLoading(false);
   };
@@ -79,6 +88,16 @@ const MembershipManagePage = () => {
   useEffect(() => {
     fetchMembershipData();
   }, []);
+
+  const continueToMomo = async (transactionId) => {
+    try {
+      const momoPayment = await paymentService.initiateMomoPayment(transactionId);
+      if (!momoPayment.payUrl) throw new Error('MoMo không trả về đường dẫn thanh toán.');
+      window.location.assign(momoPayment.payUrl);
+    } catch {
+      navigate(`/member/payment/momo?transactionId=${transactionId}`);
+    }
+  };
 
   // Preview gia hạn
   useEffect(() => {
@@ -177,9 +196,13 @@ const MembershipManagePage = () => {
         promotionCode: renewPromo || null,
         paymentMethod: renewPayMethod
       });
-      alert(`Đăng ký gia hạn thành công! Mã giao dịch: #${data.transactionId}`);
       setShowRenewModal(false);
-      fetchMembershipData();
+      if (renewPayMethod === 'MOMO') {
+        await continueToMomo(data.transactionId);
+      } else {
+        alert(`Đăng ký gia hạn thành công! Mã giao dịch: #${data.transactionId}`);
+        fetchMembershipData();
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Gia hạn thất bại');
     } finally {
@@ -205,9 +228,13 @@ const MembershipManagePage = () => {
         paymentMethod: upgradePayMethod,
         ptId: upgradePtId ? parseInt(upgradePtId) : null
       });
-      alert(`Đăng ký nâng cấp thành công! Mã giao dịch: #${data.transactionId}`);
       setShowUpgradeModal(false);
-      fetchMembershipData();
+      if (upgradePayMethod === 'MOMO') {
+        await continueToMomo(data.transactionId);
+      } else {
+        alert(`Đăng ký nâng cấp thành công! Mã giao dịch: #${data.transactionId}`);
+        fetchMembershipData();
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Nâng cấp thất bại');
     } finally {
@@ -439,8 +466,8 @@ const MembershipManagePage = () => {
                   <div className="form-group">
                     <label>Phương thức thanh toán</label>
                     <select value={renewPayMethod} onChange={(e) => setRenewPayMethod(e.target.value)}>
-                      <option value="BANK">Chuyển khoản ngân hàng</option>
                       <option value="CASH">Tiền mặt tại quầy</option>
+                      {paymentInfo?.momoEnabled && <option value="MOMO">Thanh toán bằng Momo</option>}
                     </select>
                   </div>
 
@@ -555,8 +582,8 @@ const MembershipManagePage = () => {
                   <div className="form-group">
                     <label>Phương thức thanh toán</label>
                     <select value={upgradePayMethod} onChange={(e) => setUpgradePayMethod(e.target.value)}>
-                      <option value="BANK">Chuyển khoản ngân hàng</option>
                       <option value="CASH">Tiền mặt tại quầy</option>
+                      {paymentInfo?.momoEnabled && <option value="MOMO">Thanh toán bằng Momo</option>}
                     </select>
                   </div>
 

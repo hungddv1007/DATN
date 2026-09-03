@@ -223,6 +223,16 @@ CREATE TABLE transactions (
     accepted_ip             NVARCHAR(64),
     accepted_user_agent     NVARCHAR(500),
     customer_discount_percent INT NOT NULL CONSTRAINT DF_transactions_customer_discount DEFAULT 0,
+    gateway_order_id        NVARCHAR(200),
+    gateway_request_id      NVARCHAR(50),
+    gateway_transaction_id  NVARCHAR(100),
+    gateway_pay_url         NVARCHAR(1000),
+    gateway_deeplink        NVARCHAR(1000),
+    gateway_qr_content      NVARCHAR(2000),
+    gateway_result_code     INT,
+    gateway_message         NVARCHAR(500),
+    payment_expires_at      DATETIME2,
+    paid_at                 DATETIME2,
     version                 BIGINT NOT NULL CONSTRAINT DF_transactions_version DEFAULT 0,
     created_at              DATETIME2 NOT NULL CONSTRAINT DF_transactions_created_at DEFAULT GETDATE(),
     FOREIGN KEY (membership_id) REFERENCES memberships(id),
@@ -236,11 +246,15 @@ CREATE TABLE transactions (
     CONSTRAINT CK_transactions_original_amount
         CHECK (original_amount IS NULL OR original_amount >= 0),
     CONSTRAINT CK_transactions_payment_method
-        CHECK (payment_method IS NULL OR payment_method IN ('CASH', 'BANK', 'ONLINE')),
+        CHECK (payment_method IS NULL OR payment_method IN ('CASH', 'BANK', 'ONLINE', 'MOMO')),
     CONSTRAINT CK_transactions_status
         CHECK (status IN ('PENDING', 'CONFIRMED', 'CANCELLED')),
     CONSTRAINT CK_transactions_type CHECK (type IN ('NEW', 'RENEW', 'UPGRADE'))
 );
+
+CREATE UNIQUE INDEX UX_transactions_gateway_order_id
+    ON transactions(gateway_order_id)
+    WHERE gateway_order_id IS NOT NULL;
 
 -- ============================================================
 -- 9. EXERCISES

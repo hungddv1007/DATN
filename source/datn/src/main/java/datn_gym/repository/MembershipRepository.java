@@ -67,8 +67,6 @@ public interface MembershipRepository extends JpaRepository<Membership, Integer>
             @Param("ptId") Integer ptId,
             @Param("status") String status);
 
-    long countByCreatedAtAfter(java.time.LocalDateTime date);
-
     @Query("SELECT m.gymPackage.name, COUNT(m) FROM Membership m " +
            "WHERE m.status = 'ACTIVE' AND m.endDate >= CURRENT_DATE " +
            "GROUP BY m.gymPackage.name")

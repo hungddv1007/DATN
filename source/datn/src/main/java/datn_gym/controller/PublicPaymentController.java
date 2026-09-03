@@ -1,6 +1,7 @@
 package datn_gym.controller;
 
 import datn_gym.config.PaymentProperties;
+import datn_gym.config.MomoProperties;
 import datn_gym.dto.response.PaymentInfoResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PublicPaymentController {
 
     private final PaymentProperties properties;
+    private final MomoProperties momoProperties;
 
     @GetMapping
     public ResponseEntity<PaymentInfoResponse> getPaymentInfo() {
@@ -22,7 +24,9 @@ public class PublicPaymentController {
                 safe(properties.bankAccountNumber()),
                 safe(properties.bankAccountHolder()),
                 safe(properties.transferPrefix()),
-                properties.effectivePendingExpirationHours()));
+                properties.effectivePendingExpirationHours(),
+                momoProperties.isEnabled(),
+                momoProperties.effectiveBaseUrl().contains("test-payment") ? "SANDBOX" : "PRODUCTION"));
     }
 
     private String safe(String value) {

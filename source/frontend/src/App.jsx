@@ -16,6 +16,7 @@ const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
 const MemberDashboard = lazy(() => import('./pages/member/MemberDashboard'));
 const BuyPackagePage = lazy(() => import('./pages/member/BuyPackagePage'));
+const MomoPaymentPage = lazy(() => import('./pages/member/MomoPaymentPage'));
 const MemberTransactions = lazy(() => import('./pages/member/MemberTransactions'));
 const MembershipManagePage = lazy(() => import('./pages/member/MembershipManagePage'));
 const MembershipTransferPage = lazy(() => import('./pages/member/MembershipTransferPage'));
@@ -102,6 +103,11 @@ function App() {
           <Route path="/member/diet" element={
             <ProtectedRoute allowedRoles={['MEMBER']}>
               <MemberDietPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/member/payment/momo" element={
+            <ProtectedRoute allowedRoles={['MEMBER']}>
+              <MomoPaymentPage />
             </ProtectedRoute>
           } />
           <Route path="/member/membership-transfer" element={

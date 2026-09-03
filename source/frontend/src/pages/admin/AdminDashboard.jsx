@@ -10,7 +10,7 @@ const AdminDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
-    newRegistrationsThisMonth: 0,
+    transactionsThisMonth: 0,
     monthlyRevenue: 0,
     activePTs: 0,
     revenueData: [],
@@ -43,7 +43,7 @@ const AdminDashboard = () => {
 
       <SummaryGrid columns={4} ariaLabel="Tổng quan quản trị">
         <SummaryCard icon={Users} label="Tổng người dùng" value={stats.totalUsers} tone="blue" />
-        <SummaryCard icon={Package} label="Đăng ký tháng này" value={stats.newRegistrationsThisMonth} tone="green" />
+        <SummaryCard icon={Package} label="Giao dịch tháng này" value={stats.transactionsThisMonth} tone="green" />
         <SummaryCard
           icon={CreditCard}
           label="Doanh thu tháng (VNĐ)"

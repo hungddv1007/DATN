@@ -24,7 +24,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -137,6 +139,65 @@ class TransactionServiceTest {
         assertThat(transaction.getStatus()).isEqualTo("CANCELLED");
         assertThat(membership.getStatus()).isEqualTo("CANCELLED");
         assertThat(promotion.getCurrentUsage()).isZero();
+    }
+
+    @Test
+    void adminCannotManuallyConfirmMomoTransaction() {
+        Transaction transaction = pendingTransaction("NEW", activeMembership());
+        transaction.setPaymentMethod("MOMO");
+        when(transactionRepository.findById(1)).thenReturn(Optional.of(transaction));
+
+        assertThatThrownBy(() -> service.confirmTransaction(1, admin.getEmail()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("IPN");
+    }
+
+    @Test
+    void momoSuccessAppliesOperationExactlyOnce() {
+        Membership membership = activeMembership();
+        membership.setStatus("PENDING");
+        Transaction transaction = pendingTransaction("NEW", membership);
+        transaction.setPaymentMethod("MOMO");
+        transaction.setGatewayOrderId("GYMPRO_TX_1");
+        transaction.setGatewayRequestId("MOMO_REQUEST_1");
+        transaction.setRequestedDurationDays(30);
+        transaction.setRequestedPackage(membership.getGymPackage());
+        when(transactionRepository.findByGatewayOrderIdForUpdate("GYMPRO_TX_1"))
+                .thenReturn(Optional.of(transaction));
+
+        service.confirmMomoTransaction("GYMPRO_TX_1", 998877L, 0,
+                "Successful.", 100_000L);
+        service.confirmMomoTransaction("GYMPRO_TX_1", 998877L, 0,
+                "Successful.", 100_000L);
+
+        assertThat(transaction.getStatus()).isEqualTo("CONFIRMED");
+        assertThat(transaction.getOperationApplied()).isTrue();
+        assertThat(transaction.getGatewayTransactionId()).isEqualTo("998877");
+        assertThat(transaction.getConfirmedBy()).isNull();
+        assertThat(membership.getStatus()).isEqualTo("ACTIVE");
+        verify(membershipRepository, times(1)).save(membership);
+        verify(saleService, times(1)).confirmRedemptionAndCommission(transaction);
+    }
+
+    @Test
+    void memberCanCancelOnlyOwnedPendingMomoTransaction() {
+        Membership membership = activeMembership();
+        membership.setStatus("PENDING");
+        Promotion promotion = Promotion.builder().id(7).currentUsage(1).build();
+        Transaction transaction = pendingTransaction("NEW", membership);
+        transaction.setPaymentMethod("MOMO");
+        transaction.setPromotion(promotion);
+        when(transactionRepository.findByIdAndMembership_User_Email(
+                1, membership.getUser().getEmail())).thenReturn(Optional.of(transaction));
+        when(promotionRepository.findByIdForUpdate(7)).thenReturn(Optional.of(promotion));
+
+        service.cancelPendingMomoByMember(1, membership.getUser().getEmail());
+
+        assertThat(transaction.getStatus()).isEqualTo("CANCELLED");
+        assertThat(transaction.getGatewayMessage()).contains("Khách hàng đã hủy");
+        assertThat(membership.getStatus()).isEqualTo("CANCELLED");
+        assertThat(promotion.getCurrentUsage()).isZero();
+        verify(saleService).releaseRedemption(transaction);
     }
 
     private void givenAdmin() {
