@@ -27,6 +27,7 @@ public class SaleService {
     private final SalesCodeRedemptionRepository redemptionRepository;
     private final CommissionRecordRepository commissionRepository;
     private final AiConversationRepository conversationRepository;
+    private final AiMessageRepository messageRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -45,9 +46,25 @@ public class SaleService {
         User user = userRepository.save(User.builder().role(saleRole).email(normalizedEmail)
                 .password(passwordEncoder.encode(request.getPassword())).fullName(request.getFullName().trim())
                 .phone(normalizedPhone).provider("LOCAL").status(true).build());
-        profileRepository.save(SaleProfile.builder().user(user).build());
+        SaleProfile profile = profileRepository.save(SaleProfile.builder().user(user).build());
+        createDefaultCodes(profile);
         return UserProfileResponse.builder().id(user.getId()).email(user.getEmail()).fullName(user.getFullName())
                 .phone(user.getPhone()).avatar(user.getAvatar()).role("SALE").status(true).createdAt(user.getCreatedAt()).build();
+    }
+
+    private void createDefaultCodes(SaleProfile profile) {
+        String prefix = "SALE" + profile.getUser().getId();
+        List<SaleReferralCode> defaultCodes = java.util.stream.IntStream.rangeClosed(1, 3)
+                .mapToObj(index -> SaleReferralCode.builder()
+                        .salesProfile(profile)
+                        .code(prefix + "_" + index)
+                        .description("Mã giới thiệu " + index + " của " + profile.getUser().getFullName())
+                        .discountPercent(profile.discountPercent())
+                        .oneTimePerMember(true)
+                        .isActive(true)
+                        .build())
+                .toList();
+        codeRepository.saveAll(defaultCodes);
     }
 
     public SaleProfile requireProfile(String email) {
@@ -123,21 +140,6 @@ public class SaleService {
                 .forEach(code -> { code.setDiscountPercent(discount); codeRepository.save(code); });
     }
 
-    @Transactional
-    public SaleCodeResponse createCode(String email, SaleCodeRequest request) {
-        SaleProfile profile = requireProfile(email);
-        if (codeRepository.countBySalesProfile_IdAndIsActiveTrue(profile.getId()) >= 3) {
-            throw new IllegalArgumentException("Bạn chỉ được có tối đa 3 mã đang hoạt động");
-        }
-        String codeValue = request.getCode().trim().toUpperCase();
-        if (!codeValue.matches("[A-Z0-9_-]{4,50}")) throw new IllegalArgumentException("Mã chỉ gồm chữ, số, _ hoặc -");
-        if (codeRepository.existsByCodeIgnoreCase(codeValue)) throw new IllegalArgumentException("Mã này đã tồn tại");
-        SaleReferralCode code = codeRepository.save(SaleReferralCode.builder().salesProfile(profile).code(codeValue)
-                .description(request.getDescription()).discountPercent(profile.discountPercent())
-                .oneTimePerMember(request.isOneTimePerMember()).expiresAt(request.getExpiresAt()).build());
-        return toCodeResponse(code);
-    }
-
     public List<SaleCodeResponse> getCodes(String email) {
         SaleProfile profile = requireProfile(email);
         return codeRepository.findBySalesProfile_IdOrderByCreatedAtDesc(profile.getId()).stream()
@@ -145,13 +147,33 @@ public class SaleService {
     }
 
     @Transactional
-    public SaleCodeResponse setCodeActive(String email, Integer id, boolean active) {
+    public SaleCodeResponse updateCode(String email, Integer id, SaleCodeRequest request) {
         SaleProfile profile = requireProfile(email);
         SaleReferralCode code = codeRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy mã"));
         if (!code.getSalesProfile().getId().equals(profile.getId())) throw new IllegalArgumentException("Không có quyền sửa mã này");
-        if (active && !Boolean.TRUE.equals(code.getIsActive())
-                && codeRepository.countBySalesProfile_IdAndIsActiveTrue(profile.getId()) >= 3) {
-            throw new IllegalArgumentException("Bạn chỉ được có tối đa 3 mã đang hoạt động");
+
+        String codeValue = request.getCode().trim().toUpperCase();
+        if (!codeValue.matches("[A-Z0-9_-]{4,50}")) {
+            throw new IllegalArgumentException("Mã chỉ gồm chữ, số, _ hoặc -");
+        }
+        codeRepository.findByCodeIgnoreCase(codeValue)
+                .filter(existing -> !existing.getId().equals(id))
+                .ifPresent(existing -> { throw new IllegalArgumentException("Mã này đã tồn tại"); });
+
+        code.setCode(codeValue);
+        code.setDescription(request.getDescription());
+        code.setOneTimePerMember(request.isOneTimePerMember());
+        code.setExpiresAt(request.getExpiresAt());
+        return toCodeResponse(codeRepository.save(code));
+    }
+
+    @Transactional
+    public SaleCodeResponse setCodeActive(String email, Integer id, boolean active) {
+        SaleProfile profile = requireProfile(email);
+        SaleReferralCode code = codeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy mã"));
+        if (!code.getSalesProfile().getId().equals(profile.getId())) {
+            throw new IllegalArgumentException("Không có quyền sửa trạng thái mã này");
         }
         code.setIsActive(active);
         return toCodeResponse(codeRepository.save(code));
@@ -162,7 +184,29 @@ public class SaleService {
         SaleProfile profile = requireProfile(email);
         profile.setIsOnline(online);
         profileRepository.save(profile);
+        if (!online) {
+            closeActiveChats(profile);
+        }
         return dashboard(email);
+    }
+
+    private void closeActiveChats(SaleProfile profile) {
+        LocalDateTime now = LocalDateTime.now();
+        List<AiConversation> activeChats = conversationRepository
+                .findByAssignedSale_IdAndHandoffStatusInOrderByUpdatedAtDesc(
+                        profile.getUser().getId(), ACTIVE_CHAT_STATUSES);
+        for (AiConversation conversation : activeChats) {
+            conversation.setHandoffStatus("CLOSED");
+            conversation.setClosedAt(now);
+            conversation.setUpdatedAt(now);
+            conversationRepository.save(conversation);
+            messageRepository.save(AiMessage.builder()
+                    .conversation(conversation)
+                    .role("SYSTEM")
+                    .content("Nhân viên tư vấn đã chuyển sang ngoại tuyến. Phiên tư vấn trực tiếp đã kết thúc. "
+                            + "Bạn có thể tiếp tục trò chuyện với GymPro AI.")
+                    .build());
+        }
     }
 
     public SaleDashboardResponse dashboard(String email) {

@@ -32,6 +32,9 @@ public interface PtScheduleRepository extends JpaRepository<PtSchedule, Integer>
     List<PtSchedule> findByMemberIdAndScheduleDateBetweenAndStatusOrderByScheduleDateAscStartTimeAsc(
             Integer memberId, LocalDate startDate, LocalDate endDate, String status);
 
+    List<PtSchedule> findByMemberIdAndScheduleDateBetweenAndStatusInOrderByScheduleDateAscStartTimeAsc(
+            Integer memberId, LocalDate startDate, LocalDate endDate, List<String> statuses);
+
     List<PtSchedule> findByMemberIdAndScheduleDateBetweenOrderByScheduleDateAscStartTimeAsc(
             Integer memberId, LocalDate startDate, LocalDate endDate);
 

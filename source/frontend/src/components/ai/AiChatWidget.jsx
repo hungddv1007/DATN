@@ -42,6 +42,8 @@ const AiChatWidget = () => {
 
   const shouldRender =
     user?.role === 'MEMBER' && location.pathname.startsWith('/member/');
+  const isSaleChatActive = ['SALE_ASSIGNED', 'SALE_JOINED']
+    .includes(activeConversation?.handoffStatus);
 
   const scrollToBottom = () => {
     window.requestAnimationFrame(() => {
@@ -378,7 +380,9 @@ const AiChatWidget = () => {
             <button type="button" className="ai-sale-handoff" onClick={requestSale}
               disabled={!activeConversation || ['WAITING_SALE','SALE_ASSIGNED','SALE_JOINED'].includes(activeConversation?.handoffStatus)}>
               {activeConversation?.handoffStatus === 'WAITING_SALE' ? 'Đang chờ tư vấn viên'
-                : activeConversation?.assignedSaleName ? `Đang chat với ${activeConversation.assignedSaleName}` : 'Chat với nhân viên Sale'}
+                : isSaleChatActive && activeConversation?.assignedSaleName
+                  ? `Đang chat với ${activeConversation.assignedSaleName}`
+                  : 'Chat với nhân viên Sale'}
             </button>
           </div>
 
@@ -452,7 +456,9 @@ const AiChatWidget = () => {
               }}
               maxLength={2000}
               rows={1}
-              placeholder={activeConversation?.assignedSaleName ? `Nhắn ${activeConversation.assignedSaleName}...` : 'Hỏi GymPro AI...'}
+              placeholder={isSaleChatActive && activeConversation?.assignedSaleName
+                ? `Nhắn ${activeConversation.assignedSaleName}...`
+                : 'Hỏi GymPro AI...'}
               disabled={sending || !activeConversation || activeConversation?.handoffStatus === 'WAITING_SALE'}
             />
             <button
