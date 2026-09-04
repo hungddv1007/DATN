@@ -14,4 +14,5 @@ public class PtDashboardResponse {
     private long activeMembers;
     private long totalTemplates;
     private long totalReviews;
+    private long todaySessions;
 }

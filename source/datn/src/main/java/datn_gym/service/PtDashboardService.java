@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,11 +34,16 @@ public class PtDashboardService {
         long activeMembers = membershipRepository.countByPt_IdAndStatus(pt.getId(), "ACTIVE");
         long totalTemplates = 0L;
         long totalReviews = reviewRepository.countByPt_Id(pt.getId());
+        long todaySessions = ptScheduleRepository.countTodaySessions(
+                pt.getId(),
+                LocalDate.now(),
+                List.of("SCHEDULED", "COMPLETED"));
 
         return PtDashboardResponse.builder()
                 .activeMembers(activeMembers)
                 .totalTemplates(totalTemplates)
                 .totalReviews(totalReviews)
+                .todaySessions(todaySessions)
                 .build();
     }
 

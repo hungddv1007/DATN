@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import PtLayout from '../../components/layout/PtLayout';
 import { SummaryCard, SummaryGrid } from '../../components/common/SummaryCards';
-import { Users, MessageSquare, TrendingUp, Calendar, UserCircle } from 'lucide-react';
+import { Users, MessageSquare, CalendarDays, Calendar, UserCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ptDashboardService from '../../services/ptDashboardService';
 
@@ -10,7 +10,8 @@ const PtDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     activeMembers: 0,
-    totalReviews: 0
+    totalReviews: 0,
+    todaySessions: 0
   });
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +47,7 @@ const PtDashboard = () => {
         <SummaryGrid columns={3} ariaLabel="Tổng quan huấn luyện viên">
           <SummaryCard icon={Users} label="Học viên đang quản lý" value={stats.activeMembers} tone="blue" />
           <SummaryCard icon={MessageSquare} label="Lượt đánh giá" value={stats.totalReviews} tone="purple" />
-          <SummaryCard icon={TrendingUp} label="Tỉ lệ hoàn thành lịch" value="100%" tone="green" />
+          <SummaryCard icon={CalendarDays} label="Lịch tập hôm nay" value={`${stats.todaySessions ?? 0} buổi`} tone="green" />
         </SummaryGrid>
 
         {/* Quick Links */}
