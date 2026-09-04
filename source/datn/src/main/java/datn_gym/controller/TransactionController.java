@@ -1,6 +1,7 @@
 package datn_gym.controller;
 
 import datn_gym.dto.response.TransactionResponse;
+import datn_gym.dto.response.TransactionSummaryResponse;
 import datn_gym.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,6 +34,11 @@ public class TransactionController {
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(transactionService.getPendingTransactions(pageable));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<TransactionSummaryResponse> getTransactionSummary() {
+        return ResponseEntity.ok(transactionService.getTransactionSummary());
     }
 
     // PUT /api/admin/transactions/{id}/confirm — Duyệt giao dịch

@@ -342,9 +342,13 @@ public class PtScheduleService {
         if (to.isBefore(from) || java.time.temporal.ChronoUnit.DAYS.between(from, to) > 366) {
             throw new IllegalArgumentException("Khoảng thống kê không hợp lệ hoặc vượt quá 1 năm");
         }
+        LocalDate effectiveTo = to.isAfter(LocalDate.now()) ? LocalDate.now() : to;
+        if (effectiveTo.isBefore(from)) {
+            throw new IllegalArgumentException("Khoảng thống kê chưa bắt đầu");
+        }
         List<PtSchedule> sessions = ptScheduleRepository
                 .findByPt_IdAndMember_IdAndScheduleDateBetweenOrderByScheduleDateAscStartTimeAsc(
-                        pt.getId(), memberId, from, to);
+                        pt.getId(), memberId, from, effectiveTo);
         java.util.Map<String, Long> exerciseFrequency = sessions.stream()
                 .filter(s -> "COMPLETED".equals(s.getStatus())).flatMap(s -> s.getExercises().stream())
                 .collect(java.util.stream.Collectors.groupingBy(e -> e.getExercise().getName(),
@@ -357,7 +361,7 @@ public class PtScheduleService {
         long completedMinutes = sessions.stream().filter(s -> "COMPLETED".equals(s.getStatus()))
                 .mapToLong(s -> java.time.Duration.between(s.getStartTime(), s.getEndTime()).toMinutes()).sum();
         return TrainingStatsResponse.builder().memberId(memberId).memberName(member.getFullName())
-                .fromDate(from.toString()).toDate(to.toString()).scheduledSessions(count(sessions, "SCHEDULED"))
+                .fromDate(from.toString()).toDate(effectiveTo.toString()).scheduledSessions(count(sessions, "SCHEDULED"))
                 .completedSessions(count(sessions, "COMPLETED")).cancelledSessions(count(sessions, "CANCELLED"))
                 .noShowSessions(count(sessions, "NO_SHOW")).completedMinutes(completedMinutes)
                 .muscleGroupFrequency(muscleFrequency).exerciseFrequency(exerciseFrequency)

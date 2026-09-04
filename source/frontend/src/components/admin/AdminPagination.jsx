@@ -1,5 +1,5 @@
-export default function AdminPagination({ page, totalPages, onPageChange }) {
-  if (totalPages <= 1) return null;
+export default function AdminPagination({ page, totalPages, onPageChange, alwaysVisible = false }) {
+  if (totalPages <= 0 || (!alwaysVisible && totalPages <= 1)) return null;
 
   return (
     <nav className="pagination" aria-label="Phân trang danh sách quản lý">

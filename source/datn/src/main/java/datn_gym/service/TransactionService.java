@@ -1,6 +1,7 @@
 package datn_gym.service;
 
 import datn_gym.dto.response.TransactionResponse;
+import datn_gym.dto.response.TransactionSummaryResponse;
 import datn_gym.config.PaymentProperties;
 import datn_gym.entity.GymPackage;
 import datn_gym.entity.Membership;
@@ -44,13 +45,20 @@ public class TransactionService {
     private final PackageHoldPolicyRepository holdPolicyRepository;
 
     public Page<TransactionResponse> getAllTransactions(Pageable pageable) {
-        return transactionRepository.findAllByOrderByCreatedAtDesc(pageable)
+        return transactionRepository.findAllByOrderByIdDesc(pageable)
                 .map(this::toResponse);
     }
 
     public Page<TransactionResponse> getPendingTransactions(Pageable pageable) {
-        return transactionRepository.findByStatus("PENDING", pageable)
+        return transactionRepository.findByStatusOrderByIdDesc("PENDING", pageable)
                 .map(this::toResponse);
+    }
+
+    public TransactionSummaryResponse getTransactionSummary() {
+        return new TransactionSummaryResponse(
+                transactionRepository.count(),
+                transactionRepository.countByStatus("CANCELLED"),
+                transactionRepository.countByStatus("PENDING"));
     }
 
     /**

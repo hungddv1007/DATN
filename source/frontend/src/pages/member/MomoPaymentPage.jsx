@@ -19,11 +19,14 @@ export default function MomoPaymentPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const transactionId = Number(searchParams.get('transactionId'));
+  const momoResultCode = searchParams.get('resultCode');
+  const isReturningFromMomo = momoResultCode !== null && searchParams.has('orderId');
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(0);
+  const [returnWaitSeconds, setReturnWaitSeconds] = useState(5);
 
   const loadPayment = useCallback(async () => {
     if (!Number.isInteger(transactionId) || transactionId <= 0) {
@@ -34,7 +37,10 @@ export default function MomoPaymentPage() {
     try {
       let data = await paymentService.getMomoPayment(transactionId);
       setPayment(data);
-      if (data.transactionStatus === 'PENDING' && !data.qrCode && !data.payUrl) {
+      if (!isReturningFromMomo
+          && data.transactionStatus === 'PENDING'
+          && !data.qrCode
+          && !data.payUrl) {
         data = await paymentService.initiateMomoPayment(transactionId);
       }
       setPayment(data);
@@ -44,12 +50,58 @@ export default function MomoPaymentPage() {
     } finally {
       setLoading(false);
     }
-  }, [transactionId]);
+  }, [isReturningFromMomo, transactionId]);
 
   useEffect(() => { loadPayment(); }, [loadPayment]);
 
   useEffect(() => {
+    if (!isReturningFromMomo || payment?.transactionStatus !== 'PENDING') return undefined;
+
+    let cancelled = false;
+    const waitForIpnThenFallback = async () => {
+      try {
+        for (let seconds = 5; seconds > 0; seconds -= 1) {
+          setReturnWaitSeconds(seconds);
+          await new Promise(resolve => window.setTimeout(resolve, 1000));
+          if (cancelled) return;
+
+          const latest = await paymentService.getMomoPayment(transactionId);
+          if (cancelled) return;
+          setPayment(latest);
+          if (latest.transactionStatus !== 'PENDING') return;
+        }
+
+        setReturnWaitSeconds(0);
+        const returnData = Object.fromEntries(
+          [...searchParams.entries()].filter(([key]) => key !== 'transactionId'),
+        );
+        returnData.amount = Number(returnData.amount);
+        returnData.transId = returnData.transId ? Number(returnData.transId) : null;
+        returnData.resultCode = Number(returnData.resultCode);
+        returnData.responseTime = returnData.responseTime ? Number(returnData.responseTime) : null;
+
+        const resolved = await paymentService.processMomoReturn(transactionId, returnData);
+        if (!cancelled) {
+          setPayment(resolved);
+          setError('');
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(errorMessage(
+            requestError,
+            'Không thể xác minh kết quả thanh toán với MoMo.',
+          ));
+        }
+      }
+    };
+
+    waitForIpnThenFallback();
+    return () => { cancelled = true; };
+  }, [isReturningFromMomo, payment?.transactionStatus, searchParams, transactionId]);
+
+  useEffect(() => {
     if (payment?.transactionStatus !== 'PENDING') return undefined;
+    if (isReturningFromMomo) return undefined;
     const poller = window.setInterval(async () => {
       try {
         const data = await paymentService.getMomoPayment(transactionId);
@@ -60,7 +112,7 @@ export default function MomoPaymentPage() {
       }
     }, 2000);
     return () => window.clearInterval(poller);
-  }, [payment?.transactionStatus, transactionId]);
+  }, [isReturningFromMomo, payment?.transactionStatus, transactionId]);
 
   useEffect(() => {
     setNow(Date.now());
@@ -122,6 +174,17 @@ export default function MomoPaymentPage() {
       <h1>Giao dịch đã kết thúc</h1>
       <p>{payment.message || 'Thanh toán bị hủy, thất bại hoặc mã QR đã hết hạn.'}</p>
       <Link to="/packages">Chọn lại gói tập</Link>
+    </section></div></MainLayout>;
+  }
+
+  if (isReturningFromMomo) {
+    return <MainLayout><div className="momo-page"><section className="momo-card momo-result momo-return-waiting">
+      <RefreshCw size={58} className="spin" />
+      <h1>Đang xác nhận thanh toán</h1>
+      <p>Đang chờ MoMo gửi xác nhận{'…'}</p>
+      {returnWaitSeconds > 0
+        && <p>Hệ thống sẽ tự kiểm tra kết quả sau <strong>{returnWaitSeconds} giây</strong>.</p>}
+      {error && <div className="momo-error">{error}</div>}
     </section></div></MainLayout>;
   }
 

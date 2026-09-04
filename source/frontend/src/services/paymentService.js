@@ -17,6 +17,10 @@ const paymentService = {
     const response = await api.post(`/member/payments/momo/${transactionId}/refresh`);
     return response.data;
   },
+  processMomoReturn: async (transactionId, returnData) => {
+    const response = await api.post(`/member/payments/momo/${transactionId}/return`, returnData);
+    return response.data;
+  },
   cancelMomoPayment: async (transactionId) => {
     await api.delete(`/member/payments/momo/${transactionId}`);
   },

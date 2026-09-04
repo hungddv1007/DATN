@@ -13,6 +13,11 @@ const transactionService = {
     return response.data;
   },
 
+  getTransactionSummary: async () => {
+    const response = await api.get('/admin/transactions/summary');
+    return response.data;
+  },
+
   // Duyệt giao dịch
   confirmTransaction: async (id) => {
     const response = await api.put(`/admin/transactions/${id}/confirm`);

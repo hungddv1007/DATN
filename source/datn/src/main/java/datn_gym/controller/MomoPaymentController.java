@@ -38,6 +38,15 @@ public class MomoPaymentController {
                 transactionId, authentication.getName()));
     }
 
+    @PostMapping("/api/member/payments/momo/{transactionId}/return")
+    public ResponseEntity<MomoPaymentResponse> handleReturn(
+            @PathVariable Integer transactionId,
+            @RequestBody MomoIpnRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(momoPaymentService.handleReturn(
+                transactionId, authentication.getName(), request));
+    }
+
     @DeleteMapping("/api/member/payments/momo/{transactionId}")
     public ResponseEntity<Void> cancel(
             @PathVariable Integer transactionId,

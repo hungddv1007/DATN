@@ -116,6 +116,48 @@ public class MomoPaymentService {
         return toResponse(getOwnedTransaction(transactionId, memberEmail));
     }
 
+    /**
+     * Xử lý dữ liệu MoMo gắn vào redirectUrl khi trình duyệt quay lại GymPro.
+     * Luồng này chỉ là phương án dự phòng sau khi đã chờ IPN. Dữ liệu không được
+     * tin trực tiếp từ URL: chữ ký MoMo, chủ giao dịch, mã đơn, mã yêu cầu và số
+     * tiền đều phải khớp trước khi trạng thái giao dịch được thay đổi.
+     */
+    public MomoPaymentResponse handleReturn(
+            Integer transactionId,
+            String memberEmail,
+            MomoIpnRequest request) {
+        properties.requireConfigured();
+        Transaction transaction = getOwnedTransaction(transactionId, memberEmail);
+
+        if (request == null || !momoClient.isValidIpnSignature(request)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Chữ ký phản hồi MoMo không hợp lệ.");
+        }
+        if (!properties.partnerCode().trim().equals(request.getPartnerCode())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sai mã đối tác MoMo.");
+        }
+        if (transaction.getGatewayOrderId() == null
+                || !transaction.getGatewayOrderId().equals(request.getOrderId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Mã đơn hàng MoMo không khớp giao dịch.");
+        }
+        validateIpnIdentity(transaction, request);
+
+        if ("PENDING".equals(transaction.getStatus())) {
+            if (Integer.valueOf(0).equals(request.getResultCode())) {
+                transactionService.confirmMomoTransaction(
+                        request.getOrderId(), request.getTransId(), request.getResultCode(),
+                        request.getMessage(), request.getAmount());
+            } else {
+                transactionService.failMomoTransaction(
+                        request.getOrderId(), request.getTransId(), request.getResultCode(),
+                        request.getMessage(), request.getAmount());
+            }
+        }
+
+        return toResponse(getOwnedTransaction(transactionId, memberEmail));
+    }
+
     public void cancel(Integer transactionId, String memberEmail) {
         transactionService.cancelPendingMomoByMember(transactionId, memberEmail);
     }
