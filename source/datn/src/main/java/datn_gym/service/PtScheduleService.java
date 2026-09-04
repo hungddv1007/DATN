@@ -77,7 +77,10 @@ public class PtScheduleService {
         int weeks = 1;
         String recurringGroupId = null;
         if (request.isRecurring()) {
-            weeks = Math.min(52, Math.max(2, request.getRecurringWeeks() != null ? request.getRecurringWeeks() : 8));
+            weeks = request.getRecurringWeeks() != null ? request.getRecurringWeeks() : 8;
+            if (weeks < 2 || weeks > 15) {
+                throw new IllegalArgumentException("Lịch lặp phải kéo dài từ 2 đến tối đa 15 tuần");
+            }
             recurringGroupId = UUID.randomUUID().toString();
         }
 

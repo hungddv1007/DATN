@@ -83,7 +83,7 @@ const PtMemberDetail = () => {
   const [specificDietKind, setSpecificDietKind] = useState('TRAINING_DAY');
   const [editingDiet, setEditingDiet] = useState(null); // TRAINING_DAY | REST_DAY | SPECIFIC_DATE | null
   const [dietForm, setDietForm] = useState({ ...emptyDiet });
-  const [dietLoading, setDietLoading] = useState(false);
+  const [dietLoading, setDietLoading] = useState(true);
   const [dietSaving, setDietSaving] = useState(false);
 
   // AI Analysis state
@@ -159,13 +159,13 @@ const PtMemberDetail = () => {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchDiets();
+  }, [fetchData, fetchDiets]);
 
   useEffect(() => {
-    if (activeTab === 'diet') fetchDiets();
     if (activeTab === 'physical') fetchPhysicalProfile();
     if (activeTab === 'training') fetchTrainingStats();
-  }, [activeTab, fetchDiets, fetchPhysicalProfile, fetchTrainingStats]);
+  }, [activeTab, fetchPhysicalProfile, fetchTrainingStats]);
 
   const selectedSpecificDiet = specificDiets.find(d => d.dietDate === selectedDietDate) || null;
 
@@ -741,7 +741,9 @@ const PtMemberDetail = () => {
         <SummaryCard
           icon={Utensils}
           label="Khẩu phần ăn"
-          value={`${(trainingDiet ? 1 : 0) + (restDiet ? 1 : 0)} / 2 mẫu`}
+          value={dietLoading
+            ? 'Đang tải...'
+            : `${(trainingDiet ? 1 : 0) + (restDiet ? 1 : 0)} / 2 mẫu`}
           tone="teal"
           compact
         />

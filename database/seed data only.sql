@@ -9,7 +9,7 @@ INSERT INTO roles (name) VALUES ('MEMBER');
 INSERT INTO roles (name) VALUES ('SALE');
 
 -- 2. Insert Users (100 users: 1 ADMIN, 15 PT, 84 MEMBER)
--- Mat khau cho tat ca la '123456' (da ma hoa BCrypt)
+-- Mat khau cho tat ca la '123123' (da ma hoa BCrypt)
 INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (1, 'admin@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi', N'Nguyễn Quản Trị', '0910433218', 1, 'LOCAL');
 INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt1@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi', N'Trần Đức Việt', '0900133890', 1, 'LOCAL');
 INSERT INTO users (role_id, email, password, full_name, phone, status, provider) VALUES (2, 'pt2@gympro.com', '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi', N'Võ Minh Kiệt', '0963794026', 1, 'LOCAL');
@@ -296,7 +296,6 @@ INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date
 INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('FLASHSALE25', 25, NULL, '2026-07-01', '2026-07-31', 50, 10, 1);
 INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('NEWMEMBER8', 8, NULL, '2026-01-01', '2026-12-31', 400, 116, 1);
 INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('REFER5', 5, NULL, '2026-01-01', '2026-12-31', 1000, 204, 1);
-INSERT INTO promotions (code, discount_percent, package_id, start_date, end_date, max_usage, current_usage, is_active) VALUES ('ANNIVERSARY30', 30, NULL, '2026-11-01', '2026-11-30', 100, 26, 1);
 
 -- 7. Insert Memberships
 INSERT INTO memberships (user_id, package_id, pt_id, start_date, end_date, status, pause_reason, duration_days, daily_price, hold_count, paused_at, total_hold_days, created_at) VALUES (17, 2, 4, '2025-12-31', '2026-03-31', 'EXPIRED', NULL, 90, 50000, 0, NULL, 0, '2025-12-31 00:00:00');
@@ -992,7 +991,7 @@ UPDATE memberships SET
     end_date = DATEADD(DAY, hold_max_days_per_time, end_date)
 WHERE status = 'PAUSED' AND paused_at IS NOT NULL AND hold_max_days_per_time > 0;
 
--- Tai khoan SALE demo. Mat khau: 123456.
+-- Tai khoan SALE demo. Mat khau: 123123.
 INSERT INTO users (role_id, email, password, full_name, phone, avatar, status, provider)
 VALUES ((SELECT id FROM roles WHERE name = 'SALE'), 'sale1@gympro.com',
 '$2b$10$X0n/GVUIslKxD1dTSXoD/.7MGe9Tz9oPfNx07hTmQ2PuE4qWU0ROi',
@@ -1001,8 +1000,18 @@ DECLARE @sale_user_id INT = SCOPE_IDENTITY();
 INSERT INTO sales_profiles (user_id, level_number, successful_customers, is_online, max_concurrent_chats)
 VALUES (@sale_user_id, 2, 12, 1, 3);
 DECLARE @sale_profile_id INT = SCOPE_IDENTITY();
+
+-- Giong nghiep vu Admin tao tai khoan SALE: he thong cap san dung 3 ma,
+-- SALE chi duoc chinh sua noi dung/trang thai va khong tu tao them ma.
+DECLARE @sale_code_prefix VARCHAR(30) = CONCAT('SALE', @sale_user_id, '_');
 INSERT INTO sales_referral_codes (sales_profile_id, code, description, discount_percent, one_time_per_member, is_active)
-VALUES (@sale_profile_id, 'MINHANH10', N'Mã ưu đãi cấp 2 của nhân viên Nguyễn Minh Anh', 10, 1, 1);
+VALUES
+(@sale_profile_id, CONCAT(@sale_code_prefix, '1'), N'Mã giới thiệu 1 của Nguyễn Minh Anh', 10, 1, 1),
+(@sale_profile_id, CONCAT(@sale_code_prefix, '2'), N'Mã giới thiệu 2 của Nguyễn Minh Anh', 10, 1, 1),
+(@sale_profile_id, CONCAT(@sale_code_prefix, '3'), N'Mã giới thiệu 3 của Nguyễn Minh Anh', 10, 1, 1);
+DECLARE @demo_sale_code_id INT = (
+    SELECT id FROM sales_referral_codes WHERE code = CONCAT(@sale_code_prefix, '1')
+);
 
 -- Danh gia dich vu phuc vu trang quan ly va khu vuc cam nhan tren trang chu.
 -- Tao co dinh 16 danh gia de Admin co 3 trang du lieu (7 ban ghi/trang).
@@ -1055,7 +1064,7 @@ FROM pt_schedules s
 WHERE s.pt_id = 2 AND s.status = 'COMPLETED' AND s.schedule_date BETWEEN '2026-08-03' AND '2026-08-04';
 
 -- ============================================================
--- KICH BAN DEMO BAO VE: 03/09/2026 - 08/09/2026
+-- KICH BAN DEMO BAO VE: du lieu phat sinh den het 05/09/2026
 -- Moc du lieu co dinh giup dashboard on dinh khi demo tren may khac.
 -- ============================================================
 DECLARE @demo_date DATE = '2026-09-05';
@@ -1139,7 +1148,7 @@ DECLARE @demo_transfer_source_id INT = (
     WHERE user_id = @demo_member2_id
     ORDER BY id DESC
 );
-UPDATE memberships SET package_id = @demo_premium_id, pt_id = NULL, start_date = '2026-08-15', end_date = '2026-12-13',
+UPDATE memberships SET package_id = @demo_premium_id, start_date = '2026-08-15', end_date = '2026-12-13',
     status = 'ACTIVE', pause_reason = NULL, duration_days = 120, daily_price = 50000,
     hold_count = 0, paused_at = NULL, total_hold_days = 0, hold_until = NULL,
     hold_max_times = 1, hold_max_days_per_time = 14, hold_max_total_days = 14, version = version + 1
@@ -1259,13 +1268,6 @@ VALUES
     (@demo_member11_id, @demo_transfer_policy_id, NULL, 'TRANSFER_RECEIVE', '2026-08-25 10:14:00', '127.0.0.1', N'Edge 127 / Windows 11');
 
 -- Sale cap 2: 12 khach hang thanh cong, co du hoa hong o ba trang thai.
-INSERT INTO sales_referral_codes
-    (sales_profile_id, code, description, discount_percent, one_time_per_member, is_active, expires_at)
-VALUES
-    (@sale_profile_id, 'MINHANHVIP10', N'Ưu đãi 10% dành cho khách hàng VIP của Minh Anh', 10, 1, 1, '2026-12-31 23:59:59'),
-    (@sale_profile_id, 'MINHANHPLUS10', N'Mã ưu đãi linh hoạt của nhân viên Nguyễn Minh Anh', 10, 0, 1, NULL);
-DECLARE @demo_sale_code_id INT = (SELECT id FROM sales_referral_codes WHERE code = 'MINHANH10');
-
 DECLARE @demo_sale_transactions TABLE (
     rn INT IDENTITY(1,1), transaction_id INT PRIMARY KEY, member_id INT,
     amount DECIMAL(12,0), confirmed_at DATETIME2
@@ -1350,9 +1352,9 @@ FROM blogs b
 JOIN recent_drafts r ON r.id = b.id
 WHERE r.rn <= 3;
 
--- Lich PT1 day du theo tuan/thang: hoan thanh, vang, huy, sap toi va lich lap.
+-- Lich PT1 day du theo tuan/thang. Khong tao lich sau ngay demo 05/09/2026.
 DELETE FROM pt_schedules
-WHERE pt_id = @demo_pt1_id AND schedule_date BETWEEN '2026-08-17' AND '2026-09-12';
+WHERE pt_id = @demo_pt1_id AND schedule_date BETWEEN '2026-08-17' AND '2026-09-05';
 
 INSERT INTO pt_schedules
     (pt_id, member_id, schedule_date, start_time, end_time, exercise_note, recurring_group_id,
@@ -1366,17 +1368,33 @@ VALUES
 (@demo_pt1_id, @demo_member29_id, '2026-08-26', '18:00', '19:00', N'Cardio nhẹ và thân dưới', NULL, 'COMPLETED', N'Đầu gối ổn định, nhịp tim trong vùng mục tiêu.', '2026-08-26 19:02:00', '2026-08-21 10:00:00'),
 (@demo_pt1_id, @demo_member43_id, '2026-08-28', '16:00', '17:30', N'Push day', NULL, 'CANCELLED', N'PT hủy và đã báo trước do lịch họp chuyên môn.', NULL, '2026-08-22 08:00:00'),
 (@demo_pt1_id, @demo_member68_id, '2026-08-29', '09:00', '10:00', N'Full body duy trì', NULL, 'COMPLETED', N'Kỹ thuật ổn định, mức gắng sức RPE 7/10.', '2026-08-29 10:02:00', '2026-08-23 08:00:00'),
-(@demo_pt1_id, @demo_member5_id,  '2026-08-31', '07:00', '08:30', N'Ngực - vai - tay sau', 'pt1-member5-sep-2026', 'COMPLETED', N'Bench Press đạt mục tiêu tuần, chưa cần tăng tải.', '2026-08-31 08:31:00', '2026-08-27 09:00:00'),
-(@demo_pt1_id, @demo_member29_id, '2026-09-02', '18:00', '19:00', N'Thân dưới và phục hồi lưng', NULL, 'COMPLETED', N'Hoàn thành tốt, không xuất hiện đau lưng dưới.', '2026-09-02 19:03:00', '2026-08-29 10:00:00'),
-(@demo_pt1_id, @demo_member43_id, '2026-09-03', '16:00', '17:30', N'Pull day tăng cơ', NULL, 'COMPLETED', N'Tăng 5 kg Deadlift, biên độ và nhịp thở tốt.', '2026-09-03 17:32:00', '2026-08-30 08:00:00'),
-(@demo_pt1_id, @demo_member68_id, '2026-09-04', '09:00', '10:00', N'Cardio ngắt quãng và core', NULL, 'COMPLETED', N'Hoàn thành 8 vòng interval và 3 hiệp Plank.', '2026-09-04 10:02:00', '2026-08-30 08:05:00'),
-(@demo_pt1_id, @demo_member5_id,  '2026-09-07', '07:00', '08:30', N'Chân - mông, theo dõi tiến độ tuần', 'pt1-member5-sep-2026', 'SCHEDULED', NULL, NULL, '2026-09-01 09:00:00'),
-(@demo_pt1_id, @demo_member29_id, '2026-09-07', '18:00', '19:00', N'Full body cơ bản', NULL, 'SCHEDULED', NULL, NULL, '2026-09-01 09:05:00'),
-(@demo_pt1_id, @demo_member43_id, '2026-09-08', '16:00', '17:30', N'Ngực - vai, hạn chế biên độ vai trái', NULL, 'SCHEDULED', NULL, NULL, '2026-09-01 09:10:00'),
-(@demo_pt1_id, @demo_member68_id, '2026-09-09', '09:00', '10:00', N'Cardio và mobility', NULL, 'SCHEDULED', NULL, NULL, '2026-09-01 09:15:00'),
-(@demo_pt1_id, @demo_member5_id,  '2026-09-11', '07:00', '08:30', N'Ngực - tay sau', 'pt1-member5-sep-2026', 'SCHEDULED', NULL, NULL, '2026-09-01 09:20:00');
+-- Tuan 31/08-05/09: moi hoc vien ACTIVE cua PT1 co 4 buoi da hoan thanh va 1 buoi ngay demo.
+(@demo_pt1_id, @demo_member5_id,  '2026-08-31', '07:00', '08:30', N'Ngực - vai - tay sau', 'pt1-member5-sep-2026', 'COMPLETED', N'Hoàn thành đủ bài. Bench Press ổn định ở 57,5 kg, vai không đau.', '2026-08-31 08:34:00', '2026-08-27 09:00:00'),
+(@demo_pt1_id, @demo_member29_id, '2026-08-31', '09:00', '10:00', N'Thân dưới cho người mới', NULL, 'COMPLETED', N'Đầu gối ổn định, giữ được lưng trung lập trong toàn bộ các hiệp Squat.', '2026-08-31 10:03:00', '2026-08-27 09:05:00'),
+(@demo_pt1_id, @demo_member43_id, '2026-08-31', '16:00', '17:30', N'Pull day tăng cơ', NULL, 'COMPLETED', N'Hoàn thành đúng khối lượng, vai trái không khó chịu khi kéo.', '2026-08-31 17:33:00', '2026-08-27 09:10:00'),
+(@demo_pt1_id, @demo_member68_id, '2026-08-31', '18:00', '19:00', N'Cardio ngắt quãng và core', NULL, 'COMPLETED', N'Hoàn thành 8 vòng interval, nhịp tim phục hồi tốt sau buổi tập.', '2026-08-31 19:02:00', '2026-08-27 09:15:00'),
 
--- Bai tap chi tiet cho cac buoi da hoan thanh, phuc vu thong ke tuan/thang.
+(@demo_pt1_id, @demo_member29_id, '2026-09-01', '07:00', '08:00', N'Lưng - tay trước và cardio nhẹ', NULL, 'COMPLETED', N'Kéo xô đúng biên độ, duy trì cardio vùng 2 đủ thời lượng.', '2026-09-01 08:03:00', '2026-08-28 08:00:00'),
+(@demo_pt1_id, @demo_member43_id, '2026-09-01', '09:00', '10:30', N'Ngực trên và ổn định vai', NULL, 'COMPLETED', N'Vai trái đáp ứng tốt; giữ mức tạ vừa và kiểm soát pha hạ.', '2026-09-01 10:33:00', '2026-08-28 08:05:00'),
+(@demo_pt1_id, @demo_member68_id, '2026-09-01', '16:00', '17:00', N'Toàn thân duy trì sức mạnh', NULL, 'COMPLETED', N'Kỹ thuật Kettlebell Swing chắc, thể lực duy trì ở RPE 7/10.', '2026-09-01 17:02:00', '2026-08-28 08:10:00'),
+(@demo_pt1_id, @demo_member5_id,  '2026-09-01', '18:00', '19:30', N'Chân - mông tăng cơ', 'pt1-member5-sep-2026', 'COMPLETED', N'Hoàn thành đủ hiệp; giảm Leg Press ở hiệp cuối để giữ đúng biên độ.', '2026-09-01 19:34:00', '2026-08-28 08:15:00'),
+
+(@demo_pt1_id, @demo_member43_id, '2026-09-02', '07:00', '08:30', N'Chân sau và sức mạnh', NULL, 'COMPLETED', N'Tăng Deadlift thêm 2,5 kg, nhịp thở và khóa hông tốt.', '2026-09-02 08:33:00', '2026-08-29 09:00:00'),
+(@demo_pt1_id, @demo_member68_id, '2026-09-02', '09:00', '10:00', N'Đẩy - kéo thân trên', NULL, 'COMPLETED', N'Hoàn thành đủ khối lượng, tốc độ lặp ổn định.', '2026-09-02 10:02:00', '2026-08-29 09:05:00'),
+(@demo_pt1_id, @demo_member5_id,  '2026-09-02', '16:00', '17:30', N'Lưng - tay trước tăng cơ', 'pt1-member5-sep-2026', 'COMPLETED', N'Cảm nhận cơ xô tốt, không dùng đà ở các hiệp cuối.', '2026-09-02 17:34:00', '2026-08-29 09:10:00'),
+(@demo_pt1_id, @demo_member29_id, '2026-09-02', '18:00', '19:00', N'Thân dưới và phục hồi lưng', NULL, 'COMPLETED', N'Không xuất hiện đau lưng dưới, kiểm soát tốt chuyển động đơn chân.', '2026-09-02 19:03:00', '2026-08-29 09:15:00'),
+
+(@demo_pt1_id, @demo_member68_id, '2026-09-03', '07:00', '08:00', N'Cardio sức bền và bụng', NULL, 'COMPLETED', N'Duy trì đúng vùng nhịp tim mục tiêu, core ổn định.', '2026-09-03 08:02:00', '2026-08-30 08:00:00'),
+(@demo_pt1_id, @demo_member5_id,  '2026-09-03', '09:00', '10:30', N'Vai - tay sau', 'pt1-member5-sep-2026', 'COMPLETED', N'Đẩy vai đúng kỹ thuật, dừng trước ngưỡng mất kiểm soát.', '2026-09-03 10:34:00', '2026-08-30 08:05:00'),
+(@demo_pt1_id, @demo_member29_id, '2026-09-03', '16:00', '17:00', N'Ngực và ổn định bả vai', NULL, 'COMPLETED', N'Push Up đúng trục, Face Pull giúp vai vận động thoải mái.', '2026-09-03 17:03:00', '2026-08-30 08:10:00'),
+(@demo_pt1_id, @demo_member43_id, '2026-09-03', '18:00', '19:30', N'Lưng - tay trước', NULL, 'COMPLETED', N'Hoàn thành Pull Up đủ số lần, kiểm soát tốt pha hạ.', '2026-09-03 19:33:00', '2026-08-30 08:15:00'),
+
+(@demo_pt1_id, @demo_member5_id,  '2026-09-05', '07:00', '08:30', N'Full body tổng kết tuần', 'pt1-member5-sep-2026', 'SCHEDULED', NULL, NULL, '2026-09-01 09:00:00'),
+(@demo_pt1_id, @demo_member29_id, '2026-09-05', '09:00', '10:00', N'Kỹ thuật toàn thân cho người mới', NULL, 'SCHEDULED', NULL, NULL, '2026-09-01 09:05:00'),
+(@demo_pt1_id, @demo_member43_id, '2026-09-05', '14:00', '15:30', N'Push day, theo dõi vai trái', NULL, 'SCHEDULED', NULL, NULL, '2026-09-01 09:10:00'),
+(@demo_pt1_id, @demo_member68_id, '2026-09-05', '16:00', '17:00', N'Cardio và mobility cuối tuần', NULL, 'SCHEDULED', NULL, NULL, '2026-09-01 09:15:00');
+
+-- Bai tap chi tiet va ghi chu rieng cho cac buoi da hoan thanh, phuc vu chuc nang Xem ket qua.
 INSERT INTO schedule_exercises
     (schedule_id, exercise_id, set_count, rep_count, weight_kg, duration_minutes, note)
 SELECT s.id, e.id, v.set_count, v.rep_count, v.weight_kg, v.duration_minutes, v.note
@@ -1388,12 +1406,41 @@ FROM (VALUES
     (@demo_member5_id,  CAST('2026-08-24' AS DATE), CAST('07:00' AS TIME), N'Leg Press', 4, 10, 90.0, NULL, N'Giảm tải hiệp cuối'),
     (@demo_member29_id, CAST('2026-08-26' AS DATE), CAST('18:00' AS TIME), N'Cycling', NULL, NULL, NULL, 25, N'Nhịp tim vùng 2'),
     (@demo_member68_id, CAST('2026-08-29' AS DATE), CAST('09:00' AS TIME), N'Kettlebell Swing', 4, 15, 16.0, NULL, N'RPE 7/10'),
-    (@demo_member5_id,  CAST('2026-08-31' AS DATE), CAST('07:00' AS TIME), N'Bench Press', 4, 8, 57.5, NULL, N'Đạt mục tiêu tuần'),
-    (@demo_member29_id, CAST('2026-09-02' AS DATE), CAST('18:00' AS TIME), N'Leg Curl', 3, 12, 25.0, NULL, N'Không đau lưng'),
-    (@demo_member43_id, CAST('2026-09-03' AS DATE), CAST('16:00' AS TIME), N'Deadlift', 4, 6, 75.0, NULL, N'Tăng 5 kg'),
-    (@demo_member43_id, CAST('2026-09-03' AS DATE), CAST('16:00' AS TIME), N'Barbell Row', 4, 10, 45.0, NULL, N'Giữ thân người ổn định'),
-    (@demo_member68_id, CAST('2026-09-04' AS DATE), CAST('09:00' AS TIME), N'Running (Treadmill)', NULL, NULL, NULL, 24, N'8 vòng interval'),
-    (@demo_member68_id, CAST('2026-09-04' AS DATE), CAST('09:00' AS TIME), N'Plank', 3, NULL, NULL, 2, N'Mỗi hiệp 2 phút')
+    (@demo_member5_id,  CAST('2026-08-31' AS DATE), CAST('07:00' AS TIME), N'Bench Press', 4, 8, 57.5, NULL, N'Giữ bả vai chắc, đủ biên độ ở cả 4 hiệp'),
+    (@demo_member5_id,  CAST('2026-08-31' AS DATE), CAST('07:00' AS TIME), N'Lateral Raise', 3, 12, 7.5, NULL, N'Không nhún người ở các lần cuối'),
+    (@demo_member29_id, CAST('2026-08-31' AS DATE), CAST('09:00' AS TIME), N'Squat', 3, 10, 20.0, NULL, N'Đầu gối đi đúng hướng mũi chân'),
+    (@demo_member29_id, CAST('2026-08-31' AS DATE), CAST('09:00' AS TIME), N'Plank', 3, NULL, NULL, 1, N'Mỗi hiệp giữ 45 giây'),
+    (@demo_member43_id, CAST('2026-08-31' AS DATE), CAST('16:00' AS TIME), N'Deadlift', 4, 6, 72.5, NULL, N'Vai trái ổn định, lưng trung lập'),
+    (@demo_member43_id, CAST('2026-08-31' AS DATE), CAST('16:00' AS TIME), N'Barbell Row', 4, 10, 42.5, NULL, N'Không dùng đà từ lưng dưới'),
+    (@demo_member68_id, CAST('2026-08-31' AS DATE), CAST('18:00' AS TIME), N'Running (Treadmill)', NULL, NULL, NULL, 24, N'8 vòng interval, mỗi vòng nhanh 1 phút'),
+    (@demo_member68_id, CAST('2026-08-31' AS DATE), CAST('18:00' AS TIME), N'Plank', 3, NULL, NULL, 2, N'Mỗi hiệp nghỉ 60 giây'),
+
+    (@demo_member29_id, CAST('2026-09-01' AS DATE), CAST('07:00' AS TIME), N'Lat Pulldown', 3, 12, 25.0, NULL, N'Kéo thanh về ngực, không ngả người quá mức'),
+    (@demo_member29_id, CAST('2026-09-01' AS DATE), CAST('07:00' AS TIME), N'Cycling', NULL, NULL, NULL, 20, N'Duy trì nhịp tim vùng 2'),
+    (@demo_member43_id, CAST('2026-09-01' AS DATE), CAST('09:00' AS TIME), N'Incline Dumbbell Press', 4, 10, 20.0, NULL, N'Không đau vai trong toàn bộ biên độ'),
+    (@demo_member43_id, CAST('2026-09-01' AS DATE), CAST('09:00' AS TIME), N'Face Pull', 3, 15, 17.5, NULL, N'Giữ vai thấp và xoay ngoài tốt'),
+    (@demo_member68_id, CAST('2026-09-01' AS DATE), CAST('16:00' AS TIME), N'Kettlebell Swing', 4, 15, 16.0, NULL, N'Phát lực từ hông, RPE 7/10'),
+    (@demo_member68_id, CAST('2026-09-01' AS DATE), CAST('16:00' AS TIME), N'Burpee', 3, 10, NULL, NULL, N'Nhịp độ ổn định, tiếp đất nhẹ'),
+    (@demo_member5_id,  CAST('2026-09-01' AS DATE), CAST('18:00' AS TIME), N'Squat', 4, 8, 70.0, NULL, N'Giữ tốc độ hạ tạ 3 giây'),
+    (@demo_member5_id,  CAST('2026-09-01' AS DATE), CAST('18:00' AS TIME), N'Leg Press', 4, 10, 95.0, NULL, N'Hiệp cuối giảm còn 85 kg để đủ biên độ'),
+
+    (@demo_member43_id, CAST('2026-09-02' AS DATE), CAST('07:00' AS TIME), N'Deadlift', 4, 6, 75.0, NULL, N'Tăng 2,5 kg, khóa hông tốt'),
+    (@demo_member43_id, CAST('2026-09-02' AS DATE), CAST('07:00' AS TIME), N'Leg Curl', 4, 12, 35.0, NULL, N'Kiểm soát pha trả tạ'),
+    (@demo_member68_id, CAST('2026-09-02' AS DATE), CAST('09:00' AS TIME), N'Bench Press', 3, 10, 45.0, NULL, N'Không cần hỗ trợ ở hiệp cuối'),
+    (@demo_member68_id, CAST('2026-09-02' AS DATE), CAST('09:00' AS TIME), N'Lat Pulldown', 3, 12, 40.0, NULL, N'Giữ ngực mở và kéo bằng khuỷu tay'),
+    (@demo_member5_id,  CAST('2026-09-02' AS DATE), CAST('16:00' AS TIME), N'Lat Pulldown', 4, 10, 50.0, NULL, N'Cảm nhận cơ xô tốt, không dùng đà'),
+    (@demo_member5_id,  CAST('2026-09-02' AS DATE), CAST('16:00' AS TIME), N'Bicep Curl', 3, 12, 12.5, NULL, N'Giữ khuỷu tay sát thân'),
+    (@demo_member29_id, CAST('2026-09-02' AS DATE), CAST('18:00' AS TIME), N'Leg Curl', 3, 12, 25.0, NULL, N'Không xuất hiện đau lưng dưới'),
+    (@demo_member29_id, CAST('2026-09-02' AS DATE), CAST('18:00' AS TIME), N'Lunges', 3, 10, 5.0, NULL, N'10 lần mỗi chân, bước chân ổn định'),
+
+    (@demo_member68_id, CAST('2026-09-03' AS DATE), CAST('07:00' AS TIME), N'Cycling', NULL, NULL, NULL, 30, N'Duy trì tốc độ đều trong vùng nhịp tim mục tiêu'),
+    (@demo_member68_id, CAST('2026-09-03' AS DATE), CAST('07:00' AS TIME), N'Crunch', 3, 15, NULL, NULL, N'Không kéo cổ bằng tay'),
+    (@demo_member5_id,  CAST('2026-09-03' AS DATE), CAST('09:00' AS TIME), N'Overhead Press', 4, 8, 32.5, NULL, N'Không ưỡn lưng, dừng khi tốc độ lặp giảm'),
+    (@demo_member5_id,  CAST('2026-09-03' AS DATE), CAST('09:00' AS TIME), N'Tricep Pushdown', 3, 12, 22.5, NULL, N'Khóa khuỷu tay sát thân'),
+    (@demo_member29_id, CAST('2026-09-03' AS DATE), CAST('16:00' AS TIME), N'Push Up', 3, 10, NULL, NULL, N'Giữ thân người thẳng, đủ biên độ'),
+    (@demo_member29_id, CAST('2026-09-03' AS DATE), CAST('16:00' AS TIME), N'Face Pull', 3, 15, 12.5, NULL, N'Vai vận động thoải mái sau bài'),
+    (@demo_member43_id, CAST('2026-09-03' AS DATE), CAST('18:00' AS TIME), N'Pull Up', 4, 8, NULL, NULL, N'Kiểm soát pha hạ trong 2 giây'),
+    (@demo_member43_id, CAST('2026-09-03' AS DATE), CAST('18:00' AS TIME), N'Bicep Curl', 4, 10, 15.0, NULL, N'Không đưa vai ra trước ở lần cuối')
 ) v(member_id, schedule_date, start_time, exercise_name, set_count, rep_count, weight_kg, duration_minutes, note)
 JOIN pt_schedules s ON s.pt_id = @demo_pt1_id AND s.member_id = v.member_id
     AND s.schedule_date = v.schedule_date AND s.start_time = v.start_time AND s.status = 'COMPLETED'
@@ -1407,7 +1454,7 @@ INSERT INTO pt_notes (pt_id, member_id, content, created_at) VALUES
 
 -- Thuc don hoan chinh cho member VIP cua PT1.
 DELETE FROM diets WHERE member_id = @demo_member43_id
-  AND (day_type IN ('TRAINING_DAY', 'REST_DAY') OR diet_date = '2026-09-08');
+  AND (day_type IN ('TRAINING_DAY', 'REST_DAY') OR diet_date = '2026-09-05');
 INSERT INTO diets
     (pt_id, member_id, day_type, diet_date, title, breakfast, snack_morning, lunch,
      snack_afternoon, dinner, calories, protein_g, carbs_g, fat_g, note, created_at)
@@ -1426,7 +1473,7 @@ VALUES
  N'1 hũ sữa chua Hy Lạp.',
  N'150 g khoai lang, 180 g cá trắng và salad.', 2250, 170, 230, 70,
  N'Giảm tinh bột so với ngày tập nhưng giữ đủ protein để phục hồi.', '2026-09-01 08:32:00'),
-(@demo_pt1_id, @demo_member43_id, 'SPECIFIC_DATE', '2026-09-08', N'Thực đơn cho buổi tập chiều 08/09',
+(@demo_pt1_id, @demo_member43_id, 'SPECIFIC_DATE', '2026-09-05', N'Thực đơn cho buổi tập chiều 05/09',
  N'Yến mạch, trứng và chuối.', N'Sữa chua Hy Lạp.',
  N'Cơm, ức gà và rau xanh.', N'Chuối trước tập; sữa ít béo sau tập.',
  N'Khoai lang, cá hồi và salad.', 2500, 175, 290, 70,
@@ -1447,12 +1494,12 @@ WHERE NOT EXISTS (
 -- Thong bao moi de dashboard member/Admin/PT co du trang thai da doc/chua doc.
 INSERT INTO notifications (user_id, sender_id, title, message, is_read, created_at) VALUES
 (@demo_member1_id, NULL, N'Bạn có gói tập đang chờ nhận', N'Member2 đã gửi yêu cầu chuyển nhượng gói Premium. Yêu cầu có hiệu lực đến 01/11/2026.', 0, '2026-09-02 09:01:00'),
-(@demo_member3_id, @demo_admin_id, N'Bảo lưu đã được ghi nhận', N'Gói Premium đang bảo lưu đến hết ngày 12/09/2026 và sẽ tự động hoạt động trở lại.', 0, '2026-08-29 08:30:00'),
+(@demo_member3_id, @demo_admin_id, N'Bảo lưu đã được ghi nhận', N'Gói Premium được bảo lưu dự kiến đến hết ngày 12/09/2026. Bạn có thể kết thúc bảo lưu sớm theo chính sách.', 0, '2026-08-29 08:30:00'),
 (@demo_member4_id, @demo_admin_id, N'Giao dịch đang chờ xác nhận', N'Yêu cầu mua gói VIP 90 ngày đã được tiếp nhận. GymPro sẽ thông báo sau khi đối soát.', 0, '2026-09-04 20:06:00'),
 (@demo_member5_id, @demo_admin_id, N'Gia hạn thành công', N'Giao dịch gia hạn Premium 30 ngày đã được xác nhận; biên nhận đã gửi về email đăng ký.', 1, '2026-08-20 09:30:00'),
 (@demo_member29_id, @demo_admin_id, N'Nâng cấp gói VIP thành công', N'Gói tập của bạn đã được nâng cấp lên VIP và tiếp tục do PT Trần Đức Việt phụ trách.', 0, '2026-08-25 14:20:00'),
-(@demo_member43_id, @demo_pt1_id, N'Lịch tập ngày 08/09', N'Bạn có buổi tập Push lúc 16:00 ngày 08/09. Vui lòng đến sớm 10 phút để khởi động vai.', 0, '2026-09-04 08:00:00'),
-(@demo_pt1_id, @demo_admin_id, N'Lịch tuần bảo vệ đã sẵn sàng', N'Bạn có 4 học viên đang quản lý và 4 buổi tập đã lên lịch trong tuần 07-11/09.', 0, '2026-09-05 07:00:00'),
+(@demo_member43_id, @demo_pt1_id, N'Lịch tập ngày 05/09', N'Bạn có buổi tập Push lúc 14:00 ngày 05/09. Vui lòng đến sớm 10 phút để khởi động vai.', 0, '2026-09-04 08:00:00'),
+(@demo_pt1_id, @demo_admin_id, N'Lịch tuần bảo vệ đã sẵn sàng', N'Bạn có 4 học viên đang quản lý; mỗi người có 4 buổi hoàn thành và 1 buổi trong ngày 05/09.', 0, '2026-09-05 07:00:00'),
 (@sale_user_id, @demo_admin_id, N'Cấp Sale đã được cập nhật', N'Bạn đã đạt cấp 2 với 12 khách hàng thành công. Mức ưu đãi hiện tại là 10%.', 0, '2026-08-30 11:00:00');
 
 -- Dat yeu cau dang cho o cuoi batch de day la trang thai nghiep vu moi nhat khi demo.
@@ -1468,7 +1515,77 @@ IF NOT EXISTS (
 )
     THROW 50020, 'Seed demo transfer request was not created.', 1;
 
-PRINT N'Đã nạp kịch bản demo GymPro cho giai đoạn bảo vệ 03/09/2026 - 08/09/2026.';
+-- ============================================================
+-- KIEM TRA TINH NHAT QUAN NGHIEP VU CUA DU LIEU DEMO
+-- ============================================================
+IF EXISTS (
+    SELECT m.pt_id
+    FROM memberships m
+    JOIN pt_profiles p ON p.user_id = m.pt_id
+    WHERE m.status = 'ACTIVE'
+    GROUP BY m.pt_id, p.max_members
+    HAVING COUNT(DISTINCT m.user_id) > p.max_members
+)
+    THROW 51010, N'Seed không hợp lệ: có PT vượt quá số học viên tối đa.', 1;
+
+IF EXISTS (
+    SELECT sp.id
+    FROM sales_profiles sp
+    LEFT JOIN sales_referral_codes src ON src.sales_profile_id = sp.id
+    GROUP BY sp.id
+    HAVING COUNT(src.id) <> 3
+)
+    THROW 51017, N'Seed không hợp lệ: mỗi tài khoản SALE phải được cấp sẵn đúng 3 mã giới thiệu.', 1;
+
+IF EXISTS (
+    SELECT 1
+    FROM memberships m
+    JOIN packages p ON p.id = m.package_id
+    WHERE m.status IN ('PENDING', 'ACTIVE', 'PAUSED')
+      AND ((p.can_choose_pt = 1 AND m.pt_id IS NULL)
+        OR (p.can_choose_pt = 0 AND m.pt_id IS NOT NULL))
+)
+    THROW 51016, N'Seed không hợp lệ: gói hiện tại có thông tin PT không đúng quyền lợi gói.', 1;
+
+IF EXISTS (SELECT 1 FROM pt_schedules WHERE schedule_date > @demo_date)
+    THROW 51011, N'Seed không hợp lệ: còn lịch tập sau ngày 05/09/2026.', 1;
+
+IF EXISTS (SELECT 1 FROM promotions WHERE start_date > @demo_date)
+    THROW 51012, N'Seed không hợp lệ: còn chương trình khuyến mãi bắt đầu sau ngày demo.', 1;
+
+IF EXISTS (
+    SELECT 1
+    FROM pt_schedules a
+    JOIN pt_schedules b ON b.pt_id = a.pt_id AND b.schedule_date = a.schedule_date AND b.id > a.id
+    WHERE a.status IN ('ACTIVE', 'SCHEDULED', 'COMPLETED')
+      AND b.status IN ('ACTIVE', 'SCHEDULED', 'COMPLETED')
+      AND a.start_time < b.end_time AND b.start_time < a.end_time
+)
+    THROW 51013, N'Seed không hợp lệ: có hai lịch của cùng PT bị trùng giờ.', 1;
+
+IF EXISTS (
+    SELECT m.user_id
+    FROM memberships m
+    LEFT JOIN pt_schedules s ON s.pt_id = @demo_pt1_id AND s.member_id = m.user_id
+        AND s.schedule_date BETWEEN '2026-08-31' AND '2026-09-05'
+    WHERE m.pt_id = @demo_pt1_id AND m.status = 'ACTIVE'
+    GROUP BY m.user_id
+    HAVING COUNT(s.id) < 4
+)
+    THROW 51014, N'Seed không hợp lệ: học viên ACTIVE của PT1 chưa đủ 4 buổi trong tuần 31/08-05/09.', 1;
+
+IF EXISTS (
+    SELECT 1
+    FROM pt_schedules s
+    WHERE s.pt_id = @demo_pt1_id
+      AND s.schedule_date BETWEEN '2026-08-31' AND '2026-09-04'
+      AND s.status = 'COMPLETED'
+      AND (s.actual_note IS NULL OR s.completed_at IS NULL
+           OR NOT EXISTS (SELECT 1 FROM schedule_exercises se WHERE se.schedule_id = s.id))
+)
+    THROW 51015, N'Seed không hợp lệ: buổi tập đã hoàn thành của PT1 thiếu kết quả hoặc bài tập chi tiết.', 1;
+
+PRINT N'Đã nạp và kiểm tra kịch bản demo GymPro đến hết ngày 05/09/2026.';
 
 -- ============================================================
 -- HET FILE

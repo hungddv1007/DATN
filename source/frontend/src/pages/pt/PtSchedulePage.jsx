@@ -694,9 +694,11 @@ const PtSchedulePage = () => {
                           type="number"
                           className="pts-form-control pts-input-narrow"
                           min="2"
-                          max="52"
+                          max="15"
                           value={formRecurringWeeks}
-                          onChange={(e) => setFormRecurringWeeks(parseInt(e.target.value) || 8)}
+                          onChange={(e) => setFormRecurringWeeks(
+                            Math.min(15, Math.max(2, parseInt(e.target.value) || 8))
+                          )}
                         />
                       </div>
                     )}

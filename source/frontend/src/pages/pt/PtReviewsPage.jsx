@@ -34,6 +34,7 @@ const PtReviewsPage = () => {
   };
 
   const avgRating = profile?.ratingScore || 0;
+  const formattedAvgRating = avgRating ? Number(avgRating).toFixed(1) : '—';
   const fiveStarReviews = reviews.filter(review => review.ratingStar === 5).length;
 
   return (
@@ -45,7 +46,7 @@ const PtReviewsPage = () => {
         </header>
 
         <SummaryGrid columns={3} ariaLabel="Thống kê đánh giá">
-          <SummaryCard icon={Star} label="Điểm trung bình" value={avgRating || '—'} tone="yellow" />
+          <SummaryCard icon={Star} label="Điểm trung bình" value={formattedAvgRating} tone="yellow" />
           <SummaryCard icon={MessageSquare} label="Tổng lượt đánh giá" value={reviews.length} tone="orange" />
           <SummaryCard icon={Star} label="Đánh giá 5 sao" value={fiveStarReviews} tone="green" />
         </SummaryGrid>

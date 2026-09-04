@@ -2,13 +2,16 @@ package datn_gym.service;
 
 import datn_gym.dto.request.CreateSaleAccountRequest;
 import datn_gym.dto.request.SaleCodeRequest;
+import datn_gym.dto.response.CommissionResponse;
 import datn_gym.dto.response.SaleCodeResponse;
 import datn_gym.entity.AiConversation;
 import datn_gym.entity.AiMessage;
 import datn_gym.entity.CommissionRecord;
+import datn_gym.entity.Membership;
 import datn_gym.entity.SaleProfile;
 import datn_gym.entity.SaleReferralCode;
 import datn_gym.entity.Role;
+import datn_gym.entity.Transaction;
 import datn_gym.entity.User;
 import datn_gym.repository.*;
 import org.junit.jupiter.api.Test;
@@ -20,8 +23,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 import java.util.List;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
@@ -103,6 +109,29 @@ class SaleServiceTest {
     }
 
     @Test
+    void getAllCommissionsOrdersByBusinessStatusThenTransactionIdDescending() {
+        User member = User.builder().id(20).fullName("Hội viên").build();
+        Membership membership = Membership.builder().id(10).user(member).build();
+        User sale = User.builder().id(9).fullName("Nhân viên Sale").email("sale@gympro.com").build();
+        SaleProfile profile = SaleProfile.builder().id(3).user(sale).build();
+
+        CommissionRecord pending92 = commission(1L, 92, "PENDING", membership, profile);
+        CommissionRecord paid200 = commission(2L, 200, "PAID", membership, profile);
+        CommissionRecord payable2 = commission(3L, 2, "PAYABLE", membership, profile);
+        CommissionRecord pending136 = commission(4L, 136, "PENDING", membership, profile);
+        CommissionRecord payable36 = commission(5L, 36, "PAYABLE", membership, profile);
+        when(commissionRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(List.of(pending92, paid200, payable2, pending136, payable36));
+
+        List<CommissionResponse> result = saleService.getAllCommissions();
+
+        assertEquals(List.of(36, 2, 136, 92, 200),
+                result.stream().map(CommissionResponse::getTransactionId).toList());
+        assertEquals(List.of("PAYABLE", "PAYABLE", "PENDING", "PENDING", "PAID"),
+                result.stream().map(CommissionResponse::getStatus).toList());
+    }
+
+    @Test
     void setOnlineFalseClosesEveryActiveConsultation() {
         User sale = User.builder().id(9).fullName("Nhân viên Sale").build();
         SaleProfile profile = SaleProfile.builder().id(3).user(sale).isOnline(true).build();
@@ -124,15 +153,17 @@ class SaleServiceTest {
     }
 
     @Test
-    void updateCodeChangesEditableFields() {
+    void updateCodeChangesContentButKeepsSystemUsagePolicy() {
         User sale = User.builder().id(9).build();
         SaleProfile profile = SaleProfile.builder().id(3).user(sale).build();
         SaleReferralCode existing = SaleReferralCode.builder().id(14).salesProfile(profile)
-                .code("OLD_CODE").description("Cũ").discountPercent(10).oneTimePerMember(true).build();
+                .code("OLD_CODE").description("Cũ").discountPercent(10).oneTimePerMember(false)
+                .expiresAt(LocalDateTime.of(2026, 9, 30, 23, 59)).build();
         SaleCodeRequest request = new SaleCodeRequest();
         request.setCode("new_code");
         request.setDescription("Mã mới");
         request.setOneTimePerMember(false);
+        request.setExpiresAt(LocalDateTime.of(2026, 10, 31, 23, 59));
         when(profileRepository.findByUser_Email("sale@gympro.com")).thenReturn(Optional.of(profile));
         when(codeRepository.findById(14)).thenReturn(Optional.of(existing));
         when(codeRepository.findByCodeIgnoreCase("NEW_CODE")).thenReturn(Optional.empty());
@@ -142,7 +173,8 @@ class SaleServiceTest {
 
         assertEquals("NEW_CODE", result.getCode());
         assertEquals("Mã mới", result.getDescription());
-        assertEquals(false, result.isOneTimePerMember());
+        assertEquals(true, result.isOneTimePerMember());
+        assertNull(result.getExpiresAt());
     }
 
     @Test
@@ -160,5 +192,13 @@ class SaleServiceTest {
 
         assertEquals(false, archived.isActive());
         assertEquals(true, restored.isActive());
+    }
+
+    private CommissionRecord commission(Long id, Integer transactionId, String status,
+                                        Membership membership, SaleProfile profile) {
+        Transaction transaction = Transaction.builder().id(transactionId).membership(membership).build();
+        return CommissionRecord.builder().id(id).transaction(transaction).salesProfile(profile)
+                .baseAmount(BigDecimal.valueOf(1_000_000)).commissionRate(4)
+                .commissionAmount(BigDecimal.valueOf(40_000)).status(status).build();
     }
 }

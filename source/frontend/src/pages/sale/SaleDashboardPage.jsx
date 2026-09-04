@@ -10,7 +10,7 @@ const SaleDashboardPage = () => {
   const [selected, setSelected] = useState(null); const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState(''); const [error, setError] = useState('');
   const [editingCodeId, setEditingCodeId] = useState(null);
-  const [editCode, setEditCode] = useState({code:'',description:'',oneTimePerMember:true,expiresAt:''});
+  const [editCode, setEditCode] = useState({code:'',description:''});
   const load = useCallback(async () => {
     const [d,c,m,h] = await Promise.all([saleService.dashboard(),saleService.codes(),saleService.commissions(),saleService.chats()]);
     setDashboard(d);setCodes(c);setCommissions(m);setChats(h);
@@ -44,8 +44,6 @@ const SaleDashboardPage = () => {
     setEditCode({
       code:c.code,
       description:c.description||'',
-      oneTimePerMember:Boolean(c.oneTimePerMember),
-      expiresAt:c.expiresAt?c.expiresAt.slice(0,16):'',
     });
   };
   const saveEditedCode=async e=>{
@@ -56,7 +54,6 @@ const SaleDashboardPage = () => {
         ...editCode,
         code:editCode.code.trim().toUpperCase(),
         description:editCode.description.trim()||null,
-        expiresAt:editCode.expiresAt||null,
       });
       setEditingCodeId(null);
       await load();
@@ -102,14 +99,12 @@ const SaleDashboardPage = () => {
         <form className="sale-code-edit" key={c.id} onSubmit={saveEditedCode}>
           <label>Mã giới thiệu<input required minLength={4} maxLength={50} value={editCode.code} onChange={e=>setEditCode(current=>({...current,code:e.target.value.toUpperCase()}))}/></label>
           <label>Mô tả<input maxLength={255} value={editCode.description} onChange={e=>setEditCode(current=>({...current,description:e.target.value}))}/></label>
-          <label>Hạn sử dụng<input type="datetime-local" value={editCode.expiresAt} onChange={e=>setEditCode(current=>({...current,expiresAt:e.target.value}))}/></label>
-          <label className="sale-code-checkbox"><input type="checkbox" checked={editCode.oneTimePerMember} onChange={e=>setEditCode(current=>({...current,oneTimePerMember:e.target.checked}))}/> Mỗi member chỉ được dùng một lần</label>
           <div className="sale-code-actions"><button type="button" className="secondary" onClick={()=>setEditingCodeId(null)}>Hủy</button><button type="submit">Lưu thay đổi</button></div>
         </form>
       ):(
         <div className={`sale-row sale-code-row ${c.active?'':'archived'}`} key={c.id}>
           <div><b>{c.code}</b>{c.description&&<small>{c.description}</small>}</div>
-          <span>-{c.discountPercent}% · {c.oneTimePerMember?'mỗi member 1 lần':'dùng nhiều lần'} · {c.active?'đang sử dụng':'đã lưu trữ'}</span>
+          <span>-{c.discountPercent}% · {c.active?'đang sử dụng':'đã lưu trữ'}</span>
           <div className="sale-code-actions">
             <button type="button" className="secondary" onClick={()=>beginEditCode(c)}>Chỉnh sửa</button>
             <label className="sale-code-storage-toggle">
@@ -119,7 +114,9 @@ const SaleDashboardPage = () => {
             </label>
           </div>
         </div>
-      ))}</section>
+      ))}
+      <p className="sale-code-policy-note">Mỗi mã giới thiệu chỉ được sử dụng một lần cho mỗi tài khoản và không giới hạn thời gian sử dụng.</p>
+      </section>
       <section><h2>Tư vấn trực tiếp</h2><button onClick={()=>saleService.claimNext().then(load).catch(e=>setError(e.response?.data?.message))}>Nhận khách chờ lâu nhất</button>
         {chats.map(c=><button className="chat-pick" key={c.id} onClick={()=>openChat(c)}>{c.title} · {c.handoffStatus}</button>)}</section></div>
     {selected&&<section className="sale-chat"><div className="sale-chat-head"><h2>{selected.title}</h2><button onClick={()=>saleService.closeChat(selected.id).then(()=>{setSelected(null);load();})}>Kết thúc tư vấn</button></div>

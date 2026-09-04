@@ -21,6 +21,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SaleService {
     private static final List<String> ACTIVE_CHAT_STATUSES = List.of("SALE_ASSIGNED", "SALE_JOINED");
+    private static final Comparator<CommissionRecord> ADMIN_COMMISSION_ORDER = Comparator
+            .comparingInt((CommissionRecord commission) -> commissionStatusOrder(commission.getStatus()))
+            .thenComparing(commission -> commission.getTransaction().getId(), Comparator.reverseOrder())
+            .thenComparing(CommissionRecord::getId, Comparator.nullsLast(Comparator.reverseOrder()));
 
     private final SaleProfileRepository profileRepository;
     private final SaleReferralCodeRepository codeRepository;
@@ -162,8 +166,9 @@ public class SaleService {
 
         code.setCode(codeValue);
         code.setDescription(request.getDescription());
-        code.setOneTimePerMember(request.isOneTimePerMember());
-        code.setExpiresAt(request.getExpiresAt());
+        // Đây là chính sách hệ thống, không phải tùy chọn của nhân viên SALE.
+        code.setOneTimePerMember(true);
+        code.setExpiresAt(null);
         return toCodeResponse(codeRepository.save(code));
     }
 
@@ -232,7 +237,15 @@ public class SaleService {
 
     public List<CommissionResponse> getAllCommissions() {
         return commissionRepository.findAllByOrderByCreatedAtDesc().stream()
+                .sorted(ADMIN_COMMISSION_ORDER)
                 .map(this::toCommission).toList();
+    }
+
+    private static int commissionStatusOrder(String status) {
+        if ("PAYABLE".equals(status)) return 0;
+        if ("PENDING".equals(status)) return 1;
+        if ("PAID".equals(status)) return 2;
+        return 3;
     }
 
     public SaleProfile findBestAvailableSale() {
