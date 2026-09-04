@@ -27,15 +27,21 @@ const toISODate = date => {
 const getTrainingRange = period => {
   const today = new Date();
   const from = new Date(today);
-  const to = new Date(today);
+  let to = new Date(today);
   const day = today.getDay() || 7;
   if (period === 'CURRENT_WEEK' || period === 'PREVIOUS_WEEK') {
     from.setDate(today.getDate() - day + 1 - (period === 'PREVIOUS_WEEK' ? 7 : 0));
-    to.setDate(from.getDate() + 6);
+    to = new Date(from);
+    to.setDate(to.getDate() + 6);
   } else {
     const monthOffset = period === 'PREVIOUS_MONTH' ? -1 : 0;
     from.setFullYear(today.getFullYear(), today.getMonth() + monthOffset, 1);
     to.setFullYear(today.getFullYear(), today.getMonth() + monthOffset + 1, 0);
+  }
+
+  // Thống kê của kỳ hiện tại chỉ tính đến hôm nay, không đưa lịch tương lai vào báo cáo.
+  if ((period === 'CURRENT_WEEK' || period === 'CURRENT_MONTH') && to > today) {
+    to = new Date(today);
   }
   return { from: toISODate(from), to: toISODate(to) };
 };

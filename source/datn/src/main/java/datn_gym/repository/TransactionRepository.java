@@ -30,9 +30,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Intege
                      String status,
                      LocalDateTime createdBefore);
 
-       Page<Transaction> findByStatus(String status, Pageable pageable);
+       Page<Transaction> findByStatusOrderByIdDesc(String status, Pageable pageable);
 
-       Page<Transaction> findAllByOrderByCreatedAtDesc(Pageable pageable);
+       Page<Transaction> findAllByOrderByIdDesc(Pageable pageable);
+
+       long countByStatus(String status);
 
        Optional<Transaction> findByIdAndMembership_User_Email(Integer id, String email);
 

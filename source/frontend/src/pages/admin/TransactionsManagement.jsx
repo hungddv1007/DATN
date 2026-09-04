@@ -13,18 +13,32 @@ const TransactionsManagement = () => {
   const [filter, setFilter] = useState('ALL'); // ALL or PENDING
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [summary, setSummary] = useState({
+    totalTransactions: 0,
+    cancelledTransactions: 0,
+    pendingTransactions: 0,
+  });
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      let data;
-      if (filter === 'PENDING') {
-        data = await transactionService.getPendingTransactions(page, ADMIN_PAGE_SIZE);
-      } else {
-        data = await transactionService.getAllTransactions(page, ADMIN_PAGE_SIZE);
-      }
+      const pageRequest = filter === 'PENDING'
+        ? transactionService.getPendingTransactions(page, ADMIN_PAGE_SIZE)
+        : transactionService.getAllTransactions(page, ADMIN_PAGE_SIZE);
+      const [data, summaryData] = await Promise.all([
+        pageRequest,
+        transactionService.getTransactionSummary(),
+      ]);
+      const pageMetadata = data.page || data;
       setTransactions(data.content || []);
-      setTotalPages(data.totalPages || 0);
+      setTotalPages(pageMetadata.totalPages || 0);
+      setSummary(summaryData);
+
+      if ((data.content || []).length === 0
+          && page > 0
+          && pageMetadata.totalPages > 0) {
+        setPage(pageMetadata.totalPages - 1);
+      }
     } catch (error) {
       console.error('Lỗi tải giao dịch:', error);
     } finally {
@@ -74,19 +88,36 @@ const TransactionsManagement = () => {
         <h1>Quản lý Giao dịch</h1>
       </div>
 
-      <div className="tab-buttons">
-        <button 
-          className={`tab-btn ${filter === 'ALL' ? 'active' : ''}`}
-          onClick={() => { setFilter('ALL'); setPage(0); }}
-        >
-          Tất cả giao dịch
-        </button>
-        <button 
-          className={`tab-btn ${filter === 'PENDING' ? 'active' : ''}`}
-          onClick={() => { setFilter('PENDING'); setPage(0); }}
-        >
-          Đang chờ duyệt
-        </button>
+      <div className="transaction-toolbar">
+        <div className="tab-buttons transaction-filter-tabs">
+          <button
+            className={`tab-btn ${filter === 'ALL' ? 'active' : ''}`}
+            onClick={() => { setFilter('ALL'); setPage(0); }}
+          >
+            Tất cả giao dịch
+          </button>
+          <button
+            className={`tab-btn ${filter === 'PENDING' ? 'active' : ''}`}
+            onClick={() => { setFilter('PENDING'); setPage(0); }}
+          >
+            Đang chờ duyệt
+          </button>
+        </div>
+
+        <div className="transaction-summary" aria-label="Thống kê trạng thái giao dịch">
+          <div className="transaction-summary-item total">
+            <strong>{summary.totalTransactions}</strong>
+            <span>Tất cả giao dịch</span>
+          </div>
+          <div className="transaction-summary-item cancelled">
+            <strong>{summary.cancelledTransactions}</strong>
+            <span>Giao dịch bị hủy</span>
+          </div>
+          <div className="transaction-summary-item pending">
+            <strong>{summary.pendingTransactions}</strong>
+            <span>Giao dịch đang chờ</span>
+          </div>
+        </div>
       </div>
 
       <div className="admin-table-container">
@@ -150,7 +181,12 @@ const TransactionsManagement = () => {
           </tbody>
         </table>
         
-        <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        <AdminPagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          alwaysVisible
+        />
       </div>
     </AdminLayout>
   );
