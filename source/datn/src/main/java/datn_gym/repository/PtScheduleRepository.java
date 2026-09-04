@@ -50,4 +50,12 @@ public interface PtScheduleRepository extends JpaRepository<PtSchedule, Integer>
     @Query("SELECT COUNT(s) > 0 FROM PtSchedule s " +
            "WHERE s.member.id = :memberId AND s.status = 'SCHEDULED'")
     boolean existsActiveMemberSchedule(@Param("memberId") Integer memberId);
+
+    @Query("SELECT COUNT(s) FROM PtSchedule s " +
+           "WHERE s.pt.id = :ptId AND s.scheduleDate = :date " +
+           "AND s.status IN :statuses")
+    long countTodaySessions(
+            @Param("ptId") Integer ptId,
+            @Param("date") LocalDate date,
+            @Param("statuses") List<String> statuses);
 }
