@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import ptScheduleService from '../../services/ptScheduleService';
-import { ChevronLeft, ChevronRight, User, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, Clock, CircleCheckBig, X } from 'lucide-react';
+import WorkoutResultDetails from '../../components/training/WorkoutResultDetails';
 import {
   getScheduleTransitionLabel,
   isInTimeBlock,
@@ -36,6 +37,7 @@ const MemberSchedulePage = () => {
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedCompletedSession, setSelectedCompletedSession] = useState(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
     const day = new Date().getDay();
     return day === 0 ? 6 : day - 1;
@@ -198,7 +200,13 @@ const MemberSchedulePage = () => {
                       </div>
                       <div className="msp-mobile-block-list">
                         {items.map(item => (
-                          <div key={item.id} className="msp-card">
+                          <button
+                            type="button"
+                            key={item.id}
+                            className={`msp-card${item.status === 'COMPLETED' ? ' is-completed' : ''}`}
+                            disabled={item.status !== 'COMPLETED'}
+                            onClick={() => setSelectedCompletedSession(item)}
+                          >
                             <div className="msp-card-time">{item.startTime} - {item.endTime}</div>
                             {getScheduleTransitionLabel(item.startTime, item.endTime) && (
                               <div className="msp-cross-block">
@@ -206,7 +214,10 @@ const MemberSchedulePage = () => {
                               </div>
                             )}
                             {item.exerciseNote && <div className="msp-card-note">{item.exerciseNote}</div>}
-                          </div>
+                            {item.status === 'COMPLETED' && (
+                              <span className="msp-card-result-link"><CircleCheckBig size={13} /> Xem kết quả</span>
+                            )}
+                          </button>
                         ))}
                       </div>
                     </section>
@@ -246,7 +257,13 @@ const MemberSchedulePage = () => {
                       return (
                         <div key={dayIdx} className={`msp-slot-cell ${isToday ? 'msp-day-today' : ''}`}>
                           {items.map(item => (
-                            <div key={item.id} className="msp-card">
+                            <button
+                              type="button"
+                              key={item.id}
+                              className={`msp-card${item.status === 'COMPLETED' ? ' is-completed' : ''}`}
+                              disabled={item.status !== 'COMPLETED'}
+                              onClick={() => setSelectedCompletedSession(item)}
+                            >
                               <div className="msp-card-time">{item.startTime} - {item.endTime}</div>
                               {getScheduleTransitionLabel(item.startTime, item.endTime) && (
                                 <div className="msp-cross-block">
@@ -256,7 +273,10 @@ const MemberSchedulePage = () => {
                               {item.exerciseNote && (
                                 <div className="msp-card-note">{item.exerciseNote}</div>
                               )}
-                            </div>
+                              {item.status === 'COMPLETED' && (
+                                <span className="msp-card-result-link"><CircleCheckBig size={13} /> Xem kết quả</span>
+                              )}
+                            </button>
                           ))}
                         </div>
                       );
@@ -266,6 +286,34 @@ const MemberSchedulePage = () => {
               </div>
             </div>
           </>
+        )}
+
+        {selectedCompletedSession && (
+          <div
+            className="msp-result-backdrop"
+            onClick={event => {
+              if (event.target === event.currentTarget) setSelectedCompletedSession(null);
+            }}
+          >
+            <section className="msp-result-modal" role="dialog" aria-modal="true" aria-labelledby="msp-result-title">
+              <header>
+                <div>
+                  <h2 id="msp-result-title">Kết quả buổi tập</h2>
+                  <p>
+                    {new Date(`${selectedCompletedSession.scheduleDate}T00:00:00`).toLocaleDateString('vi-VN')}
+                    {' · '}{selectedCompletedSession.startTime}–{selectedCompletedSession.endTime}
+                  </p>
+                  {selectedCompletedSession.exerciseNote && (
+                    <span>Nội dung dự kiến: {selectedCompletedSession.exerciseNote}</span>
+                  )}
+                </div>
+                <button type="button" aria-label="Đóng kết quả buổi tập" onClick={() => setSelectedCompletedSession(null)}>
+                  <X size={19} />
+                </button>
+              </header>
+              <WorkoutResultDetails session={selectedCompletedSession} />
+            </section>
+          </div>
         )}
       </div>
     </MainLayout>
