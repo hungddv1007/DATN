@@ -7,6 +7,7 @@ import ptDashboardService from '../../services/ptDashboardService';
 import { confirmDialog } from '../../utils/dialog';
 import { ChevronLeft, ChevronRight, Plus, X, Repeat, Bell, Trash2, CircleCheckBig, UserX } from 'lucide-react';
 import TimePickerWheel from '../../components/common/TimePickerWheel';
+import WorkoutResultDetails from '../../components/training/WorkoutResultDetails';
 import {
   getScheduleTransitionLabel,
   isInTimeBlock,
@@ -609,18 +610,7 @@ const PtSchedulePage = () => {
                     </div>
                     {editingSchedule.status === 'COMPLETED' && (
                       <div className="pts-completed-summary">
-                        {(editingSchedule.exercises || []).map(exercise => (
-                          <div key={exercise.id || `${exercise.exerciseId}-${exercise.exerciseName}`}>
-                            <strong>{exercise.exerciseName}</strong>
-                            <span>{[
-                              exercise.setCount && `${exercise.setCount} hiệp`,
-                              exercise.repCount && `${exercise.repCount} lần`,
-                              exercise.weightKg != null && `${exercise.weightKg} kg`,
-                              exercise.durationMinutes && `${exercise.durationMinutes} phút`,
-                            ].filter(Boolean).join(' · ') || 'Đã thực hiện'}</span>
-                          </div>
-                        ))}
-                        {editingSchedule.actualNote && <p>{editingSchedule.actualNote}</p>}
+                        <WorkoutResultDetails session={editingSchedule} compact />
                       </div>
                     )}
                   </div>
@@ -816,7 +806,7 @@ const PtSchedulePage = () => {
                               onChange={event => updateCompletionRow(index, 'durationMinutes', event.target.value)} />
                             <button type="button" title="Xóa dòng" onClick={() => removeCompletionRow(index)}><Trash2 size={15} /></button>
                           </div>
-                          <input className="pts-form-control" placeholder="Ghi chú riêng cho bài tập (tùy chọn)"
+                          <input className="pts-form-control" placeholder="Ghi chú kỹ thuật/kết quả bài tập (tùy chọn)"
                             value={row.note} onChange={event => updateCompletionRow(index, 'note', event.target.value)} />
                         </div>
                       ))}
@@ -825,7 +815,7 @@ const PtSchedulePage = () => {
                       <Plus size={15} /> Thêm bài tập
                     </button>
                     <textarea className="pts-form-control pts-completion-note" rows="3"
-                      placeholder="Nhận xét chung sau buổi tập (tùy chọn)" value={actualNote}
+                      placeholder="Nhận xét của PT sau buổi tập (tùy chọn)" value={actualNote}
                       onChange={event => setActualNote(event.target.value)} />
                     {formError && <div className="pts-form-error">{formError}</div>}
                     <div className="pts-delete-actions">

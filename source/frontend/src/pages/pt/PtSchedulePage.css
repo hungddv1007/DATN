@@ -770,12 +770,6 @@
   border-radius: 10px;
 }
 
-.pts-completed-summary > div { display: flex; justify-content: space-between; gap: 12px; }
-.pts-completed-summary strong { color: #e2e8f0; font-size: .8rem; }
-.pts-completed-summary span,
-.pts-completed-summary p { color: #94a3b8; font-size: .75rem; }
-.pts-completed-summary p { margin: 2px 0 0; padding-top: 7px; border-top: 1px solid rgba(148,163,184,.12); }
-
 /* ============ DELETE OVERLAY ============ */
 .pts-delete-overlay {
   position: absolute;

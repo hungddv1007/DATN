@@ -7,8 +7,9 @@ import memberProfileService from '../../services/memberProfileService';
 import { confirmDialog } from '../../utils/dialog';
 import ptScheduleService from '../../services/ptScheduleService';
 import { analyzeNutrition, generateDietFromPhysicalProfile } from '../../services/nutritionAIService';
-import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus, Activity, Sparkles, ChartNoAxesColumnIncreasing } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, User, Package, Calendar, StickyNote, Edit2, Utensils, Dumbbell, Coffee, Save, X, Plus, Activity, Sparkles, ChartNoAxesColumnIncreasing, Eye } from 'lucide-react';
 import PhysicalProfileView from '../../components/member/PhysicalProfileView';
+import WorkoutResultDetails from '../../components/training/WorkoutResultDetails';
 import '../admin/AdminManagement.css';
 import './PtMemberDetail.css';
 
@@ -72,6 +73,7 @@ const PtMemberDetail = () => {
   const [trainingStats, setTrainingStats] = useState(null);
   const [trainingStatsLoading, setTrainingStatsLoading] = useState(false);
   const [trainingStatsError, setTrainingStatsError] = useState('');
+  const [selectedTrainingSession, setSelectedTrainingSession] = useState(null);
 
   // Diet state
   const [trainingDiet, setTrainingDiet] = useState(null);
@@ -849,7 +851,7 @@ const PtMemberDetail = () => {
         </div>
       )}
 
-      {activeTab === 'training' && (
+      {activeTab === 'training' && <>
         <section className="pt-training-stats">
           <div className="pt-training-toolbar">
             <div>
@@ -899,7 +901,7 @@ const PtMemberDetail = () => {
                 <div className="pt-training-empty">Không có lịch tập trong khoảng thời gian này.</div>
               ) : (
                 <div className="pt-training-table-wrap"><table>
-                  <thead><tr><th>Ngày</th><th>Giờ</th><th>Nội dung</th><th>Trạng thái</th><th>Kết quả</th></tr></thead>
+                  <thead><tr><th>Ngày</th><th>Giờ</th><th>Nội dung</th><th>Trạng thái</th><th>Bài tập</th><th>Chi tiết</th></tr></thead>
                   <tbody>{trainingStats.sessions.map(session => (
                     <tr key={session.id}>
                       <td>{new Date(`${session.scheduleDate}T00:00:00`).toLocaleDateString('vi-VN')}</td>
@@ -908,7 +910,18 @@ const PtMemberDetail = () => {
                       <td><span className={`pt-training-status status-${(session.status || '').toLowerCase()}`}>
                         {{ SCHEDULED: 'Đã lên lịch', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy', NO_SHOW: 'Vắng mặt' }[session.status] || session.status}
                       </span></td>
-                      <td>{(session.exercises || []).map(item => item.exerciseName).join(', ') || session.actualNote || '—'}</td>
+                      <td>{(session.exercises || []).map(item => item.exerciseName).join(', ') || '—'}</td>
+                      <td>
+                        {session.status === 'COMPLETED' ? (
+                          <button
+                            type="button"
+                            className="pt-training-detail-button"
+                            onClick={() => setSelectedTrainingSession(session)}
+                          >
+                            <Eye size={14} /> Xem kết quả
+                          </button>
+                        ) : '—'}
+                      </td>
                     </tr>
                   ))}</tbody>
                 </table></div>
@@ -916,7 +929,32 @@ const PtMemberDetail = () => {
             </div>
           </>}
         </section>
-      )}
+
+        {selectedTrainingSession && (
+          <div
+            className="pt-training-result-backdrop"
+            onClick={event => {
+              if (event.target === event.currentTarget) setSelectedTrainingSession(null);
+            }}
+          >
+            <section className="pt-training-result-modal" role="dialog" aria-modal="true" aria-labelledby="pt-training-result-title">
+              <header>
+                <div>
+                  <h3 id="pt-training-result-title">Kết quả buổi tập</h3>
+                  <p>
+                    {new Date(`${selectedTrainingSession.scheduleDate}T00:00:00`).toLocaleDateString('vi-VN')}
+                    {' · '}{selectedTrainingSession.startTime}–{selectedTrainingSession.endTime}
+                  </p>
+                </div>
+                <button type="button" aria-label="Đóng kết quả buổi tập" onClick={() => setSelectedTrainingSession(null)}>
+                  <X size={19} />
+                </button>
+              </header>
+              <WorkoutResultDetails session={selectedTrainingSession} />
+            </section>
+          </div>
+        )}
+      </>}
 
       {activeTab === 'diet' && (
         dietLoading ? (
