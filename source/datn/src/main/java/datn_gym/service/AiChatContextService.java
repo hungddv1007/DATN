@@ -1,23 +1,30 @@
 package datn_gym.service;
 
 import datn_gym.entity.Diet;
+import datn_gym.entity.GymPackage;
 import datn_gym.entity.MemberProfile;
 import datn_gym.entity.Membership;
+import datn_gym.entity.PtProfile;
 import datn_gym.entity.PtSchedule;
 import datn_gym.entity.User;
 import datn_gym.repository.DietRepository;
+import datn_gym.repository.GymPackageRepository;
 import datn_gym.repository.MemberProfileRepository;
 import datn_gym.repository.MembershipRepository;
+import datn_gym.repository.PtProfileRepository;
 import datn_gym.repository.PtScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import java.util.StringJoiner;
 
 @Service
@@ -32,9 +39,19 @@ public class AiChatContextService {
     private final DietRepository dietRepository;
     private final PtScheduleRepository ptScheduleRepository;
     private final MemberProfileRepository memberProfileRepository;
+    private final GymPackageRepository gymPackageRepository;
+    private final PtProfileRepository ptProfileRepository;
 
     @Transactional(readOnly = true)
     public String buildMemberContext(String email, boolean includePhysicalData) {
+        return buildMemberContext(email, includePhysicalData, "");
+    }
+
+    @Transactional(readOnly = true)
+    public String buildMemberContext(
+            String email,
+            boolean includePhysicalData,
+            String userQuestion) {
         User member = userService.getUserByEmail(email);
         LocalDate today = LocalDate.now();
         StringBuilder context = new StringBuilder();
@@ -44,6 +61,10 @@ public class AiChatContextService {
         appendSchedule(context, member.getId(), today);
         appendDiet(context, member.getId());
         appendPhysicalProfile(context, member.getId(), includePhysicalData);
+        if (shouldIncludePackageAndPtCatalog(userQuestion)) {
+            appendActivePackages(context);
+            appendAvailablePts(context);
+        }
 
         return context.toString().trim();
     }
@@ -223,6 +244,157 @@ public class AiChatContextService {
         context.append("Hồ sơ thể chất do hội viên cung cấp: ")
                 .append(physicalProfile)
                 .append('\n');
+    }
+
+    private void appendActivePackages(StringBuilder context) {
+        List<GymPackage> packages = gymPackageRepository.findByIsActiveTrue();
+        context.append("\nDANH SÁCH GÓI TẬP ĐANG MỞ BÁN:\n");
+
+        if (packages.isEmpty()) {
+            context.append("- Hiện chưa có gói tập đang mở bán.\n");
+            return;
+        }
+
+        packages.stream().limit(20).forEach(gymPackage -> {
+            context.append("- Tên gói: ")
+                    .append(gymPackage.getName())
+                    .append('\n')
+                    .append("  Giá cơ bản: ")
+                    .append(gymPackage.getDailyPrice().stripTrailingZeros().toPlainString())
+                    .append(" VND/ngày\n")
+                    .append("  Thời hạn đăng ký tối thiểu: ")
+                    .append(gymPackage.getMinDays())
+                    .append(" ngày\n")
+                    .append("  Có PT: ")
+                    .append(yesNo(gymPackage.getHasPt()))
+                    .append('\n')
+                    .append("  Được tự chọn PT: ")
+                    .append(yesNo(gymPackage.getCanChoosePt()))
+                    .append('\n')
+                    .append("  Có khẩu phần ăn: ")
+                    .append(yesNo(gymPackage.getHasMealPlan()))
+                    .append('\n');
+
+            if (gymPackage.getMaxHoldTimes() != null
+                    && gymPackage.getMaxHoldTimes() > 0) {
+                context.append("  Bảo lưu tối đa: ")
+                        .append(gymPackage.getMaxHoldTimes())
+                        .append(" lần; tỷ lệ ngày được hoàn lại: ")
+                        .append(gymPackage.getHoldReturnPercent())
+                        .append("%\n");
+            } else {
+                context.append("  Không hỗ trợ bảo lưu.\n");
+            }
+
+            context.append("  Mô tả: ")
+                    .append(catalogText(gymPackage.getDescription(), "Chưa có mô tả"))
+                    .append('\n');
+        });
+
+        context.append("Giá trên là giá cơ bản theo ngày. Giá thanh toán cuối cùng còn phụ thuộc ")
+                .append("thời hạn, ưu đãi, mã khuyến mãi, mã giới thiệu và credit nâng cấp.\n");
+    }
+
+    private void appendAvailablePts(StringBuilder context) {
+        List<PtProfile> profiles = ptProfileRepository.findAllOrderByRatingScoreDesc();
+        context.append("\nDANH SÁCH PT CÒN KHẢ NĂNG NHẬN HỌC VIÊN:\n");
+        boolean hasAvailablePt = false;
+
+        for (PtProfile profile : profiles.stream().limit(50).toList()) {
+            User pt = profile.getUser();
+            if (pt == null || !Boolean.TRUE.equals(pt.getStatus())) {
+                continue;
+            }
+
+            int currentMembers = membershipRepository
+                    .countByPt_IdAndStatus(pt.getId(), "ACTIVE");
+            int maxMembers = profile.getMaxMembers() != null
+                    ? profile.getMaxMembers()
+                    : 5;
+            if (currentMembers >= maxMembers) {
+                continue;
+            }
+
+            hasAvailablePt = true;
+            String rating = profile.getRatingScore() == null
+                    ? "Chưa có đánh giá"
+                    : profile.getRatingScore()
+                            .setScale(1, RoundingMode.HALF_UP)
+                            .toPlainString() + "/5";
+
+            context.append("- ")
+                    .append(pt.getFullName())
+                    .append('\n')
+                    .append("  Chuyên môn: ")
+                    .append(catalogText(profile.getSpecialization(), "Chưa cập nhật"))
+                    .append('\n')
+                    .append("  Đánh giá: ")
+                    .append(rating)
+                    .append('\n')
+                    .append("  Số học viên: ")
+                    .append(currentMembers)
+                    .append('/')
+                    .append(maxMembers)
+                    .append('\n');
+
+            if (profile.getCertificates() != null && !profile.getCertificates().isBlank()) {
+                context.append("  Chứng chỉ: ")
+                        .append(catalogText(profile.getCertificates(), ""))
+                        .append('\n');
+            }
+            if (profile.getBio() != null && !profile.getBio().isBlank()) {
+                context.append("  Giới thiệu: ")
+                        .append(catalogText(profile.getBio(), ""))
+                        .append('\n');
+            }
+        }
+
+        if (!hasAvailablePt) {
+            context.append("- Hiện chưa có PT còn chỗ nhận học viên.\n");
+        }
+        context.append("Danh sách trên chỉ dùng để tư vấn; PT chỉ được giữ chỗ và phân công ")
+                .append("sau khi hội viên hoàn tất quy trình đăng ký hợp lệ.\n");
+    }
+
+    boolean shouldIncludePackageAndPtCatalog(String question) {
+        if (question == null || question.isBlank()) {
+            return false;
+        }
+        String normalized = Normalizer.normalize(
+                        question.toLowerCase(Locale.ROOT),
+                        Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd')
+                .replaceAll("\\s+", " ")
+                .trim();
+        String padded = " " + normalized + " ";
+
+        return normalized.contains("goi tap")
+                || normalized.contains("cac goi")
+                || normalized.contains("goi nao")
+                || normalized.contains("goi basic")
+                || normalized.contains("goi premium")
+                || normalized.contains("goi vip")
+                || normalized.contains("dang ky goi")
+                || normalized.contains("mua goi")
+                || normalized.contains("gia goi")
+                || normalized.contains("quyen loi")
+                || normalized.contains("huan luyen vien")
+                || normalized.contains("trainer")
+                || normalized.contains("coach")
+                || padded.contains(" pt ")
+                || padded.contains(" hlv ")
+                || normalized.contains("goi y pt")
+                || normalized.contains("chon pt");
+    }
+
+    private String yesNo(Boolean value) {
+        return Boolean.TRUE.equals(value) ? "Có" : "Không";
+    }
+
+    private String catalogText(String value, String fallback) {
+        String text = textOrFallback(value, fallback);
+        return text.length() <= 500 ? text : text.substring(0, 500);
     }
 
     private String formatPhysicalProfile(MemberProfile profile) {

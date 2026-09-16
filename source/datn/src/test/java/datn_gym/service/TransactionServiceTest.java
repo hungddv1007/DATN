@@ -4,6 +4,7 @@ import datn_gym.config.PaymentProperties;
 import datn_gym.entity.GymPackage;
 import datn_gym.entity.Membership;
 import datn_gym.entity.Promotion;
+import datn_gym.entity.SaleReferralCode;
 import datn_gym.entity.Transaction;
 import datn_gym.entity.User;
 import datn_gym.repository.MembershipRepository;
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -198,6 +201,53 @@ class TransactionServiceTest {
         assertThat(membership.getStatus()).isEqualTo("CANCELLED");
         assertThat(promotion.getCurrentUsage()).isZero();
         verify(saleService).releaseRedemption(transaction);
+    }
+
+    @Test
+    void transactionHistoryUsesPromotionSnapshotAfterPromotionWasEdited() {
+        Membership membership = activeMembership();
+        Promotion editedPromotion = Promotion.builder()
+                .id(7)
+                .code("NEW_CODE")
+                .discountPercent(35)
+                .build();
+        Transaction transaction = pendingTransaction("NEW", membership);
+        transaction.setPromotion(editedPromotion);
+        transaction.setPromotionCodeSnapshot("ORIGINAL10");
+        transaction.setDiscountPercentSnapshot(10);
+        PageRequest pageable = PageRequest.of(0, 7);
+        when(transactionRepository.findAllByOrderByIdDesc(pageable))
+                .thenReturn(new PageImpl<>(List.of(transaction), pageable, 1));
+
+        var response = service.getAllTransactions(pageable).getContent().get(0);
+
+        assertThat(response.getPromotionCode()).isEqualTo("ORIGINAL10");
+        assertThat(response.getDiscountPercent()).isEqualTo(10);
+        assertThat(response.getAmount()).isEqualByComparingTo("100000");
+    }
+
+    @Test
+    void transactionHistoryUsesReferralSnapshotAfterSaleCodeWasEdited() {
+        Membership membership = activeMembership();
+        SaleReferralCode editedSaleCode = SaleReferralCode.builder()
+                .id(8)
+                .code("NEW_SALE_CODE")
+                .discountPercent(15)
+                .build();
+        Transaction transaction = pendingTransaction("NEW", membership);
+        transaction.setSaleCode(editedSaleCode);
+        transaction.setReferralCodeSnapshot("ORIGINAL_SALE10");
+        transaction.setDiscountPercentSnapshot(10);
+        transaction.setCustomerDiscountPercent(10);
+        PageRequest pageable = PageRequest.of(0, 7);
+        when(transactionRepository.findAllByOrderByIdDesc(pageable))
+                .thenReturn(new PageImpl<>(List.of(transaction), pageable, 1));
+
+        var response = service.getAllTransactions(pageable).getContent().get(0);
+
+        assertThat(response.getReferralCode()).isEqualTo("ORIGINAL_SALE10");
+        assertThat(response.getDiscountPercent()).isEqualTo(10);
+        assertThat(response.getAmount()).isEqualByComparingTo("100000");
     }
 
     private void givenAdmin() {

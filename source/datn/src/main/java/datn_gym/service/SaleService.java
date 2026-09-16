@@ -35,6 +35,7 @@ public class SaleService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ChatWebSocketBroker webSocketBroker;
 
     @Transactional
     public UserProfileResponse createSaleAccount(CreateSaleAccountRequest request) {
@@ -204,13 +205,15 @@ public class SaleService {
             conversation.setHandoffStatus("CLOSED");
             conversation.setClosedAt(now);
             conversation.setUpdatedAt(now);
-            conversationRepository.save(conversation);
-            messageRepository.save(AiMessage.builder()
+            AiConversation savedConversation = conversationRepository.save(conversation);
+            AiMessage savedMessage = messageRepository.save(AiMessage.builder()
                     .conversation(conversation)
                     .role("SYSTEM")
                     .content("Nhân viên tư vấn đã chuyển sang ngoại tuyến. Phiên tư vấn trực tiếp đã kết thúc. "
                             + "Bạn có thể tiếp tục trò chuyện với GymPro AI.")
                     .build());
+            webSocketBroker.publishMessage(savedMessage);
+            webSocketBroker.publishConversation(savedConversation);
         }
     }
 

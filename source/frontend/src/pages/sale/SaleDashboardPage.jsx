@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import MainLayout from '../../components/layout/MainLayout';
 import saleService from '../../services/saleService';
+import { createChatWebSocketClient } from '../../services/chatWebSocketService';
 import './SaleDashboardPage.css';
 
 const money = v => new Intl.NumberFormat('vi-VN').format(v || 0) + ' ₫';
@@ -9,25 +10,112 @@ const SaleDashboardPage = () => {
   const [commissions, setCommissions] = useState([]); const [chats, setChats] = useState([]);
   const [selected, setSelected] = useState(null); const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState(''); const [error, setError] = useState('');
+  const [chatConnected, setChatConnected] = useState(false);
   const [editingCodeId, setEditingCodeId] = useState(null);
   const [editCode, setEditCode] = useState({code:'',description:''});
+  const socketRef = useRef(null);
+  const selectedIdRef = useRef(null);
+  const messageListRef = useRef(null);
   const load = useCallback(async () => {
     const [d,c,m,h] = await Promise.all([saleService.dashboard(),saleService.codes(),saleService.commissions(),saleService.chats()]);
     setDashboard(d);setCodes(c);setCommissions(m);setChats(h);
   }, []);
   useEffect(()=>{
     load().catch(e=>setError(e.response?.data?.message||'Không thể tải dữ liệu'));
-    const timer = window.setInterval(() => load().catch(() => {}), 5000);
-    return () => window.clearInterval(timer);
   },[load]);
+
   useEffect(() => {
-    if (!selected?.id) return undefined;
-    const refresh = () => saleService.messages(selected.id).then(setMessages).catch(() => {});
-    const timer = window.setInterval(refresh, 3000);
-    return () => window.clearInterval(timer);
+    selectedIdRef.current = selected?.id || null;
   }, [selected?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const client = createChatWebSocketClient({
+      onConnectionChange: setChatConnected,
+      onEvent: payload => {
+        if (cancelled) return;
+        if (payload.type === 'MESSAGE' && payload.conversationId === selectedIdRef.current) {
+          setMessages(current => current.some(item => item.id === payload.message.id)
+            ? current : [...current, payload.message]);
+        } else if (payload.type === 'CONVERSATION_UPDATED') {
+          const updated = payload.conversation;
+          setChats(current => {
+            if (updated.handoffStatus === 'CLOSED') {
+              return current.filter(item => item.id !== updated.id);
+            }
+            return current.some(item => item.id === updated.id)
+              ? current.map(item => item.id === updated.id ? updated : item)
+              : [updated, ...current];
+          });
+          if (updated.id === selectedIdRef.current) {
+            if (updated.handoffStatus === 'CLOSED') {
+              setSelected(null);
+              setMessages([]);
+            } else {
+              setSelected(updated);
+            }
+          }
+        } else if (payload.type === 'AUTHENTICATED') {
+          saleService.chats().then(items => {
+            if (!cancelled) setChats(items);
+          }).catch(() => {});
+          const conversationId = selectedIdRef.current;
+          if (conversationId) {
+            saleService.messages(conversationId).then(items => {
+              if (!cancelled) setMessages(items);
+            }).catch(() => {});
+          }
+        } else if (payload.type === 'ERROR') {
+          setError(payload.message || 'Kết nối chat thời gian thực gặp lỗi');
+        }
+      },
+    });
+    socketRef.current = client;
+    client.connect();
+    return () => {
+      cancelled = true;
+      client.disconnect();
+      if (socketRef.current === client) socketRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const client = socketRef.current;
+    const conversationId = selected?.id;
+    if (!client || !conversationId || !chatConnected) return undefined;
+    client.subscribe(conversationId);
+    return () => client.unsubscribe(conversationId);
+  }, [selected?.id, chatConnected]);
+
+  useEffect(() => {
+    setDashboard(current => current ? { ...current, activeChats: chats.length } : current);
+  }, [chats.length]);
+
+  useEffect(() => {
+    if (!selected?.id || !messageListRef.current) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const list = messageListRef.current;
+      if (list) list.scrollTop = list.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [messages, selected?.id]);
+
   const openChat=async c=>{setSelected(c);setMessages(await saleService.messages(c.id));};
-  const send=async e=>{e.preventDefault();if(!message.trim())return;await saleService.sendMessage(selected.id,message);setMessage('');setMessages(await saleService.messages(selected.id));};
+  const send=async e=>{
+    e.preventDefault();
+    const cleanMessage=message.trim();
+    if(!cleanMessage||!selected)return;
+    setError('');
+    try {
+      if(socketRef.current?.isConnected()){
+        socketRef.current.sendMessage(selected.id,cleanMessage);
+      }else{
+        const saved=await saleService.sendMessage(selected.id,cleanMessage);
+        setMessages(current=>current.some(item=>item.id===saved.id)?current:[...current,saved]);
+      }
+      setMessage('');
+    }catch(e){setError(e.response?.data?.message||e.message||'Không thể gửi tin nhắn');}
+  };
   const toggleAvailability=async()=>{
     const goingOnline=!dashboard.online;
     try {
@@ -120,7 +208,7 @@ const SaleDashboardPage = () => {
       <section><h2>Tư vấn trực tiếp</h2><button onClick={()=>saleService.claimNext().then(load).catch(e=>setError(e.response?.data?.message))}>Nhận khách chờ lâu nhất</button>
         {chats.map(c=><button className="chat-pick" key={c.id} onClick={()=>openChat(c)}>{c.title} · {c.handoffStatus}</button>)}</section></div>
     {selected&&<section className="sale-chat"><div className="sale-chat-head"><h2>{selected.title}</h2><button onClick={()=>saleService.closeChat(selected.id).then(()=>{setSelected(null);load();})}>Kết thúc tư vấn</button></div>
-      <div className="sale-messages">{messages.map(m=><p key={m.id} className={m.role==='SALE'?'mine':''}><b>{m.senderName||m.role}:</b> {m.content}</p>)}</div>
+      <div className="sale-messages" ref={messageListRef}>{messages.map(m=><p key={m.id} className={m.role==='SALE'?'mine':''}><b>{m.senderName||m.role}:</b> {m.content}</p>)}</div>
       <form onSubmit={send}><input value={message} onChange={e=>setMessage(e.target.value)} placeholder="Nhập nội dung tư vấn..."/><button>Gửi</button></form></section>}
     <section><h2>Hoa hồng</h2>{commissions.map(c=><div className="sale-row" key={c.id}><span>GD #{c.transactionId} · {c.memberName}</span><b>{money(c.commissionAmount)} · {c.status}</b></div>)}</section>
   </div></MainLayout>;

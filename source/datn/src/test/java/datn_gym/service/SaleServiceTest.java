@@ -45,6 +45,7 @@ class SaleServiceTest {
     @Mock UserRepository userRepository;
     @Mock RoleRepository roleRepository;
     @Mock PasswordEncoder passwordEncoder;
+    @Mock ChatWebSocketBroker webSocketBroker;
     @InjectMocks SaleService saleService;
 
     @Test

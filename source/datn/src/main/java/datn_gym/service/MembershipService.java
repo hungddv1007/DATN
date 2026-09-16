@@ -536,6 +536,11 @@ public class MembershipService {
                 .membership(membership)
                 .promotion(calc.promotion)
                 .saleCode(calc.saleCode)
+                .promotionCodeSnapshot(calc.promotion != null ? calc.promotion.getCode() : null)
+                .referralCodeSnapshot(calc.saleCode != null ? calc.saleCode.getCode() : null)
+                .discountPercentSnapshot(calc.promotion != null
+                        ? calc.promotion.getDiscountPercent()
+                        : calc.saleCode != null ? calc.customerDiscountPercent : null)
                 .customerDiscountPercent(calc.customerDiscountPercent)
                 .requestedDurationDays(requestedDurationDays)
                 .requestedPackage(requestedPackage)
@@ -585,12 +590,38 @@ public class MembershipService {
                 .finalAmount(tx != null ? tx.getAmount() : null)
                 .paymentMethod(tx != null ? tx.getPaymentMethod() : null)
                 .transactionStatus(tx != null ? tx.getStatus() : null)
-                .promotionCode(tx != null && tx.getPromotion() != null ? tx.getPromotion().getCode() : null)
-                .referralCode(tx != null && tx.getSaleCode() != null ? tx.getSaleCode().getCode() : null)
-                .discountPercent(tx == null ? null : tx.getPromotion() != null
-                        ? tx.getPromotion().getDiscountPercent() : tx.getCustomerDiscountPercent())
+                .promotionCode(tx == null ? null : historicalPromotionCode(tx))
+                .referralCode(tx == null ? null : historicalReferralCode(tx))
+                .discountPercent(tx == null ? null : historicalDiscountPercent(tx))
                 .remainingDays(remainingDays)
                 .build();
+    }
+
+    private String historicalPromotionCode(Transaction tx) {
+        if (tx.getPromotion() == null) return null;
+        return hasText(tx.getPromotionCodeSnapshot())
+                ? tx.getPromotionCodeSnapshot()
+                : tx.getPromotion().getCode();
+    }
+
+    private String historicalReferralCode(Transaction tx) {
+        if (tx.getSaleCode() == null) return null;
+        return hasText(tx.getReferralCodeSnapshot())
+                ? tx.getReferralCodeSnapshot()
+                : tx.getSaleCode().getCode();
+    }
+
+    private Integer historicalDiscountPercent(Transaction tx) {
+        if (tx.getDiscountPercentSnapshot() != null) {
+            return tx.getDiscountPercentSnapshot();
+        }
+        return tx.getPromotion() != null
+                ? tx.getPromotion().getDiscountPercent()
+                : tx.getCustomerDiscountPercent();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private void applyHoldPolicy(Membership membership, GymPackage gymPackage, int durationDays) {

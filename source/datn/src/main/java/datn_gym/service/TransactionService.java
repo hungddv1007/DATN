@@ -397,12 +397,38 @@ public class TransactionService {
                         ? tx.getConfirmedBy().getFullName()
                         : null)
                 .createdAt(tx.getCreatedAt())
-                .promotionCode(tx.getPromotion() != null ? tx.getPromotion().getCode() : null)
-                .referralCode(tx.getSaleCode() != null ? tx.getSaleCode().getCode() : null)
-                .discountPercent(tx.getPromotion() != null
-                        ? tx.getPromotion().getDiscountPercent() : tx.getCustomerDiscountPercent())
+                .promotionCode(historicalPromotionCode(tx))
+                .referralCode(historicalReferralCode(tx))
+                .discountPercent(historicalDiscountPercent(tx))
                 .acceptedTerms(tx.getAcceptedTerms()).termsVersion(tx.getTermsVersion())
                 .build();
+    }
+
+    private String historicalPromotionCode(Transaction tx) {
+        if (tx.getPromotion() == null) return null;
+        return hasText(tx.getPromotionCodeSnapshot())
+                ? tx.getPromotionCodeSnapshot()
+                : tx.getPromotion().getCode();
+    }
+
+    private String historicalReferralCode(Transaction tx) {
+        if (tx.getSaleCode() == null) return null;
+        return hasText(tx.getReferralCodeSnapshot())
+                ? tx.getReferralCodeSnapshot()
+                : tx.getSaleCode().getCode();
+    }
+
+    private Integer historicalDiscountPercent(Transaction tx) {
+        if (tx.getDiscountPercentSnapshot() != null) {
+            return tx.getDiscountPercentSnapshot();
+        }
+        return tx.getPromotion() != null
+                ? tx.getPromotion().getDiscountPercent()
+                : tx.getCustomerDiscountPercent();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String limit(String value, int max) {

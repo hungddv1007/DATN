@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { confirmDialog } from '../../utils/dialog';
 import {
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import aiChatService from '../../services/aiChatService';
+import { createChatWebSocketClient } from '../../services/chatWebSocketService';
 import './AiChatWidget.css';
 
 const STARTER_PROMPTS = [
@@ -36,21 +37,24 @@ const AiChatWidget = () => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [chatConnected, setChatConnected] = useState(false);
   const abortControllerRef = useRef(null);
   const messageListRef = useRef(null);
   const localMessageIdRef = useRef(0);
+  const socketRef = useRef(null);
+  const activeConversationIdRef = useRef(null);
 
   const shouldRender =
     user?.role === 'MEMBER' && location.pathname.startsWith('/member/');
   const isSaleChatActive = ['SALE_ASSIGNED', 'SALE_JOINED']
     .includes(activeConversation?.handoffStatus);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     window.requestAnimationFrame(() => {
       const element = messageListRef.current;
       if (element) element.scrollTop = element.scrollHeight;
     });
-  };
+  }, []);
 
   const loadConversation = async (conversation) => {
     setLoading(true);
@@ -178,8 +182,14 @@ const AiChatWidget = () => {
     if (['SALE_ASSIGNED', 'SALE_JOINED'].includes(activeConversation.handoffStatus)) {
       setSending(true); setError('');
       try {
-        const saved = await aiChatService.sendHumanMessage(activeConversation.id, cleanText);
-        setMessages(current => [...current, saved]); setInput(''); scrollToBottom();
+        if (socketRef.current?.isConnected()) {
+          socketRef.current.sendMessage(activeConversation.id, cleanText);
+        } else {
+          const saved = await aiChatService.sendHumanMessage(activeConversation.id, cleanText);
+          setMessages(current => current.some(item => item.id === saved.id)
+            ? current : [...current, saved]);
+        }
+        setInput(''); scrollToBottom();
       } catch (err) { setError(err.response?.data?.message || err.message); }
       finally { setSending(false); }
       return;
@@ -280,36 +290,58 @@ const AiChatWidget = () => {
   };
 
   useEffect(() => {
-    const conversationId = activeConversation?.id;
-    const humanChatActive = ['WAITING_SALE', 'SALE_ASSIGNED', 'SALE_JOINED']
-      .includes(activeConversation?.handoffStatus);
-    if (!isOpen || !initialized || !conversationId || !humanChatActive) return undefined;
+    activeConversationIdRef.current = activeConversation?.id || null;
+  }, [activeConversation?.id]);
 
+  useEffect(() => {
+    if (!shouldRender || !isOpen) return undefined;
     let cancelled = false;
-    const refreshHumanChat = async () => {
-      try {
-        const [items, history] = await Promise.all([
-          aiChatService.getConversations(),
-          aiChatService.getMessages(conversationId),
-        ]);
+    const client = createChatWebSocketClient({
+      onConnectionChange: setChatConnected,
+      onEvent: payload => {
         if (cancelled) return;
-        setConversations(items);
-        const current = items.find(item => item.id === conversationId);
-        if (current) setActiveConversation(current);
-        setMessages(history);
-        scrollToBottom();
-      } catch {
-        // Poll tiếp ở chu kỳ sau; lỗi gửi chủ động vẫn được hiển thị riêng.
+        if (payload.type === 'MESSAGE'
+          && payload.conversationId === activeConversationIdRef.current) {
+          setMessages(current => current.some(item => item.id === payload.message.id)
+            ? current : [...current, payload.message]);
+          scrollToBottom();
+        } else if (payload.type === 'CONVERSATION_UPDATED') {
+          const updated = payload.conversation;
+          setConversations(current => current.some(item => item.id === updated.id)
+            ? current.map(item => item.id === updated.id ? updated : item)
+            : [updated, ...current]);
+          setActiveConversation(current => current?.id === updated.id ? updated : current);
+        } else if (payload.type === 'AUTHENTICATED') {
+          const conversationId = activeConversationIdRef.current;
+          aiChatService.getConversations().then(items => {
+            if (!cancelled) setConversations(items);
+          }).catch(() => {});
+          if (conversationId) {
+            aiChatService.getMessages(conversationId).then(history => {
+              if (!cancelled) setMessages(history);
+            }).catch(() => {});
+          }
+        } else if (payload.type === 'ERROR') {
+          setError(payload.message || 'Kết nối chat thời gian thực gặp lỗi.');
+        }
       }
-    };
-
-    const timer = window.setInterval(refreshHumanChat, 3000);
-    refreshHumanChat();
+    });
+    socketRef.current = client;
+    client.connect();
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      client.disconnect();
+      if (socketRef.current === client) socketRef.current = null;
     };
-  }, [activeConversation?.handoffStatus, activeConversation?.id, initialized, isOpen]);
+  }, [isOpen, scrollToBottom, shouldRender]);
+
+  useEffect(() => {
+    const client = socketRef.current;
+    const conversationId = activeConversation?.id;
+    if (!client || !conversationId || !chatConnected) return undefined;
+    client.subscribe(conversationId);
+    return () => client.unsubscribe(conversationId);
+  }, [activeConversation?.id, chatConnected]);
 
   if (!shouldRender) return null;
 

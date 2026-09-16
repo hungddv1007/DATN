@@ -29,6 +29,20 @@ public class Transaction {
     private SaleReferralCode saleCode;
 
     /**
+     * Bản chụp thông tin mã tại thời điểm giao dịch được tạo.
+     * Không dùng quan hệ promotion/saleCode để hiển thị lịch sử vì các mã có thể
+     * được đổi tên hoặc đổi mức giảm sau đó.
+     */
+    @Column(name = "promotion_code_snapshot", length = 50)
+    private String promotionCodeSnapshot;
+
+    @Column(name = "referral_code_snapshot", length = 50)
+    private String referralCodeSnapshot;
+
+    @Column(name = "discount_percent_snapshot")
+    private Integer discountPercentSnapshot;
+
+    /**
      * Snapshot của thay đổi sẽ được áp dụng sau khi giao dịch được duyệt.
      * Không cập nhật Membership khi giao dịch vẫn còn PENDING.
      */

@@ -75,6 +75,9 @@ public class SecurityConfig {
                 // Async dispatch của SSE đã được xác thực ở request ban đầu.
                 .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
 
+                // WebSocket tự xác thực JWT bằng gói AUTH ngay sau khi kết nối.
+                .requestMatchers("/api/ws/**").permitAll()
+
                 // 1. Auth - công khai hoàn toàn
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/public/payments/momo/ipn").permitAll()

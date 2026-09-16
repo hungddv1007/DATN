@@ -24,7 +24,7 @@ class AiChatServiceTest {
                 "Gói tập của tôi còn bao lâu?"))
                 .isTrue();
         assertThat(service.isDeterministicAccountQuery(
-                "Gói VIP hết hạn khi nào?"))
+                "Gói hiện tại của tôi hết hạn khi nào?"))
                 .isTrue();
     }
 
@@ -35,6 +35,12 @@ class AiChatServiceTest {
                 .isFalse();
         assertThat(service.isDeterministicAccountQuery(
                 "Hãy giải thích cách squat đúng kỹ thuật"))
+                .isFalse();
+        assertThat(service.isDeterministicAccountQuery(
+                "Gói VIP có thời hạn tối thiểu bao nhiêu?"))
+                .isFalse();
+        assertThat(service.isDeterministicAccountQuery(
+                "Gợi ý cho tôi một PT tăng cơ"))
                 .isFalse();
     }
 }

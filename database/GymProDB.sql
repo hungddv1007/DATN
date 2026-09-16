@@ -207,6 +207,9 @@ CREATE TABLE transactions (
     id                      INT IDENTITY(1,1) PRIMARY KEY,
     membership_id           INT NOT NULL,
     promotion_id            INT,
+    promotion_code_snapshot NVARCHAR(50),
+    referral_code_snapshot  NVARCHAR(50),
+    discount_percent_snapshot INT,
     requested_duration_days INT,
     requested_package_id    INT,
     requested_pt_id         INT,
@@ -245,6 +248,8 @@ CREATE TABLE transactions (
     CONSTRAINT CK_transactions_amount CHECK (amount >= 0),
     CONSTRAINT CK_transactions_original_amount
         CHECK (original_amount IS NULL OR original_amount >= 0),
+    CONSTRAINT CK_transactions_discount_snapshot
+        CHECK (discount_percent_snapshot IS NULL OR discount_percent_snapshot BETWEEN 0 AND 100),
     CONSTRAINT CK_transactions_payment_method
         CHECK (payment_method IS NULL OR payment_method IN ('CASH', 'BANK', 'ONLINE', 'MOMO')),
     CONSTRAINT CK_transactions_status

@@ -1515,6 +1515,25 @@ IF NOT EXISTS (
 )
     THROW 50020, 'Seed demo transfer request was not created.', 1;
 
+-- Dong bang ten ma va phan tram giam tai thoi diem du lieu giao dich demo duoc tao.
+-- Lich su giao dich se khong thay doi khi Admin/Sale sua ma ve sau.
+UPDATE transaction_record
+SET promotion_code_snapshot = promotion.code,
+    discount_percent_snapshot = promotion.discount_percent
+FROM transactions AS transaction_record
+JOIN promotions AS promotion ON promotion.id = transaction_record.promotion_id
+WHERE transaction_record.promotion_code_snapshot IS NULL
+   OR transaction_record.discount_percent_snapshot IS NULL;
+
+UPDATE transaction_record
+SET referral_code_snapshot = sale_code.code,
+    discount_percent_snapshot = transaction_record.customer_discount_percent
+FROM transactions AS transaction_record
+JOIN sales_referral_codes AS sale_code ON sale_code.id = transaction_record.sale_code_id
+WHERE transaction_record.promotion_id IS NULL
+  AND (transaction_record.referral_code_snapshot IS NULL
+       OR transaction_record.discount_percent_snapshot IS NULL);
+
 -- ============================================================
 -- KIEM TRA TINH NHAT QUAN NGHIEP VU CUA DU LIEU DEMO
 -- ============================================================

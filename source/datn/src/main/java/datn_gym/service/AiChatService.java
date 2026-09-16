@@ -48,6 +48,12 @@ public class AiChatService {
             còn thiếu. Tỷ lệ mỡ được ghi là ước tính không được trình bày như một kết quả đo chính xác.
             Không bịa lịch tập, gói tập hay thực đơn. Nếu dữ liệu không có, hãy nói rõ là chưa có.
             Khi nhắc lại mã, số liệu hoặc ngày tháng, phải sao chép nguyên văn từ dữ liệu GymPro.
+            Khi tư vấn gói tập, chỉ sử dụng những gói đang mở bán trong dữ liệu GymPro. Giá được
+            cung cấp là giá cơ bản theo ngày; không tự tính giá thanh toán cuối cùng khi hệ thống
+            chưa cung cấp kết quả xem trước giá. Khi gợi ý PT, chỉ chọn trong danh sách PT còn khả
+            năng nhận học viên, ưu tiên chuyên môn phù hợp rồi mới xét đánh giá và số chỗ còn lại.
+            Không tuyên bố rằng PT đã được giữ chỗ hoặc phân công. Nếu gói không có PT hoặc không
+            cho tự chọn PT thì phải nói rõ cho hội viên.
             Chỉ tư vấn; không tuyên bố rằng bạn đã sửa lịch tập, thực đơn hoặc dữ liệu hệ thống.
             Trả lời ngắn gọn, dễ hiểu và thực tế. Thông tin dinh dưỡng chỉ mang tính ước lượng.
             """;
@@ -150,7 +156,8 @@ public class AiChatService {
                 : requireModel(properties.chatModel(), "GEMINI_CHAT_MODEL");
         String memberContext = contextService.buildMemberContext(
                 email,
-                Boolean.TRUE.equals(conversation.getPhysicalDataConsent()));
+                Boolean.TRUE.equals(conversation.getPhysicalDataConsent()),
+                userText);
         String prompt = buildPrompt(conversation.getId(), memberContext);
 
         Duration configuredTimeout = properties.timeout() != null
@@ -246,8 +253,10 @@ public class AiChatService {
                     || normalized.contains("hien tai"));
         boolean ownPackage = normalized.contains("goi tap cua toi")
                 || normalized.contains("goi cua toi")
-                || normalized.contains("goi tap hien tai");
-        boolean packageExpiry = normalized.contains("goi")
+                || normalized.contains("goi tap hien tai")
+                || normalized.contains("goi hien tai")
+                || normalized.contains("goi dang dung");
+        boolean packageExpiry = ownPackage
                 && (normalized.contains("con bao lau")
                     || normalized.contains("het han")
                     || normalized.contains("ngay ket thuc")

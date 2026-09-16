@@ -21,6 +21,7 @@ public class HumanChatService {
     private final UserRepository userRepository;
     private final SaleService saleService;
     private final NotificationService notificationService;
+    private final ChatWebSocketBroker webSocketBroker;
 
     @Transactional
     public AiConversationResponse requestHandoff(String memberEmail, Integer conversationId) {
@@ -47,7 +48,9 @@ public class HumanChatService {
         addSystem(conversation, profile == null
                 ? "Yêu cầu tư vấn đã được đưa vào hàng chờ."
                 : "Nhân viên tư vấn " + profile.getUser().getFullName() + " đã được phân công.");
-        return toConversation(conversationRepository.save(conversation));
+        AiConversation saved = conversationRepository.save(conversation);
+        webSocketBroker.publishConversation(saved);
+        return toConversation(saved);
     }
 
     public List<AiConversationResponse> saleConversations(String saleEmail) {
@@ -70,7 +73,9 @@ public class HumanChatService {
         conversation.setHandoffStatus("SALE_ASSIGNED");
         conversation.setUpdatedAt(LocalDateTime.now());
         addSystem(conversation, "Nhân viên tư vấn " + profile.getUser().getFullName() + " đã được phân công.");
-        return toConversation(conversationRepository.save(conversation));
+        AiConversation saved = conversationRepository.save(conversation);
+        webSocketBroker.publishConversation(saved);
+        return toConversation(saved);
     }
 
     @Transactional
@@ -86,10 +91,15 @@ public class HumanChatService {
     public AiMessageResponse sendSaleMessage(String email, Integer conversationId, String text) {
         User sale = requireUser(email, "SALE");
         AiConversation conversation = requireAssignedSale(conversationId, sale);
+        requireHumanChat(conversation);
+        boolean joinedNow = false;
         if ("SALE_ASSIGNED".equals(conversation.getHandoffStatus())) {
             conversation.setHandoffStatus("SALE_JOINED");
+            joinedNow = true;
         }
-        return saveMessage(conversation, sale, "SALE", text);
+        AiMessageResponse response = saveMessage(conversation, sale, "SALE", text);
+        if (joinedNow) webSocketBroker.publishConversation(conversation);
+        return response;
     }
 
     public List<AiMessageResponse> saleMessages(String email, Integer conversationId) {
@@ -108,7 +118,9 @@ public class HumanChatService {
         conversation.setClosedAt(LocalDateTime.now());
         conversation.setUpdatedAt(LocalDateTime.now());
         addSystem(conversation, "Phiên tư vấn trực tiếp đã kết thúc. Bạn có thể tiếp tục trò chuyện với GymPro AI.");
-        return toConversation(conversationRepository.save(conversation));
+        AiConversation saved = conversationRepository.save(conversation);
+        webSocketBroker.publishConversation(saved);
+        return toConversation(saved);
     }
 
     private AiMessageResponse saveMessage(AiConversation conversation, User sender, String role, String text) {
@@ -116,11 +128,31 @@ public class HumanChatService {
                 .senderUser(sender).role(role).content(text.trim()).build());
         conversation.setUpdatedAt(LocalDateTime.now());
         conversationRepository.save(conversation);
+        webSocketBroker.publishMessage(message);
         return toMessage(message);
     }
 
     private void addSystem(AiConversation conversation, String text) {
-        messageRepository.save(AiMessage.builder().conversation(conversation).role("SYSTEM").content(text).build());
+        AiMessage message = messageRepository.save(
+                AiMessage.builder().conversation(conversation).role("SYSTEM").content(text).build());
+        webSocketBroker.publishMessage(message);
+    }
+
+    @Transactional(readOnly = true)
+    public void assertWebSocketAccess(String email, String role, Integer conversationId) {
+        if ("MEMBER".equals(role)) {
+            User member = requireUser(email, "MEMBER");
+            conversationRepository.findByIdAndUser_Id(conversationId, member.getId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Không tìm thấy cuộc trò chuyện"));
+            return;
+        }
+        if ("SALE".equals(role)) {
+            User sale = requireUser(email, "SALE");
+            requireAssignedSale(conversationId, sale);
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Không có quyền truy cập cuộc trò chuyện");
     }
 
     private void requireHumanChat(AiConversation conversation) {

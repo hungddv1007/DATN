@@ -6,6 +6,7 @@ import datn_gym.config.MomoProperties;
 import datn_gym.dto.response.MembershipResponse;
 import datn_gym.entity.GymPackage;
 import datn_gym.entity.Membership;
+import datn_gym.entity.Promotion;
 import datn_gym.entity.Transaction;
 import datn_gym.entity.User;
 import datn_gym.entity.PolicyVersion;
@@ -151,6 +152,57 @@ class MembershipServiceConcurrencyTest {
         assertThat(response.getTransactionId()).isEqualTo(202);
         assertThat(response.getStatus()).isEqualTo("PENDING");
         verify(transactionRepository).save(any(Transaction.class));
+    }
+
+    @Test
+    void registerSnapshotsPromotionCodeAndDiscountOnTransaction() {
+        String email = "member@gym.local";
+        User member = User.builder().id(10).email(email).fullName("Member").build();
+        GymPackage gymPackage = GymPackage.builder()
+                .id(1).name("Premium").dailyPrice(BigDecimal.valueOf(50_000))
+                .minDays(30).canChoosePt(false).isActive(true).build();
+        Promotion promotion = Promotion.builder()
+                .id(7).code("SAVE10").discountPercent(10).currentUsage(0).isActive(true).build();
+        MembershipRequest request = new MembershipRequest();
+        request.setPackageId(gymPackage.getId());
+        request.setDurationDays(30);
+        request.setPaymentMethod("BANK");
+        request.setPromotionCode("SAVE10");
+        request.setAcceptedTerms(true);
+        request.setTermsVersionId(1);
+
+        when(userRepository.findByEmailForMembershipUpdate(email)).thenReturn(Optional.of(member));
+        when(policyService.requireAcceptedVersion(1, "MEMBERSHIP_TERMS"))
+                .thenReturn(PolicyVersion.builder().id(1).versionNumber(1).policyType("MEMBERSHIP_TERMS").build());
+        when(membershipRepository.findByUser_IdAndStatusIn(
+                member.getId(), List.of("ACTIVE", "PAUSED", "PENDING")))
+                .thenReturn(Optional.empty());
+        when(gymPackageRepository.findById(gymPackage.getId())).thenReturn(Optional.of(gymPackage));
+        when(holdPolicyRepository.findApplicable(gymPackage.getId(), 30)).thenReturn(Optional.empty());
+        when(discountRepository.findBestDiscount(gymPackage.getId(), 30)).thenReturn(Optional.empty());
+        when(promotionRepository.findValidPromotion("SAVE10", LocalDate.now(), gymPackage.getId()))
+                .thenReturn(Optional.of(promotion));
+        when(promotionRepository.save(promotion)).thenReturn(promotion);
+        when(membershipRepository.save(any(Membership.class))).thenAnswer(invocation -> {
+            Membership persisted = invocation.getArgument(0);
+            persisted.setId(101);
+            return persisted;
+        });
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction persisted = invocation.getArgument(0);
+            persisted.setId(202);
+            return persisted;
+        });
+
+        service.registerPackage(email, request, null, null);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(Transaction.class);
+        verify(transactionRepository).save(captor.capture());
+        Transaction saved = captor.getValue();
+        assertThat(saved.getPromotionCodeSnapshot()).isEqualTo("SAVE10");
+        assertThat(saved.getDiscountPercentSnapshot()).isEqualTo(10);
+        assertThat(saved.getReferralCodeSnapshot()).isNull();
+        assertThat(saved.getAmount()).isEqualByComparingTo("1350000");
     }
 
     @Test

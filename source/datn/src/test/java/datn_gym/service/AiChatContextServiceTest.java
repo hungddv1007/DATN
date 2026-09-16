@@ -3,10 +3,13 @@ package datn_gym.service;
 import datn_gym.entity.GymPackage;
 import datn_gym.entity.MemberProfile;
 import datn_gym.entity.Membership;
+import datn_gym.entity.PtProfile;
 import datn_gym.entity.User;
 import datn_gym.repository.DietRepository;
+import datn_gym.repository.GymPackageRepository;
 import datn_gym.repository.MemberProfileRepository;
 import datn_gym.repository.MembershipRepository;
+import datn_gym.repository.PtProfileRepository;
 import datn_gym.repository.PtScheduleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +42,10 @@ class AiChatContextServiceTest {
     private PtScheduleRepository scheduleRepository;
     @Mock
     private MemberProfileRepository profileRepository;
+    @Mock
+    private GymPackageRepository gymPackageRepository;
+    @Mock
+    private PtProfileRepository ptProfileRepository;
 
     private AiChatContextService service;
     private User member;
@@ -50,7 +57,9 @@ class AiChatContextServiceTest {
                 membershipRepository,
                 dietRepository,
                 scheduleRepository,
-                profileRepository);
+                profileRepository,
+                gymPackageRepository,
+                ptProfileRepository);
         member = User.builder()
                 .id(5)
                 .email("member@gym.local")
@@ -129,5 +138,96 @@ class AiChatContextServiceTest {
                 .contains("20/09/2099")
                 .contains("Trần Đức Việt")
                 .doesNotContain("20/07/2099");
+    }
+
+    @Test
+    void onlyLoadsPackageAndPtCatalogForRelevantQuestions() {
+        assertThat(service.shouldIncludePackageAndPtCatalog(
+                "Hiện phòng gym có những gói nào?"))
+                .isTrue();
+        assertThat(service.shouldIncludePackageAndPtCatalog(
+                "Có HLV tăng cơ nào còn nhận học viên không?"))
+                .isTrue();
+
+        String context = service.buildMemberContext(
+                member.getEmail(),
+                false,
+                "Hãy giải thích cách squat đúng kỹ thuật");
+
+        assertThat(context).doesNotContain("DANH SÁCH GÓI TẬP ĐANG MỞ BÁN");
+        verify(gymPackageRepository, never()).findByIsActiveTrue();
+        verify(ptProfileRepository, never()).findAllOrderByRatingScoreDesc();
+    }
+
+    @Test
+    void includesActivePackagesAndOnlyAvailableActivePts() {
+        GymPackage vip = GymPackage.builder()
+                .name("VIP")
+                .dailyPrice(new BigDecimal("83000"))
+                .minDays(30)
+                .description("Có PT và thực đơn cá nhân hóa")
+                .hasPt(true)
+                .canChoosePt(true)
+                .hasMealPlan(true)
+                .maxHoldTimes(2)
+                .holdReturnPercent(90)
+                .isActive(true)
+                .build();
+        User availableUser = User.builder()
+                .id(20)
+                .fullName("PT Tăng Cơ")
+                .status(true)
+                .build();
+        User fullUser = User.builder()
+                .id(21)
+                .fullName("PT Đã Đủ Học Viên")
+                .status(true)
+                .build();
+        User disabledUser = User.builder()
+                .id(22)
+                .fullName("PT Đã Bị Khóa")
+                .status(false)
+                .build();
+        PtProfile available = PtProfile.builder()
+                .user(availableUser)
+                .specialization("Tăng cơ")
+                .ratingScore(new BigDecimal("4"))
+                .maxMembers(5)
+                .build();
+        PtProfile full = PtProfile.builder()
+                .user(fullUser)
+                .specialization("Cardio")
+                .ratingScore(new BigDecimal("5"))
+                .maxMembers(5)
+                .build();
+        PtProfile disabled = PtProfile.builder()
+                .user(disabledUser)
+                .specialization("Boxing")
+                .ratingScore(new BigDecimal("4.5"))
+                .maxMembers(5)
+                .build();
+
+        when(gymPackageRepository.findByIsActiveTrue()).thenReturn(List.of(vip));
+        when(ptProfileRepository.findAllOrderByRatingScoreDesc())
+                .thenReturn(List.of(full, disabled, available));
+        when(membershipRepository.countByPt_IdAndStatus(fullUser.getId(), "ACTIVE"))
+                .thenReturn(5);
+        when(membershipRepository.countByPt_IdAndStatus(availableUser.getId(), "ACTIVE"))
+                .thenReturn(4);
+
+        String context = service.buildMemberContext(
+                member.getEmail(),
+                false,
+                "Tôi chưa mua gói, hãy gợi ý PT tăng cơ phù hợp");
+
+        assertThat(context)
+                .contains("DANH SÁCH GÓI TẬP ĐANG MỞ BÁN")
+                .contains("VIP")
+                .contains("83000 VND/ngày")
+                .contains("PT Tăng Cơ")
+                .contains("Đánh giá: 4.0/5")
+                .contains("Số học viên: 4/5")
+                .doesNotContain("PT Đã Đủ Học Viên")
+                .doesNotContain("PT Đã Bị Khóa");
     }
 }
