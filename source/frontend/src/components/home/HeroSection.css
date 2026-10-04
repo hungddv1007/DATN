@@ -1,0 +1,90 @@
+.hero-section {
+  position: relative;
+  width: 100%;
+  height: 90vh; /* Chiếm gần hết màn hình */
+  background-image: url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1920&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  /* Lớp phủ gradient tối dần để làm nổi bật text */
+  background: linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.4) 100%);
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 900px;
+  padding: 0 24px;
+}
+
+.hero-headline {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 24px;
+  line-height: 1.2;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  text-transform: uppercase;
+}
+
+.hero-subheadline {
+  font-size: 1.5rem;
+  color: #e2e8f0;
+  margin-bottom: 40px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.btn-register-now {
+  background-color: #f97316; /* Cam */
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-transform: uppercase;
+}
+
+.btn-register-now:hover {
+  background-color: #ea580c;
+}
+
+.btn-explore {
+  background-color: transparent;
+  color: white;
+  border: 2px solid white;
+  padding: 12px 30px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.btn-explore:hover {
+  background-color: rgba(255,255,255,0.1);
+}
+
+@media (max-width: 768px) {
+  .hero-headline { font-size: 2.5rem; }
+  .hero-subheadline { font-size: 1.1rem; }
+  .hero-buttons { flex-direction: column; }
+}

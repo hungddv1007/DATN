@@ -20,7 +20,7 @@ public class JwtTokenProvider {
     @Value("${app.jwt.expiration}")
     private long jwtExpiration;
 
-    // Tao token tu thong tin user
+    // Tạo token từ thông tin user
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         Date now = new Date();
@@ -34,7 +34,20 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Lay email tu token
+    // Tạo token từ email (dùng cho Google OAuth - không cần Authentication object)
+    public String generateTokenFromEmail(String email) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpiration);
+
+        return Jwts.builder()
+                .subject(email)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    // Lấy email từ token
     public String getEmailFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -44,7 +57,7 @@ public class JwtTokenProvider {
         return claims.getSubject();
     }
 
-    // Kiem tra token hop le
+    // Kiểm tra token hợp lệ
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
@@ -52,6 +65,8 @@ public class JwtTokenProvider {
                     .build()
                     .parseSignedClaims(token);
             return true;
+        } catch (ExpiredJwtException e) {
+            throw e; // Ném ra để Filter bắt được
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

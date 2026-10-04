@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.ExpiredJwtException;
+
 import java.io.IOException;
 
 @Component
@@ -29,7 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         try {
-            // Lay token tu header Authorization
+            // Lấy token từ header Authorization
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
@@ -46,8 +48,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
+        } catch (ExpiredJwtException ex) {
+            logger.warn("Token expired");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"message\": \"Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.\"}");
+            return; // Dừng filter chain tại đây
         } catch (Exception ex) {
-            logger.error("Khong the set user authentication: " + ex.getMessage());
+            logger.error("Không thể set user authentication: " + ex.getMessage());
         }
 
         filterChain.doFilter(request, response);

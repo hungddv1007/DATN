@@ -1,0 +1,17 @@
+.physical-profile-view { display: grid; gap: 18px; }
+.physical-view-section { padding: 20px; background: rgba(30, 41, 59, .62); border: 1px solid rgba(148, 163, 184, .13); border-radius: 14px; }
+.physical-view-section-title { display: flex; gap: 11px; align-items: flex-start; padding-bottom: 15px; margin-bottom: 16px; border-bottom: 1px solid rgba(148, 163, 184, .11); color: #f97316; }
+.physical-view-section-title h3 { margin: 0 0 3px; color: #f1f5f9; font-size: 1rem; }
+.physical-view-section-title p { margin: 0; color: #64748b; font-size: .82rem; }
+.physical-view-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.physical-view-value { min-width: 0; padding: 13px 14px; background: rgba(15, 23, 42, .52); border: 1px solid rgba(148, 163, 184, .09); border-radius: 10px; }
+.physical-view-value > span { display: block; margin-bottom: 5px; color: #94a3b8; font-size: .75rem; font-weight: 650; text-transform: uppercase; letter-spacing: .035em; }
+.physical-view-value > strong { display: block; color: #e2e8f0; font-size: .92rem; font-weight: 600; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.physical-view-value > strong.is-empty { color: #64748b; font-weight: 500; font-style: italic; }
+.physical-view-value.is-wide { min-height: 82px; }
+.physical-view-grid-text { grid-template-columns: 1fr 1fr; }
+.physical-view-readonly-note { display: flex; align-items: center; gap: 9px; padding: 13px 15px; color: #93c5fd; background: rgba(59, 130, 246, .08); border: 1px solid rgba(59, 130, 246, .17); border-radius: 10px; font-size: .84rem; }
+.physical-view-state { padding: 50px 20px; color: #94a3b8; background: rgba(30, 41, 59, .55); border: 1px solid rgba(148, 163, 184, .12); border-radius: 14px; text-align: center; }
+.physical-view-state.is-error { color: #fca5a5; }
+@media (max-width: 760px) { .physical-view-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .physical-view-grid, .physical-view-grid-text { grid-template-columns: 1fr; } .physical-view-section { padding: 16px; } }

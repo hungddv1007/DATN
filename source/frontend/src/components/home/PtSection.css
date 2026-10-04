@@ -1,0 +1,153 @@
+.pt-section {
+  padding: 80px 0 100px;
+  background-color: #1e293b; /* Nền xám đậm hơn một chút so với nền chính */
+}
+
+.pt-section .section-title {
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #f1f5f9; /* Sửa lại màu font sáng để nổi bật trên nền tối */
+  margin-bottom: 60px;
+}
+
+.carousel-wrapper {
+  margin: 0 -16px;
+  padding: 0 20px; /* Chỗ cho nút bấm mũi tên */
+}
+
+.pt-slide {
+  padding: 16px;
+}
+
+.pt-section .pt-card {
+  background: rgba(30, 41, 59, 0.7);
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  color: #f1f5f9; /* Sáng màu chữ */
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.pt-section .pt-card:hover {
+  border-color: #ea580c;
+  transform: translateY(-5px);
+}
+
+.pt-section .pt-img-wrapper {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  padding: 4px;
+  background: linear-gradient(135deg, #ea580c, #fcd34d);
+}
+
+.pt-section .pt-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 4px solid #1e293b; /* Viền tối phù hợp nền */
+}
+
+.pt-section .pt-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 800;
+  border: 4px solid #1e293b;
+}
+
+.pt-section .pt-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #f1f5f9;
+}
+
+.pt-section .pt-spec {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.pt-section .pt-spec b {
+  color: #cbd5e1; /* Sáng hơn cho chữ in đậm */
+}
+
+.pt-section .pt-rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #f1f5f9; /* Chữ điểm số sáng */
+  margin-bottom: 24px;
+}
+
+.pt-section .btn-view-profile {
+  background: transparent;
+  color: #cbd5e1;
+  border: 2px solid #475569;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.pt-section .btn-view-profile:hover {
+  background: #ea580c;
+  color: white;
+  border-color: #ea580c;
+}
+
+/* Slick Carousel overrides for dark theme */
+.slick-prev:before, .slick-next:before {
+  color: #ea580c !important;
+  font-size: 36px !important;
+}
+.slick-prev { left: -30px; z-index: 10;}
+.slick-next { right: -30px; z-index: 10;}
+
+.slick-dots li button:before {
+  color: #cbd5e1 !important;
+  font-size: 10px !important;
+}
+.slick-dots li.slick-active button:before {
+  color: #ea580c !important;
+}
+
+@media (max-width: 600px) {
+  .pt-section {
+    padding: 56px 0 72px;
+  }
+
+  .pt-section .section-title {
+    margin-bottom: 34px;
+    font-size: 2rem;
+  }
+
+  .carousel-wrapper {
+    margin: 0;
+    padding: 0 10px;
+  }
+
+  .pt-slide {
+    padding: 8px;
+  }
+
+  .slick-prev,
+  .slick-next {
+    display: none !important;
+  }
+}

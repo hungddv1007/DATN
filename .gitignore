@@ -30,5 +30,18 @@ build/
 !**/src/test/**/build/
 
 ### VS Code ###
-.vscode/
 docs/
+uploads/
+source/frontend/test-results/
+source/frontend/playwright-report/
+.ms/
+bao_cao/
+.codex_work/
+.m2/
+erd/
+migrations/
+tmp/
+### Environment variables / secrets ###
+.env
+.env.*
+!.env.example

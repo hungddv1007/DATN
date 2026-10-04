@@ -1,0 +1,108 @@
+package datn_gym.repository;
+
+import datn_gym.entity.Membership;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import jakarta.persistence.LockModeType;
+
+public interface MembershipRepository extends JpaRepository<Membership, Integer> {
+
+    Optional<Membership> findByUser_IdAndStatus(Integer userId, String status);
+    Optional<Membership> findByUser_IdAndStatusIn(Integer userId, List<String> statuses);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM Membership m WHERE m.id = :id")
+    Optional<Membership> findByIdForUpdate(@Param("id") Integer id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM Membership m WHERE m.user.id = :userId AND m.status IN :statuses")
+    Optional<Membership> findCurrentByUserIdForUpdate(@Param("userId") Integer userId,
+                                                      @Param("statuses") List<String> statuses);
+
+    List<Membership> findByStatusAndHoldUntilLessThanEqual(String status, LocalDate date);
+    Optional<Membership> findByUser_IdAndStatusAndEndDateGreaterThanEqual(
+            Integer userId, String status, LocalDate date);
+    List<Membership> findByUser_IdOrderByCreatedAtDesc(Integer userId);
+    List<Membership> findByPt_IdAndStatus(Integer ptId, String status);
+    List<Membership> findByPt_Id(Integer ptId);
+
+    @Query("SELECT m FROM Membership m JOIN FETCH m.user JOIN FETCH m.gymPackage WHERE m.pt.id = ?1 AND m.status = ?2")
+    List<Membership> findByPtIdAndStatusWithDetails(Integer ptId, String status);
+
+    @Query("SELECT m FROM Membership m WHERE " +
+           "m.pt IS NULL AND m.status = 'ACTIVE' " +
+           "AND m.endDate >= CURRENT_DATE " +
+           "AND m.gymPackage.hasPt = true")
+    List<Membership> findUnassignedPtMemberships();
+
+    @Query("SELECT COUNT(m) FROM Membership m WHERE " +
+           "m.status = 'ACTIVE' AND " +
+           "MONTH(m.createdAt) = :month AND YEAR(m.createdAt) = :year")
+    Long countActiveMembershipsInMonth(
+            @Param("month") int month,
+            @Param("year") int year);
+
+    @Query("SELECT m FROM Membership m WHERE " +
+           "m.status = 'ACTIVE' AND " +
+           "m.endDate BETWEEN :fromDate AND :toDate")
+    List<Membership> findExpiringMemberships(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
+
+    Page<Membership> findByStatus(String status, Pageable pageable);
+
+    @Query("SELECT COUNT(m) FROM Membership m WHERE m.pt.id = :ptId " +
+           "AND m.status = :status " +
+           "AND (:status <> 'ACTIVE' OR m.endDate >= CURRENT_DATE)")
+    int countByPt_IdAndStatus(
+            @Param("ptId") Integer ptId,
+            @Param("status") String status);
+
+    @Query("SELECT m.gymPackage.name, COUNT(m) FROM Membership m " +
+           "WHERE m.status = 'ACTIVE' AND m.endDate >= CURRENT_DATE " +
+           "GROUP BY m.gymPackage.name")
+    List<Object[]> countActiveMembershipsByPackage();
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE Membership m SET m.status = 'EXPIRED' " +
+           "WHERE m.status = 'ACTIVE' AND m.endDate < :today")
+    int expireActiveMembershipsBefore(@Param("today") LocalDate today);
+
+    // Dùng cho: PtNote, PtComment, Review và quyền xem hồ sơ thể chất
+    @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
+           "m.pt.id = :ptId AND m.user.id = :memberId AND m.status = 'ACTIVE' " +
+           "AND m.endDate >= CURRENT_DATE")
+    boolean existsActiveMembershipByPtAndMember(
+            @Param("ptId") Integer ptId,
+            @Param("memberId") Integer memberId);
+
+    // FIX KIẾN TRÚC: Chuyển từ DietRepository về đây
+    // Dùng cho: DietService.validateMemberIsVip()
+    // Kiểm tra HV có gói ACTIVE với hasMealPlan = true không
+    @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
+           "m.user.id = :memberId AND m.status = 'ACTIVE' " +
+           "AND m.endDate >= CURRENT_DATE " +
+           "AND m.gymPackage.hasMealPlan = true")
+    boolean existsVipMembership(@Param("memberId") Integer memberId);
+
+    // FIX KIẾN TRÚC: Chuyển từ DietRepository về đây
+    // Dùng cho: DietService.validatePtCanManageDiet()
+    // Kiểm tra HV có gói VIP ACTIVE và đang thuộc PT này không
+    @Query("SELECT COUNT(m) > 0 FROM Membership m WHERE " +
+           "m.pt.id = :ptId AND m.user.id = :memberId " +
+           "AND m.status = 'ACTIVE' AND m.endDate >= CURRENT_DATE " +
+           "AND m.gymPackage.hasMealPlan = true")
+    boolean existsVipMembershipByPtAndMember(
+            @Param("ptId") Integer ptId,
+            @Param("memberId") Integer memberId);
+}

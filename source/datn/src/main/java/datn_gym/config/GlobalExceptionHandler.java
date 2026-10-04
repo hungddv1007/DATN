@@ -1,48 +1,92 @@
 package datn_gym.config;
 
 import datn_gym.dto.response.MessageResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
-    // Loi xac thuc sai email/mat khau
+    // 1. Lỗi Đăng nhập: Sai Email hoặc Mật khẩu
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<MessageResponse> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new MessageResponse("Email hoặc mật khẩu không đúng!"));
+                .body(new MessageResponse("Email hoặc mật khẩu không chính xác!"));
     }
 
-    // Loi khong tim thay user
+    // 2. Lỗi Đăng nhập: Tài khoản bị khóa (status = 0)
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<MessageResponse> handleDisabledAccount(DisabledException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new MessageResponse("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin!"));
+    }
+
+    // 3. Lỗi: Không tìm thấy user
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<MessageResponse> handleUserNotFound(UsernameNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new MessageResponse(ex.getMessage()));
     }
 
-    // Loi validation (input khong hop le)
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<MessageResponse> handleValidation(MethodArgumentNotValidException ex) {
-        String errors = ex.getBindingResult().getFieldErrors().stream()
-                .map(FieldError::getDefaultMessage)
-                .collect(Collectors.joining(", "));
-        return ResponseEntity.badRequest()
-                .body(new MessageResponse(errors));
+    // 4. Lỗi nghiệp vụ: Trùng email, OTP sai, v.v.
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<MessageResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new MessageResponse(ex.getMessage()));
     }
 
-    // Loi runtime chung
+    // 5. Lỗi từ ResponseStatusException (dùng trong Service layer)
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<MessageResponse> handleResponseStatus(ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(new MessageResponse(ex.getReason() != null ? ex.getReason() : ex.getMessage()));
+    }
+
+    // 6. Lỗi phân quyền: @PreAuthorize thất bại
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<MessageResponse> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new MessageResponse("Bạn không có quyền thực hiện thao tác này!"));
+    }
+
+    // 7. Lỗi Validation từ DTO (@NotBlank, @Email, @Pattern...)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+    }
+
+    // 8. Các lỗi hệ thống không lường trước được (Internal Server Error)
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<MessageResponse> handleUploadTooLarge(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE)
+                .body(new MessageResponse("Ảnh tải lên vượt quá dung lượng cho phép."));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<MessageResponse> handleRuntime(RuntimeException ex) {
-        return ResponseEntity.badRequest()
-                .body(new MessageResponse(ex.getMessage()));
+        log.error("Lỗi hệ thống chưa được xử lý", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new MessageResponse("Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."));
     }
 }

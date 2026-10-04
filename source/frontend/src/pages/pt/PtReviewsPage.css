@@ -1,0 +1,131 @@
+.pt-reviews-page {
+  --review-surface: rgba(30, 41, 59, 0.72);
+  --review-border: rgba(148, 163, 184, 0.14);
+  width: 100%;
+}
+
+.pt-reviews-header {
+  margin-bottom: 28px;
+}
+
+.pt-reviews-page .pt-reviews-header h1 {
+  margin: 0 0 8px;
+  color: #f8fafc;
+  font-size: clamp(1.65rem, 2.4vw, 2rem);
+  line-height: 1.2;
+}
+
+.pt-reviews-page .pt-reviews-header p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.pt-review-list {
+  overflow: hidden;
+  background: var(--review-surface);
+  border: 1px solid var(--review-border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.12);
+}
+
+.pt-review-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--review-border);
+}
+
+.pt-review-list-header h2 {
+  margin: 0 0 3px;
+  color: #f1f5f9;
+  font-size: 1.05rem;
+}
+
+.pt-review-list-header span {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.pt-review-state {
+  padding: 48px 24px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.pt-review-state--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.pt-review-state--empty svg {
+  margin-bottom: 5px;
+  color: #475569;
+}
+
+.pt-review-state--empty strong {
+  color: #cbd5e1;
+}
+
+.pt-review-state--empty span {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.pt-review-item {
+  padding: 20px 22px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  transition: background 0.2s ease;
+}
+
+.pt-review-item:last-child {
+  border-bottom: 0;
+}
+
+.pt-review-item:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.pt-review-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.pt-review-member {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.pt-review-stars {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.pt-review-item time {
+  flex-shrink: 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.pt-reviews-page .pt-review-item p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 640px) {
+  .pt-review-item-header {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
